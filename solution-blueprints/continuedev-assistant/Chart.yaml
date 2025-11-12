@@ -1,0 +1,22 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-continuedev-assistant
+description: A local LLM assistant for your IDE
+type: application
+version: 0.5.3
+maintainers:
+  - name: AMD
+    url: https://www.amd.com/
+dependencies:
+- name: libchart-aim-llm
+  version: 0.5.3
+  repository: oci://registry-1.docker.io/amdenterpriseai
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.release.notes: "AIM release images"
+  com.amd.aim.description.full: "The continuedev-assistant is an AI pair programmer that integrates into your code editor in the browser. It uses large language models LLMs to suggest code snippets, functions, and even entire modules as you type. This solution provides you with a local LLM of your choice to predict, fix and discuss the code while you are developing."
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "Continue.dev Coding Assistant"

@@ -1,0 +1,48 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+image: python:3.10-bullseye
+
+autogenstudio:
+  pip: autogenstudio==0.4.2.2
+
+llm:
+  # Use existing external AIM service instead of deploying our own
+  # Set to null or comment out to deploy own AIM service
+  existingService: null
+
+  # Configuration for deploying own AIM service (used when existingService is not set)
+  nameOverride: aim-llama-70b
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.4-preview"
+  env_vars:
+    AIM_ENGINE_ARGS: >-
+      {"served_model_name": "aim/llama-3.3-70b-instruct", "enable-auto-tool-choice": null, "tool-call-parser": "llama3_json"}
+
+  storage:
+    ephemeral:
+      quantity: 512Gi
+      storageClassName: mlstorage
+
+kaiwo:
+  enabled: false
+
+metadata:
+  labels:
+    app.kubernetes.io/name: autogenstudio
+
+resources:
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+  requests:
+    cpu: "1"
+    memory: "2Gi"
+
+service:
+  type: ClusterIP
+  port: 8081
+
+envVars:
+  AUTOGENSTUDIO_APPDIR: "/app/"
+  PYTHONUNBUFFERED: "1"

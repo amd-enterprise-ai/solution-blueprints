@@ -1,0 +1,98 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+{{ define "deployment" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "release.fullname" . }}
+  labels:
+    app: {{ include "release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "release.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "release.fullname" . }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          args:
+          - |
+            {{- include "autogenstudio.entrypoint" . | nindent 12 }}
+          command: ["sh", "-c"]
+          {{- if .Values.envVars }}
+          env:
+            {{- include "container.env" . | nindent 12 }}
+          {{- end }}
+          image: {{ .Values.image | quote}}
+          imagePullPolicy: "Always"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 120  # 120 * 10s = 20 minutes for startup (including Playwright install)
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+          {{- if .Values.resources }}
+          resources:
+            {{- .Values.resources | toYaml | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /mnt/config
+      volumes:
+        - name: config-volume
+          configMap:
+            # Provide the name of the ConfigMap containing the files you want
+            # to add to the container
+            name: {{ include "release.fullname" . }}-config
+
+{{- end -}}
+
+{{- define "deployment_stripped" -}}
+{{- $deployment := include "deployment" . | fromYaml }}
+{{- $ := unset $deployment "metadata" }}
+{{- $ := unset $deployment.spec.template "metadata" }}
+{{- $deployment | toYaml }}
+{{- end -}}
+
+{{- define "deployment_wrapped_with_kaiwoservice" -}}
+apiVersion: kaiwo.silogen.ai/v1alpha1
+kind: KaiwoService
+metadata:
+  name: {{ include "release.fullname" . }}
+  labels:
+    app: {{ include "release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  deployment:
+    {{- include "deployment" . | nindent 4 }}
+{{- end -}}
+
+{{- if .Values.kaiwo.enabled -}}
+{{- include "deployment_wrapped_with_kaiwoservice" . }}
+{{- else -}}
+{{- include "deployment" . }}
+{{- end -}}

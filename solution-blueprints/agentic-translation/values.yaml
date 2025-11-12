@@ -1,0 +1,66 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Default values for agentic-translation.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+metadata:
+  labels: {}
+
+image: "python:3.12"
+imagePullPolicy: Always
+
+enableUI: True
+
+storage:
+  ephemeral:
+    quantity: 20Gi
+    storageClassName: mlstorage
+    accessModes:
+      - ReadWriteOnce
+  dshm:
+    sizeLimit: 32Gi
+
+deployment:
+  ports:
+    api: 5000
+    ui: 8501
+
+# startupProbe - checks if the container has successfully started. It disables liveness and readiness probes until it succeeds, useful for slow-starting applications.
+# livenessProbe - checks if the container is still alive. If it fails, Kubernetes restarts the container to recover from failure.
+# readinessProbe - checks if the container is ready to serve traffic. If it fails, the container is removed from the service's endpoints but remains running.
+# ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+startupProbe:
+  httpGet:
+    path: /health
+    port: api
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  failureThreshold: 360 # 360 x 10s => allow for 60 minutes startup time
+livenessProbe:
+  httpGet:
+    path: /health
+    port: api
+  failureThreshold: 1
+  periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /readiness
+    port: api
+  initialDelaySeconds: 10
+  failureThreshold: 1
+  periodSeconds: 10
+
+# kaiwo settings (if enabled, use kaiwo CRDs to have kaiwo operator manage the workload)
+kaiwo:
+  enabled: false
+
+llm:
+  nameOverride: aim-llama-70b
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.4-preview"
+
+  storage:
+    ephemeral:
+      storageClassName: mlstorage
+      quantity: 512Gi

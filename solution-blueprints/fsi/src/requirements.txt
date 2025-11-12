@@ -1,0 +1,12 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+defusedxml
+gradio
+langchain
+langchain-openai
+matplotlib
+pandas
+requests
+yfinance

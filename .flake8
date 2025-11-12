@@ -1,0 +1,8 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+[flake8]
+max-line-length = 120
+extend-ignore = E203, E501, F401, F841
+exclude = .git,__pycache__,venv,.github
