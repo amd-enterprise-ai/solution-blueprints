@@ -1,0 +1,24 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ define "aimchart-llm.service" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aimchart-llm.release.fullname" . }}
+  labels:
+    app: {{ include "aimchart-llm.release.fullname" . }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: {{ default 8000 .Values.env_vars.AIM_PORT }}
+  selector:
+    app: {{ include "aimchart-llm.release.fullname" . }}
+{{- end }}
+
+{{- if not .Values.existingService }}
+{{- include "aimchart-llm.service" . }}
+{{- end }}

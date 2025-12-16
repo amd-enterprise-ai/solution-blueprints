@@ -1,0 +1,59 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ if not .Values.existingService -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aim-chromadb.release.fullname" . }}
+  labels:
+    app: {{ include "aim-chromadb.release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "aim-chromadb.release.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "aim-chromadb.release.fullname" . }}
+    spec:
+      containers:
+        - name: "aim-chromadb"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- if .Values.deployment.args }}
+            {{- toYaml .Values.deployment.args | nindent 12 }}
+            {{- else }}
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "{{ .Values.deployment.ports.http }}"
+            {{- end }}
+          env:
+            - name: IS_PERSISTENT
+              value: "TRUE"
+            - name: PERSIST_DIRECTORY
+              value: "/chroma/.chroma/index"
+          ports:
+            - name: http
+              containerPort: {{ .Values.deployment.ports.http }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /chroma/.chroma/index
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "aim-chromadb.release.fullname" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- end -}}

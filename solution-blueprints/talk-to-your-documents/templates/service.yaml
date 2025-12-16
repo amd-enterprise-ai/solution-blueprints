@@ -1,0 +1,18 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aimsb-talk-to-your-documents.fullname" . }}
+  labels:
+    {{- include "aimsb-talk-to-your-documents.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  selector:
+    {{- include "aimsb-talk-to-your-documents.selectorLabels" . | nindent 4 }}

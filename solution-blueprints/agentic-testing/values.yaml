@@ -1,0 +1,55 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Test Agent configuration
+testAgent:
+  enabled: true
+  image:
+    repository: python
+    tag: "3.13-slim"
+    pullPolicy: IfNotPresent
+
+  resources:
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+
+  # Environment variables
+  env:
+    PYTHONUNBUFFERED: "1"
+
+llm:
+  # Use existing external AIM service instead of deploying our own
+  # Set to null or comment out to deploy own AIM service
+  existingService: null
+
+  # Configuration for deploying own AIM service (used when existingService is not set)
+  nameOverride: llama33-70b-instruct
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+  env_vars:
+    AIM_ENGINE_ARGS: >-
+      {"enable-auto-tool-choice": null, "tool-call-parser": "llama3_json"}
+
+  storage:
+    ephemeral:
+      quantity: 512Gi
+      storageClassName: mlstorage
+
+kaiwo:
+  enabled: false
+
+metadata:
+  labels:
+    app.kubernetes.io/name: agentic-testing
+
+resources:
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+  requests:
+    cpu: "1"
+    memory: "2Gi"

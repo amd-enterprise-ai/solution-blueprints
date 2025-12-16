@@ -37,8 +37,8 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fsi \
 
 ## Connecting
 
-Then, to connect to the UI, port-forward 8080 to be able to access the UI. The UI will then be available at <http://localhost:8080>.
+Then, to connect to the UI, port-forward any chosen port, e.g., 8081, to be able to access the UI. The UI will then be available at <http://localhost:8081>.
 
 ```bash
-kubectl port-forward services/aimsb-fsi-$name 8080:80 -n $namespace
+kubectl port-forward services/aimsb-fsi-$name 8081:80 -n $namespace
 ```

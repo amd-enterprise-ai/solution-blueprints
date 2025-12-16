@@ -42,7 +42,7 @@
                             "label": "OpenAIChatCompletionClient",
                             "config": {
                                 "model": "${MODEL_NAME}",
-                                "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                "base_url": "${OPENAI_API_BASE_URL}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -114,7 +114,7 @@
                             "label": "${MODEL_NAME}",
                             "config": {
                                 "model": "${MODEL_NAME}",
-                                "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                "base_url": "${OPENAI_API_BASE_URL}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -151,7 +151,7 @@
                             "label": "OpenAIChatCompletionClient",
                             "config": {
                                 "model": "${MODEL_NAME}",
-                                "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                "base_url": "${OPENAI_API_BASE_URL}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -212,7 +212,7 @@
                     "label": "${MODEL_NAME}",
                     "config": {
                         "model": "${MODEL_NAME}",
-                        "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                        "base_url": "${OPENAI_API_BASE_URL}",
                         "model_info": {
                             "vision": false,
                             "function_calling": true,
@@ -520,7 +520,7 @@
                                         "label": "OpenAIChatCompletionClient",
                                         "config": {
                                             "model": "${MODEL_NAME}",
-                                            "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                            "base_url": "${OPENAI_API_BASE_URL}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -639,7 +639,7 @@
                                         "label": "OpenAIChatCompletionClient",
                                         "config": {
                                             "model": "${MODEL_NAME}",
-                                            "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                            "base_url": "${OPENAI_API_BASE_URL}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -711,7 +711,7 @@
                                         "label": "OpenAIChatCompletionClient",
                                         "config": {
                                             "model": "${MODEL_NAME}",
-                                            "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                            "base_url": "${OPENAI_API_BASE_URL}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -759,7 +759,7 @@
                             "label": "OpenAIChatCompletionClient",
                             "config": {
                                 "model": "${MODEL_NAME}",
-                                "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                "base_url": "${OPENAI_API_BASE_URL}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -837,7 +837,7 @@
                                         "label": "${MODEL_NAME}",
                                         "config": {
                                             "model": "${MODEL_NAME}",
-                                            "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                            "base_url": "${OPENAI_API_BASE_URL}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -874,7 +874,7 @@
                                         "label": "OpenAIChatCompletionClient",
                                         "config": {
                                             "model": "${MODEL_NAME}",
-                                            "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                            "base_url": "${OPENAI_API_BASE_URL}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -934,7 +934,7 @@
                             "label": "OpenAIChatCompletionClient",
                             "config": {
                                 "model": "${MODEL_NAME}",
-                                "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                "base_url": "${OPENAI_API_BASE_URL}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -1012,7 +1012,7 @@
                                         "label": "OpenAIChatCompletionClient",
                                         "config": {
                                             "model": "${MODEL_NAME}",
-                                            "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                            "base_url": "${OPENAI_API_BASE_URL}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -1153,7 +1153,7 @@
                                         "config": {
                                             "temperature": 0.7,
                                             "model": "${MODEL_NAME}",
-                                            "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                            "base_url": "${OPENAI_API_BASE_URL}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -1210,7 +1210,7 @@
                                         "config": {
                                             "temperature": 0.7,
                                             "model": "${MODEL_NAME}",
-                                            "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                            "base_url": "${OPENAI_API_BASE_URL}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -1259,7 +1259,7 @@
                             "config": {
                                 "temperature": 0.7,
                                 "model": "${MODEL_NAME}",
-                                "base_url": "{{- include \"aim-llm.url\" .Values.llm -}}",
+                                "base_url": "${OPENAI_API_BASE_URL}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,

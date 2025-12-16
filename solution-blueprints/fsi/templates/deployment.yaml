@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: {{ .Chart.Name }}
-          command: ["sh", "-c"]
+          command: ["bash", "-e", "-u", "-o", "pipefail", "-c"]
           args:
           - |
             pip install -r /workload/mount/requirements.txt

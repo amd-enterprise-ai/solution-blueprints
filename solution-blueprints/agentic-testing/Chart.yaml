@@ -1,0 +1,23 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-agentic-testing
+description: Quality assurance testing framework using Pydantic AI and Playwright
+type: application
+maintainers:
+- name: AMD
+  url: https://www.amd.com/
+version: 0.2.2
+dependencies:
+- name: aimchart-llm
+  version: 0.2.1
+  repository: oci://registry-1.docker.io/amdenterpriseai
+  alias: llm
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.release.notes: "Update AIM version"
+  com.amd.aim.title: "Agentic Testing Framework"
+  com.amd.aim.description.full: A quality assurance and testing framework that leverages autonomous agents to design, execute, and analyze tests for software applications. This framework enables continuous testing and validation by utilizing AI-driven agents to identify bugs, performance issues, and usability concerns.
+  com.amd.aim.hfToken.required: "not-applicable"

@@ -61,6 +61,28 @@ limits:
 {{- end }}
 - name: BASE_URL
   value: {{ include "httpRoute.baseUrl" . | quote }}
+- name: AIM_BASE_URL
+  {{/*
+    Build a context that has the right .Values, .Release, and .Chart metadata.
+    NOTE that .Chart.Name should be the same as given to alias in the dependencies list.
+  */}}
+  {{- $sub := dict
+        "Values" (merge (dict) .Values.chatLLM)
+        "Release" .Release
+        "Chart" (dict "Name" "chatLLM")
+  -}}
+  value: {{ include "aimchart-llm.url" $sub }}
+- name: AIM_AUTOCOMPLETE_BASE_URL
+  {{/*
+    Build a context that has the right .Values, .Release, and .Chart metadata.
+    NOTE that .Chart.Name should be the same as given to alias in the dependencies list.
+  */}}
+  {{- $sub := dict
+        "Values" (merge (dict) .Values.autocompleteLLM)
+        "Release" .Release
+        "Chart" (dict "Name" "autocompleteLLM")
+  -}}
+  value: {{ include "aimchart-llm.url" $sub }}
 {{- end -}}
 
 # Container volume mounts helper
@@ -128,6 +150,7 @@ code-server --install-extension ms-kubernetes-tools.vscode-kubernetes-tools
 pip install requests
 
 MODEL_NAME=$(python << 'EOF'
+import os
 import sys
 import time
 import requests
@@ -138,7 +161,7 @@ for retry in range(120):
         time.sleep(10)
     print(f"Trying to retrieve model name (attempt {retry+1})", file=sys.stderr)
     try:
-        r = requests.get(urllib.parse.urljoin({{ include "aim-llm.url" .Values.chat.llm | quote }}, "v1/models"), timeout=0.5)
+        r = requests.get(urllib.parse.urljoin(os.getenv("AIM_BASE_URL"), "v1/models"), timeout=0.5)
         if r.status_code == 200:
             try:
                 print(r.json()["data"][0]["id"], end="")
@@ -155,6 +178,7 @@ echo "Model name retrieved successfully, got: $MODEL_NAME"
 
 {{ if .Values.autocomplete.enabled }}
 AUTOCOMPLETE_MODEL_NAME=$(python << 'EOF'
+import os
 import sys
 import time
 import requests
@@ -165,7 +189,7 @@ for retry in range(120):
         time.sleep(10)
     print(f"Trying to retrieve autocomplete model name (attempt {retry+1})", file=sys.stderr)
     try:
-        r = requests.get(urllib.parse.urljoin({{ include "aim-llm.url" .Values.autocomplete.llm | quote }}, "v1/models"), timeout=0.5)
+        r = requests.get(urllib.parse.urljoin(os.getenv("AIM_AUTOCOMPLETE_BASE_URL"), "v1/models"), timeout=0.5)
         if r.status_code == 200:
             try:
                 print(r.json()["data"][0]["id"], end="")
@@ -192,7 +216,7 @@ models:
     provider: openai
     model: ${MODEL_NAME}
     apiKey: none
-    apiBase: {{ include "aim-llm.url" .Values.chat.llm }}
+    apiBase: ${AIM_BASE_URL}
     defaultCompletionOptions:
 {{ toYaml .Values.chat.defaultCompletionOptions | indent 6 }}
   {{- if .Values.autocomplete.enabled }}
@@ -200,7 +224,7 @@ models:
     provider: openai
     model: ${AUTOCOMPLETE_MODEL_NAME}
     apiKey: none
-    apiBase: {{ include "aim-llm.url" .Values.autocomplete.llm }}
+    apiBase: ${AIM_AUTOCOMPLETE_BASE_URL}
     roles:
       - autocomplete
     defaultCompletionOptions:

@@ -1,0 +1,83 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ define "aimchart-llm.deployment.bare" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aimchart-llm.release.fullname" . }}
+  labels:
+    app: {{ include "aimchart-llm.release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ include "aimchart-llm.release.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "aimchart-llm.release.fullname" . }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: aim-llm
+          {{- if .Values.env_vars }}
+          env:
+            {{- include "aimchart-llm.container.env" . | nindent 12 }}
+          {{- end }}
+          image: {{ .Values.image | quote }}
+          imagePullPolicy: "Always"
+          ports:
+            - name: http
+              containerPort: {{ default 8000 .Values.env_vars.AIM_PORT }}
+          startupProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 10
+            failureThreshold: 360 # 360 x 10s => allow for 60 minutes startup time
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+          resources:
+            {{- include "aimchart-llm.container.resources" . | nindent 12 }}
+          volumeMounts:
+            {{- include "aimchart-llm.container.volumeMounts" . | nindent 12 }}
+      volumes:
+  {{- include "aimchart-llm.container.volumes" . | nindent 8 }}
+{{- end -}}
+
+{{ define "aimchart-llm.deployment.kaiwoservice" -}}
+apiVersion: kaiwo.silogen.ai/v1alpha1
+kind: KaiwoService
+metadata:
+  name: {{ include "aimchart-llm.release.fullname" . }}
+  labels:
+    app: {{ include "aimchart-llm.release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  deployment:
+    {{- include "aimchart-llm.deployment.bare" . | nindent 4 }}
+{{- end }}
+
+{{ if not .Values.existingService -}}
+{{- if .Values.kaiwo.enabled -}}
+{{- include "aimchart-llm.deployment.kaiwoservice" . }}
+{{- else -}}
+{{- include "aimchart-llm.deployment.bare" . }}
+{{- end }}
+{{- end }}

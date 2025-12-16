@@ -1,0 +1,17 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "release.fullname" . }}-source-code
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+data:
+  agent.py: |
+{{ .Files.Get "src/agent.py" | indent 4 }}
+  requirements.txt: |
+{{ .Files.Get "src/requirements.txt" | indent 4 }}
+  gwt_specifications.txt: |
+{{ .Files.Get "src/gwt_specifications.txt" | indent 4 }}

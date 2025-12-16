@@ -23,9 +23,9 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-continuedev
 ## Using an existing deployment or external LLM
 By default, any required AIMs are deployed by the helm chart. If you already have a compatible AIM deployed, you can use that instead, and reuse resources.
 
-To use an existing deployment or external LLM for the Agent/Edit/Chat functionality, set the value `chat.llm.existingService` to that endpoint. Then, any other values you pass in the `chat.llm` mapping are simply ignored, and your existing service is used instead. You should use the Kubernetes Service name, or if the service is in a different namespace, you can use the long form `<SERVICENAME>.<NAMESPACE>.svc.cluster.local:<SERVICEPORT>`. If needed, you can pass a whole URL.
+To use an existing deployment or external LLM for the Agent/Edit/Chat functionality, set the value `chatLLM.existingService` to that endpoint. Then, any other values you pass in the `chatLLM` mapping are simply ignored, and your existing service is used instead. You should use the Kubernetes Service name, or if the service is in a different namespace, you can use the long form `<SERVICENAME>.<NAMESPACE>.svc.cluster.local:<SERVICEPORT>`. If needed, you can pass a whole URL.
 
-Similarly, you may use an existing deployment for the Autocomplete functionality. Set the value `autocomplete.llm.existingService` to that endpoint.
+Similarly, you may use an existing deployment for the Autocomplete functionality. Set the value `autocompleteLLM.existingService` to that endpoint.
 
 Full example command:
 ```bash
@@ -34,18 +34,22 @@ namespace="my-namespace"
 servicename="aim-llm-my-model-123456"
 autocompleteservicename="aim-llm-my-autocomplete-123"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-continuedev-assistant \
-  --set chat.llm.existingService=$servicename \
-  --set autocomplete.llm.existingService=$autocompleteservicename \
+  --set chatLLM.existingService=$servicename \
+  --set autocompleteLLM.existingService=$autocompleteservicename \
   | kubectl apply -f - -n $namespace
 ```
 
 ## Connecting
 
-Then, to connect to the code-server, port-forward 8080 to be able to access the UI. The UI will then be available at <http://localhost:8080>.
+Then, to connect to the UI, port-forward any chosen port, e.g., 8083, to be able to access the UI. The UI will then be available at <http://localhost:8083>.
 
 ```bash
-kubectl port-forward services/aimsb-continuedev-assistant-$name 8080:80 -n $namespace
+kubectl port-forward services/aimsb-continuedev-assistant-$name 8083:80 -n $namespace
 ```
+
+## Using continue.dev
+The continue.dev extension is installed and by default appears inside the extensions tab on the left hand side. The user experience is probably best if you drag the extension to the right side pane (see point three [here](https://docs.continue.dev/ide-extensions/install)).
+To get familiar with continue.dev features, see [the quick start guide](https://docs.continue.dev/ide-extensions/quick-start).
 
 ## Browser recommendation
 

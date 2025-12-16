@@ -28,7 +28,7 @@ spec:
           args:
           - |
             {{- .Values.entrypoint | nindent 12 }}
-          command: ["sh", "-c"]
+          command: ["bash", "-e", "-u", "-o", "pipefail", "-c"]
           {{- end }}
           {{- if .Values.env_vars }}
           env:

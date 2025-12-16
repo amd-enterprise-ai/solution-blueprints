@@ -1,0 +1,34 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-talk-to-your-documents
+description: A RAG application blueprint to talk to your documents
+type: application
+version: 0.4.7
+
+maintainers:
+  - name: AMD
+    url: https://www.amd.com/
+
+dependencies:
+- name: aimchart-llm
+  version: "0.2.1"
+  repository: "oci://registry-1.docker.io/amdenterpriseai"
+  alias: llm
+- name: aimchart-embedding
+  version: "0.1.2"
+  repository: "oci://registry-1.docker.io/amdenterpriseai"
+  alias: embedding
+- name: aimchart-chromadb
+  version: "0.1.3"
+  repository: "oci://registry-1.docker.io/amdenterpriseai"
+  alias: chromadb
+
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.description.full: "This blueprint deploys a Retrieval-Augmented Generation (RAG) application which allows you to talk to your documents. It uses a vector database (ChromaDB) to store document embeddings and a large language model (LLM) to answer questions based on the retrieved context."
+  com.amd.aim.release.notes: "Update AIM version"
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "Talk to your documents"

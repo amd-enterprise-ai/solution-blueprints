@@ -40,7 +40,13 @@ limits:
 # Container environment variables helper
 {{- define "container.env" -}}
 - name: OPENAI_API_BASE_URL
-  value: {{ include "aim-llm.url" .Values.llm | quote }}
+  {{/* Build a context that has the right .Values, .Release, and .Chart metadata. */}}
+  {{- $sub := dict
+        "Values" (merge (dict) .Values.llm)
+        "Release" .Release
+        "Chart" (dict "Name" "llm")
+  -}}
+  value: {{ include "aimchart-llm.url" $sub }}
 - name: API_PORT
   value: {{ .Values.deployment.ports.api | quote }}
 - name: TRANSLATE_BASE_URL
@@ -63,8 +69,6 @@ limits:
 {{- define "container.volumeMounts" -}}
 - mountPath: /workload
   name: ephemeral-storage
-- mountPath: /workload/mount
-  name: workload-mount
 - mountPath: /dev/shm
   name: dshm
 {{- end -}}
@@ -95,7 +99,4 @@ limits:
     medium: Memory
     sizeLimit: {{ .Values.storage.dshm.sizeLimit }}
   name: dshm
-- configMap:
-    name: {{ include "release.fullname" . }}
-  name: workload-mount
 {{- end -}}

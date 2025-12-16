@@ -22,25 +22,31 @@ spec:
       labels:
         app: {{ include "release.fullname" . }}
     spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ .name | quote }}
+        {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           command: ["sh", "-c"]
           args:
           - |
-            pip install -r /workload/mount/requirements.txt
             {{- if .Values.enableUI }}
-            python /workload/mount/api.py & python -m streamlit run /workload/mount/ui.py \
+            python /app/src/api.py &
+            python -m streamlit run /app/src/ui.py \
               --server.port {{ .Values.deployment.ports.ui }} \
               --client.toolbarMode viewer \
               --browser.gatherUsageStats false \
               --server.headless true \
               --server.fileWatcherType none
             {{- else }}
-            python /workload/mount/api.py
+            python /app/src/api.py
             {{- end }}
           env:
             {{- include "container.env" . | nindent 12 }}
-          image: {{ .Values.image | quote}}
+          image: "{{ .Values.image.repository }}:{{ tpl .Values.image.tag $ }}"
           imagePullPolicy: {{ default "Always" .Values.imagePullPolicy | quote }}
           {{- if .Values.livenessProbe }}
           livenessProbe:

@@ -1,0 +1,9 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimchart-llm
+description: AIM LLM Deployed on Kubernetes
+type: application
+version: 0.2.1

@@ -1,0 +1,17 @@
+# Copyright (c) Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aimsb-talk-to-your-documents.fullname" . }}
+  labels:
+    app: {{ include "aimsb-talk-to-your-documents.fullname" . }}
+data:
+{{- /* This logic correctly packages your source code into the ConfigMap keys */}}
+{{- $files := .Files }}
+{{- range $path, $_ := .Files.Glob "src/**" }}
+  {{ $path | replace "/" "_" }}: |
+{{ $files.Get $path | indent 4 }}
+{{- end }}

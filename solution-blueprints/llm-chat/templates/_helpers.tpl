@@ -40,7 +40,13 @@ limits:
 # Container environment variables helper
 {{- define "container.env" -}}
 - name: OPENAI_API_BASE_URLS
-  value: {{ include "aim-llm.url" .Values.llm }}
+  {{/* Build a context that has the right .Values, .Release, and .Chart metadata. Note that .Chart.Name should be the same as given to alias in the dependencies list. */}}
+  {{- $sub := dict
+        "Values" (merge (dict) .Values.llm)
+        "Release" .Release
+        "Chart" (dict "Name" "llm")
+  -}}
+  value: {{ include "aimchart-llm.url" $sub }}
 {{- range $key, $value := .Values.env_vars }}
 {{- if (typeIs "string" $value) }}
 - name: {{ $key }}

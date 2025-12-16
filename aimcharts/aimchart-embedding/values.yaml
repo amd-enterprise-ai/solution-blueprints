@@ -1,0 +1,60 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+image: "michaelf34/infinity:0.0.70-amd-gfx942"
+imagePullPolicy: "Always"
+
+existingService: null
+
+nameOverride: null
+fullnameOverride: null
+
+deployment:
+  ports:
+    http: 7997
+
+resources:
+  requests:
+    cpu: "2"
+    memory: "8Gi"
+  limits:
+    cpu: "4"
+    memory: "16Gi"
+
+gpus: 0
+
+env_vars: {}
+  # HF_HOME: "/workload/.cache/huggingface"
+  # INFINITY_ANONYMOUS_USAGE_STATS: "0"
+
+model: "intfloat/multilingual-e5-large-instruct"
+
+storage:
+  ephemeral:
+    quantity: "64Gi"
+  dshm:
+    sizeLimit: "16Gi"
+
+metadata:
+  labels: {}
+
+startupProbe:
+  httpGet:
+    path: /models
+    port: 7997
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  failureThreshold: 90
+
+readinessProbe:
+  httpGet:
+    path: /models
+    port: 7997
+  periodSeconds: 10
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 7997
+  periodSeconds: 10

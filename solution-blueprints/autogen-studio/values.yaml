@@ -12,9 +12,9 @@ llm:
   # Set to null or comment out to deploy own AIM service
   existingService: null
 
+  nameOverride: llama33-70b-instruct
   # Configuration for deploying own AIM service (used when existingService is not set)
-  nameOverride: aim-llama-70b
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.4-preview"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
   env_vars:
     AIM_ENGINE_ARGS: >-
       {"served_model_name": "aim/llama-3.3-70b-instruct", "enable-auto-tool-choice": null, "tool-call-parser": "llama3_json"}

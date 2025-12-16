@@ -77,33 +77,23 @@ persistent_storage:
       pvc_name: "pvc-{{ .Values.metadata.user_id }}"
       mount_path: "/workload/{{ .Values.metadata.user_id }}"
 
-
 chat:
   defaultCompletionOptions:
     temperature: 0.6
     topP: 0.95
     topK: 20
     minP: 0
-  llm:
-    nameOverride: qwen3-32b
-    image: "amdenterpriseai/aim-qwen-qwen3-32b:0.8.4"
 
-    storage:
-      ephemeral:
-        storageClassName: mlstorage
+chatLLM:
+  nameOverride: gpt-oss-20b
+  image: "amdenterpriseai/aim-openai-gpt-oss-20b:0.9.0"
+  storage:
+    ephemeral:
+      storageClassName: mlstorage
 
 
 autocomplete:  # Make a version of the LLM available for autocomplete. It can have extra values (e.g. thinking turned off.)
   enabled: true
-  llm:
-    nameOverride: qwen2-5-coder-7b
-    image: "amdenterpriseai/aim-base:0.8"
-    env_vars:
-      AIM_MODEL_ID: "Qwen/Qwen2.5-Coder-7B"
-
-    storage:
-      ephemeral:
-        storageClassName: mlstorage
   defaultCompletionOptions:
     temperature: 0.0
     maxTokens: 128
@@ -112,3 +102,12 @@ autocomplete:  # Make a version of the LLM available for autocomplete. It can ha
     modelTimeout: 2500
     maxPromptTokens: 8192
     onlyMyCode: true
+
+autocompleteLLM:
+  nameOverride: qwen2-5-coder-7b
+  image: "amdenterpriseai/aim-base:0.9"
+  env_vars:
+    AIM_MODEL_ID: "Qwen/Qwen2.5-Coder-7B"
+  storage:
+    ephemeral:
+      storageClassName: mlstorage

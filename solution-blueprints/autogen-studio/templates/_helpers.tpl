@@ -2,20 +2,35 @@
 #
 # SPDX-License-Identifier: MIT
 
+# Release name helper
+{{- define "release.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
 # Release fullname helper
 {{- define "release.fullname" -}}
 {{- $currentTime := now | date "20060102-1504" -}}
-{{- if ne .Release.Name "release-name" -}}
-autogenstudio-{{ .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-autogenstudio-{{ $currentTime | lower | trunc 63 | trimSuffix "-" -}}
+{{- if ne .Release.Name "release-name" -}}
+{{- include "release.name" . }}-{{ .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- include "release.name" . }}-{{ $currentTime | lower | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
 # Container environment variables helper
 {{- define "container.env" -}}
 - name: OPENAI_API_BASE_URL
-  value: {{ include "aim-llm.url" .Values.llm }}"
+  {{/* Build a context that has the right .Values, .Release, and .Chart metadata. */}}
+  {{- $sub := dict
+        "Values" (merge (dict) .Values.llm)
+        "Release" .Release
+        "Chart" (dict "Name" "llm")
+  -}}
+  value: {{ include "aimchart-llm.url" $sub }}
 {{- range $key, $value := .Values.envVars }}
 {{- if (typeIs "string" $value) }}
 - name: {{ $key }}
@@ -30,16 +45,6 @@ autogenstudio-{{ $currentTime | lower | trunc 63 | trimSuffix "-" -}}
 {{- end }}
 {{- end -}}
 
-# Default gallery JSON template - processes template variables
-{{/*
-Default gallery configuration with template processing
-Model names will be replaced at runtime by the entrypoint script
-*/}}
-{{- define "default.gallery.json" -}}
-{{- $content := .Files.Get "src/default-gallery.json" -}}
-{{- $content := $content | replace "{{- include \\\"aim-llm.url\\\" .Values.llm -}}" (include "aim-llm.url" .Values.llm) -}}
-{{ $content }}
-{{- end -}}
 
 # AutoGen Studio entrypoint script
 {{/*
@@ -73,6 +78,7 @@ timeout 3 autogenstudio ui --appdir "{{ .Values.envVars.AUTOGENSTUDIO_APPDIR }}"
 
 echo "[patch] extracting model name from AIM service..."
 MODEL_NAME=$(python << 'EOF'
+import os
 import sys
 import time
 import requests
@@ -84,7 +90,7 @@ for retry in range(120):
         time.sleep(wait_time)
     print(f"Trying to retrieve model name (attempt {retry+1})", file=sys.stderr)
     try:
-        r = requests.get(urllib.parse.urljoin({{ include "aim-llm.url" .Values.llm | quote }}, "v1/models"), timeout=0.5)
+        r = requests.get(urllib.parse.urljoin(os.environ["OPENAI_API_BASE_URL"], "v1/models"), timeout=0.5)
         if r.status_code == 200:
             try:
                 print(r.json()["data"][0]["id"], end="")

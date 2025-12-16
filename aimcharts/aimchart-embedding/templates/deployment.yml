@@ -1,0 +1,59 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ if not .Values.existingService -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aim-embedding.release.fullname" . }}
+  labels:
+    app: {{ include "aim-embedding.release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "aim-embedding.release.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "aim-embedding.release.fullname" . }}
+    spec:
+      containers:
+      - name: aim-embedding
+        image: "{{ .Values.image }}"
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        command:
+          - "infinity_emb"
+        args:
+          - "v1"
+        ports:
+        - name: http
+          containerPort: {{ .Values.deployment.ports.http }}
+        env:
+          {{- include "aim-embedding.container.env" . | nindent 10 }}
+        startupProbe:
+          {{- toYaml .Values.startupProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 10 }}
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 10 }}
+        resources:
+          requests:
+            {{- toYaml .Values.resources.requests | nindent 12 }}
+            {{- if .Values.gpus }}
+            amd.com/gpu: "{{ .Values.gpus }}"
+            {{- end }}
+          limits:
+            {{- toYaml .Values.resources.limits | nindent 12 }}
+            {{- if .Values.gpus }}
+            amd.com/gpu: "{{ .Values.gpus }}"
+            {{- end }}
+        volumeMounts:
+          {{- include "aim-embedding.container.volumeMounts" . | nindent 10 }}
+      volumes:
+        {{- include "aim-embedding.container.volumes" . | nindent 8 }}
+{{- end -}}

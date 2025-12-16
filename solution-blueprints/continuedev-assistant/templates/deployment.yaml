@@ -31,7 +31,7 @@ spec:
           args:
           - |
             {{- include "entrypoint" . | nindent 12 }}
-          command: ["sh", "-c"]
+          command: ["bash", "-e", "-u", "-o", "pipefail", "-c"]
           {{- if .Values.env_vars }}
           env:
             {{- include "container.env" . | nindent 12 }}

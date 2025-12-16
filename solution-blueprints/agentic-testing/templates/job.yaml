@@ -1,0 +1,65 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "release.fullname" . }}-test-job
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+spec:
+  backoffLimit: 0  # Don't retry failed jobs - test results should be immediate
+  template:
+    metadata:
+      labels:
+        app: {{ include "release.name" . }}
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: test-agent
+        image: "{{ .Values.testAgent.image.repository }}:{{ .Values.testAgent.image.tag }}"
+        imagePullPolicy: {{ .Values.testAgent.image.pullPolicy }}
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            set -e
+            echo "Installing dependencies..."
+            pip install --no-cache-dir -r /app/requirements.txt
+
+            echo "Installing Node.js and Microsoft Playwright MCP server..."
+            apt-get update && apt-get install -y curl
+            curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+            apt-get install -y nodejs
+            npm install -g @playwright/mcp@latest
+
+            echo "Installing Playwright browser binaries..."
+            npx playwright install chrome
+
+            echo "Running test agent..."
+            python /app/agent.py
+        env:
+        - name: LLM_ENDPOINT
+          {{/* Build a context that has the right .Values, .Release, and .Chart metadata. */}}
+          {{- $sub := dict
+                "Values" (merge (dict) .Values.llm)
+                "Release" .Release
+                "Chart" (dict "Name" "llm")
+          -}}
+          value: {{ include "aimchart-llm.url" $sub }}
+        {{- range $key, $value := .Values.testAgent.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.testAgent.resources | nindent 10 }}
+        volumeMounts:
+        - name: source-code
+          mountPath: /app
+      volumes:
+      - name: source-code
+        configMap:
+          name: {{ include "release.fullname" . }}-source-code
+          defaultMode: 0755

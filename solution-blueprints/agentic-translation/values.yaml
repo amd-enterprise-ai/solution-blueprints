@@ -8,8 +8,13 @@
 metadata:
   labels: {}
 
-image: "python:3.12"
+image:
+  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-agentic-translation-application"
+  tag: "{{ .Chart.Version }}"
 imagePullPolicy: Always
+imagePullSecrets: []
+# Example:
+# - name: my-registry-secret
 
 enableUI: True
 
@@ -57,9 +62,9 @@ kaiwo:
   enabled: false
 
 llm:
-  nameOverride: aim-llama-70b
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.4-preview"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
 
+  nameOverride: llama33-70b-instruct
   storage:
     ephemeral:
       storageClassName: mlstorage

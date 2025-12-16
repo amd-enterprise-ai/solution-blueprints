@@ -1,0 +1,111 @@
+# yaml-language-server: $schema=
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+metadata:
+  labels: {}
+
+image: "python:3.12"
+imagePullPolicy: Always
+
+# Environment variables for the talk-to-your-documents application.
+env_vars:
+  USE_OPENAI_COMPATIBLE_EMBEDDINGS: "true"
+  MAX_RETRIES: "3"
+  INITIAL_DELAY: "1.0"
+  BACKOFF_FACTOR: "2.0"
+  CHUNK_SIZE: "1000"
+  CHUNK_OVERLAP: "200"
+  TOP_K_DOCS: "5"
+
+deployment:
+  ports:
+    http: 7860
+
+resources:
+  requests:
+    cpu: "1"
+    memory: "4Gi"
+  limits:
+    cpu: "1"
+    memory: "4Gi"
+
+storage:
+  ephemeral:
+    quantity: 20Gi
+    storageClassName: mlstorage
+  dshm:
+    sizeLimit: 32Gi
+
+startupProbe:
+  httpGet: { path: /health, port: http }
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  failureThreshold: 60
+livenessProbe:
+  httpGet: { path: /health, port: http }
+  periodSeconds: 10
+readinessProbe:
+  httpGet: { path: /health, port: http }
+  periodSeconds: 10
+
+kaiwo:
+  enabled: false
+
+# -- Values passed to the `llm` Subchart (aimchart-llm) --
+
+llm:
+  service:
+    enabled: true
+    type: ClusterIP
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+  model: "llama-3-3-70b-instruct"
+  storage:
+    ephemeral:
+      storageClassName: mlstorage
+      quantity: 512Gi
+
+# -- Values passed to the `embedding` Subchart (aimchart-embedding) --
+
+embedding:
+  metadata:
+    labels: {}
+  image: "michaelf34/infinity:0.0.70-amd-gfx942"
+  model: "intfloat/multilingual-e5-large-instruct"
+  gpus: 1
+  resources:
+    requests: { cpu: "2", memory: "32Gi" }
+    limits: { cpu: "4", memory: "192Gi" }
+  storage:
+    ephemeral:
+      quantity: 20Gi
+    dshm:
+      sizeLimit: 16Gi
+  deployment:
+    ports:
+      http: 7997
+    command:
+      - infinity_emb
+    args:
+      - v1
+      - server
+
+# -- Values passed to the `chromadb` Subchart (aimchart-chromadb) --
+
+chromadb:
+  metadata:
+    labels: {}
+  image:
+    repository: "chromadb/chroma"
+    tag: "1.3.5"
+  resources:
+    requests: { cpu: "1", memory: "4Gi" }
+    limits: { cpu: "2", memory: "8Gi" }
+  deployment:
+    ports:
+      http: 8000
+  persistence:
+    enabled: true
+    size: 25Gi
+    storageClassName: mlstorage

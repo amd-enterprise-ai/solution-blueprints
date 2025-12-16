@@ -1,0 +1,9 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimchart-chromadb
+description: A reusable library chart for deploying a ChromaDB server.
+type: application
+version: 0.1.3

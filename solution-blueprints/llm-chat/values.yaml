@@ -70,7 +70,7 @@ kaiwo:
 
 
 llm:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.4"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.5"
   gpus: 1
   storage:
     ephemeral:

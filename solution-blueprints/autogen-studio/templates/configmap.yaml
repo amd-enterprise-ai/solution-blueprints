@@ -9,15 +9,10 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ .Chart.Name }}
 data:
-{{- $files := .Files }}
-{{- $root := . }}
-{{- range $path, $_ := .Files.Glob "src/*" }}
-  {{ $key := $path | trimPrefix "src/" }}
-  {{- if eq $key "default-gallery.json" }}
-  {{- $key }}: |-
-{{ include "default.gallery.json" $root | indent 4 }}
-  {{- else }}
-  {{- $key }}: |
-{{ $files.Get $path | indent 4 }}
-  {{- end }}
-{{- end }}
+  {{/*
+    Only default-gallery.json is included in the ConfigMap.
+    If additional files are added to src/, they will not be automatically included.
+    This behavior is intentional; update this section if more files need to be added.
+  */}}
+  default-gallery.json: |-
+{{ .Files.Get "src/default-gallery.json" | indent 4 }}

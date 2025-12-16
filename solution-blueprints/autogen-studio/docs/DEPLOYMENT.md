@@ -35,8 +35,8 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-autogenstud
 ```
 ## Connecting
 
-Then, to connect to the UI, port-forward 8080 to be able to access the UI. The UI will then be available at <http://localhost:8080>.
+Then, to connect to the UI, port-forward any chosen port, e.g., 8082, to be able to access the UI. The UI will then be available at <http://localhost:8082>.
 
 ```bash
-kubectl port-forward services/aimsb-autogenstudio-$name 8080:80 -n $namespace
+kubectl port-forward services/aimsb-autogenstudio-$name 8082:8081 -n $namespace
 ```

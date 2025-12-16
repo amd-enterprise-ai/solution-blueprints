@@ -1,0 +1,92 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{/*
+This is the main definition for the Deployment resource.
+It is namespaced to avoid conflicts.
+*/}}
+{{- define "aimsb-talk-to-your-documents.deployment" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aimsb-talk-to-your-documents.fullname" . }}
+  labels:
+    {{- include "aimsb-talk-to-your-documents.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "aimsb-talk-to-your-documents.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "aimsb-talk-to-your-documents.selectorLabels" . | nindent 8 }}
+    spec:
+      initContainers:
+      - name: wait-for-dependencies
+        image: alpine:latest
+        command: ['sh', '-c']
+        args:
+        - |
+          apk add --no-cache curl netcat-openbsd
+          echo "Waiting for backend services to be ready..."
+
+          {{ $sub := dict "Values" (merge (dict) .Values.chromadb) "Release" .Release "Chart" (dict "Name" "chromadb") }}
+          CHROMADB_URL="{{ include "aim-chromadb.url" $sub }}/api/v2/heartbeat"
+          echo "Waiting for ChromaDB ($CHROMADB_URL)..."
+          until curl -s -f -o /dev/null $CHROMADB_URL; do sleep 5; done
+          echo "✓ ChromaDB is up!"
+
+          {{ $sub := dict "Values" (merge (dict) .Values.embedding) "Release" .Release "Chart" (dict "Name" "embedding") }}
+          EMBEDDING_URL="{{ include "aim-embedding.url" $sub }}/models"
+          echo "Waiting for Embedding service ($EMBEDDING_URL)..."
+          until curl -s -f -o /dev/null $EMBEDDING_URL; do sleep 5; done
+          echo "✓ Embedding service is up!"
+
+          {{ $sub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") }}
+          VLLM_URL="{{ include "aimchart-llm.url" $sub }}/models"
+          echo "Waiting for VLLM service ($VLLM_URL)..."
+          until curl -s -f -o /dev/null $VLLM_URL; do sleep 5; done
+          echo "✓ VLLM service is up!"
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ .Values.image | quote }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              {{- include "aimsb-talk-to-your-documents.entrypoint" . | nindent 14 }}
+          ports:
+            {{- range $key, $value := .Values.deployment.ports }}
+            - name: {{ $key }}
+              containerPort: {{ $value }}
+            {{- end }}
+          env:
+            {{- include "aimsb-talk-to-your-documents.container.env" . | nindent 12 }}
+          {{- if .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 -}}
+          {{- end }}
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 -}}
+          {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 -}}
+          {{- end }}
+          resources:
+            {{- include "aimsb-talk-to-your-documents.container.resources" . | nindent 12 }}
+          volumeMounts:
+            {{- include "aimsb-talk-to-your-documents.container.volumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "aimsb-talk-to-your-documents.container.volumes" . | nindent 8 }}
+{{- end }}
+
+{{/*
+This is the main entrypoint for this template.
+It calls the main deployment definition.
+*/}}
+{{- include "aimsb-talk-to-your-documents.deployment" . -}}

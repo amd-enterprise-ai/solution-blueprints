@@ -35,9 +35,24 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-tra
   | kubectl apply -f - -n $namespace
 ```
 
+## Using a custom image and imagePullSecrets
+
+To use a custom version of the image from another repo, you can set the `image` and `imagePullSecrets`, if necessary, from the command line as follows:
+
+```bash
+imagerepository="my-repo/custom-agentic-translation-application"
+imagetag="0.0.1"
+secretname="my-registry-secret"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-translation \
+  --set image.repository=$imagerepository \
+  --set image.tag=$imagetag \
+  --set imagePullSecrets[0].name=$secretname \
+  | kubectl apply -f - -n $namespace
+```
+
 ## Connecting
 
-Then, to connect to the UI, port-forward 8501 to be able to access the UI. The UI will then be available at<http://localhost:8501>
+Then, to connect to the UI, port-forward 8501 to be able to access the UI. The UI will then be available at <http://localhost:8501>
 
 ```bash
 kubectl port-forward services/aimsb-agentic-translation-$name 8501:8501 -n $namespace
