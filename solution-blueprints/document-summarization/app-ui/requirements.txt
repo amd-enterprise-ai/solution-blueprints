@@ -1,0 +1,15 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+docx2txt>=0.8
+
+gradio>=5.11.0
+langchain_community>=0.3.27
+moviepy==2.2.1
+nltk==3.9.2
+numpy==1.26.4
+opencv-python==4.10.0.82
+Pillow==10.3.0
+pypdf>=5.4.0
+unstructured==0.17.2

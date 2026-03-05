@@ -1,0 +1,82 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "router.complexName" . }}-router-classifier
+  namespace: {{ .Release.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "router.complexName" . }}-router-classifier
+  template:
+    metadata:
+      labels:
+        app: {{ include "router.complexName" . }}-router-classifier
+    spec:
+      initContainers:
+        - name: unpack-workload
+          image: busybox:latest
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -eux
+              mkdir -p /workload/mount
+
+              for key in $(ls /workload/configmap); do
+                content=$(cat "/workload/configmap/$key")
+
+                if echo "$key" | grep -q "__init__.py$"; then
+                  filename="__init__.py"
+                  dirpart=$(echo "$key" | sed 's/__init__.py$//')
+                  dirpath=$(echo "$dirpart" | tr '_' '/')
+                else
+                  filename=$(echo "$key" | awk -F'_' '{print $NF}')
+                  dirpath=$(echo "$key" | sed 's/_'"$filename"'$//; s/_/\//g')
+                fi
+
+                mkdir -p "/workload/mount/$dirpath"
+                echo "$content" > "/workload/mount/$dirpath/$filename"
+              done
+          volumeMounts:
+            - name: workload
+              mountPath: /workload/configmap
+            - name: workload-mount
+              mountPath: /workload/mount
+      containers:
+        - name: router-classifier
+          image: {{ .Values.images.pythonBase }}
+          command: [ "sh", "-c" ]
+          env:
+            - name: CLASSIFIER_BASE_URL
+              value: {{ include "llm.backendBaseUrl" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) | quote }}
+          {{- $apiKey := include "llm.backendApiKey" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) }}
+          {{- if $apiKey }}
+            - name: CLASSIFIER_API_KEY
+              value: {{ $apiKey | quote }}
+          {{- end }}
+          {{- $modelName := include "llm.backendModelName" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) }}
+          {{- if $modelName }}
+            - name: CLASSIFIER_MODEL_NAME
+              value: {{ $modelName | quote }}
+          {{- end }}
+          args:
+            - |
+              set -e
+              pip install -v --no-cache-dir -r /workload/mount/classifier/requirements.txt
+              export PYTHONPATH=/workload/mount/classifier
+              python3 -m classifierApp.main
+          ports:
+            - containerPort: {{ .Values.ports.routerClassifier }}
+          volumeMounts:
+            - name: workload-mount
+              mountPath: /workload/mount
+      volumes:
+        - name: workload
+          configMap:
+            name: {{ include "router.complexName" . }}-workload
+        - name: workload-mount
+          emptyDir: {}

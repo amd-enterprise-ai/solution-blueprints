@@ -1,0 +1,8 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+controller_base_url: ${CONTROLLER_URL}
+approach_route:
+  - manual
+  - auto

@@ -1,0 +1,81 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "codedocs.fullname" . }}-backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "codedocs.fullname" . }}-backend
+  template:
+    metadata:
+      labels:
+        app: {{ include "codedocs.fullname" . }}-backend
+    spec:
+      initContainers:
+        - name: unpack-workload
+          image: busybox:latest
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -eux
+              mkdir -p /workload/mount
+              for key in $(ls /workload/configmap); do
+                content=$(cat "/workload/configmap/$key")
+                if echo "$key" | grep -q "__init__.py$"; then
+                  filename="__init__.py"
+                  dirpart=$(echo "$key" | sed 's/__init__.py$//')
+                  dirpath=$(echo "$dirpart" | tr '_' '/')
+                else
+                  filename=$(echo "$key" | awk -F'_' '{print $NF}')
+                  dirpath=$(echo "$key" | sed 's/_'"$filename"'$//; s/_/\//g')
+                fi
+                mkdir -p "/workload/mount/$dirpath"
+                echo "$content" > "/workload/mount/$dirpath/$filename"
+              done
+          volumeMounts:
+            - name: workload
+              mountPath: /workload/configmap
+            - name: workload-mount
+              mountPath: /workload/mount
+      containers:
+        - name: codedocs-backend
+          image: {{ .Values.backend.image }}
+          command: [ "sh", "-c" ]
+          env:
+            - name: AMD_AIM_BASE_URL
+              value: {{ printf "%s/v1" (include "codedocs.llm.url" .) | quote }}
+          args:
+            - |
+              set -e
+
+              apt-get update
+              apt-get install -y --no-install-recommends git ca-certificates
+              rm -rf /var/lib/apt/lists/*
+
+              pip install -v --no-cache-dir -r /workload/mount/CodeDocsBackend/requirements.txt
+              export DOCUMENTATION_AGENTS_CONFIG={{ .Values.backend.env.DOCUMENTATION_AGENTS_CONFIG }}
+              export DOCUMENTATION_TASKS_CONFIG={{ .Values.backend.env.DOCUMENTATION_TASKS_CONFIG }}
+              export PLANNER_AGENTS_CONFIG={{ .Values.backend.env.PLANNER_AGENTS_CONFIG }}
+              export PLANNER_TASKS_CONFIG={{ .Values.backend.env.PLANNER_TASKS_CONFIG }}
+              export AMD_AIM_BASE_URL="$AMD_AIM_BASE_URL"
+              export AMD_AIM_API_KEY={{ .Values.backend.env.OPENAI_API_KEY }}
+              export OPENAI_API_KEY={{ .Values.backend.env.OPENAI_API_KEY }}
+              export PORT={{ .Values.backend.port }}
+              export PYTHONPATH=/workload/mount/CodeDocsBackend
+              python3 -m main
+          ports:
+            - containerPort: {{ .Values.backend.port }}
+          volumeMounts:
+            - name: workload-mount
+              mountPath: /workload/mount
+      volumes:
+        - name: workload
+          configMap:
+            name: {{ include "codedocs.fullname" . }}-workload
+        - name: workload-mount
+          emptyDir: {}

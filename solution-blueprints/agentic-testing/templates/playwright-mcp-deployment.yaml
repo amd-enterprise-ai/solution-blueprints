@@ -1,0 +1,48 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if .Values.playwrightMcp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "release.fullname" . }}-playwright-mcp
+  labels:
+    app.kubernetes.io/name: {{ include "release.name" . }}
+    app.kubernetes.io/component: playwright-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "release.name" . }}
+      app.kubernetes.io/component: playwright-mcp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "release.name" . }}
+        app.kubernetes.io/instance: {{ include "release.fullname" . }}
+        app.kubernetes.io/component: playwright-mcp
+    spec:
+      containers:
+        - name: playwright-mcp
+          image: "{{ .Values.playwrightMcp.image.repository }}:{{ .Values.playwrightMcp.image.tag }}"
+          imagePullPolicy: {{ .Values.playwrightMcp.image.pullPolicy }}
+          command: ["node"]
+          args:
+            - "cli.js"
+            - "--headless"
+            - "--browser"
+            - "chromium"
+            - "--no-sandbox"
+            - "--port"
+            - {{ .Values.playwrightMcp.port | quote }}
+            - "--host"
+            - "0.0.0.0"
+            - "--allowed-hosts"
+            - "*"
+          ports:
+            - name: http
+              containerPort: {{ .Values.playwrightMcp.port }}
+          resources:
+            {{- toYaml .Values.playwrightMcp.resources | nindent 12 }}
+{{- end }}

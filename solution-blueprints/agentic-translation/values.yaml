@@ -16,7 +16,7 @@ imagePullSecrets: []
 # Example:
 # - name: my-registry-secret
 
-enableUI: True
+enableUI: true
 
 storage:
   ephemeral:
@@ -29,7 +29,7 @@ storage:
 
 deployment:
   ports:
-    api: 5000
+    api: 5000  # API backend and health checks (health and readiness)
     ui: 8501
 
 # startupProbe - checks if the container has successfully started. It disables liveness and readiness probes until it succeeds, useful for slow-starting applications.
@@ -60,6 +60,12 @@ readinessProbe:
 # kaiwo settings (if enabled, use kaiwo CRDs to have kaiwo operator manage the workload)
 kaiwo:
   enabled: false
+
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
 
 llm:
   image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"

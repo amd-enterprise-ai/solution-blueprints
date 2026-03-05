@@ -1,0 +1,6 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Runtime deps are installed via components/requirements.txt
+# (kept non-empty so pip -r succeeds)

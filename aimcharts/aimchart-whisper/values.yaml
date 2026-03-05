@@ -1,0 +1,71 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Proxy and Shared Storage settings
+global:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""
+  sharedSAName: null
+  modelUseHostPath: null
+  modelUsePVC: null
+
+# Model selection
+ASR_MODEL_PATH: "openai/whisper-small"
+# Compute target
+device: "cpu"
+
+"replicaCount": 1
+
+"image":
+  "repository": "registry-1.docker.io/amdenterpriseai/image-aimchart-whisper"
+  "tag": ""
+
+"imagePullPolicy": "Always"
+"imagePullSecrets": []
+
+service:
+  type: ClusterIP
+  port: 7066
+
+# Pod Level
+podSecurityContext: {}
+
+# Container Level
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 0
+  seccompProfile: { type: "RuntimeDefault" }
+  capabilities: { drop: ["ALL"] }
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+
+readinessProbe:
+  periodSeconds: 10
+  initialDelaySeconds: 5
+  httpGet: {path: "/health", port: 7066}
+
+startupProbe:
+  failureThreshold: 120
+  periodSeconds: 5
+  initialDelaySeconds: 5
+  httpGet: {path: "/health", port: 7066}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# --- Overrides ---
+nameOverride: ""
+fullnameOverride: ""
+podAnnotations: {}
+
+# --- Testing ---
+testPod: { enabled: false }

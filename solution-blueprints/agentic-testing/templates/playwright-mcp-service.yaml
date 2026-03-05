@@ -1,0 +1,22 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if .Values.playwrightMcp.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "release.fullname" . }}-playwright-mcp
+  labels:
+    app.kubernetes.io/name: {{ include "release.name" . }}
+    app.kubernetes.io/component: playwright-mcp
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ include "release.fullname" . }}
+    app.kubernetes.io/component: playwright-mcp
+  ports:
+    - name: http
+      port: {{ .Values.playwrightMcp.port }}
+      targetPort: http
+{{- end }}

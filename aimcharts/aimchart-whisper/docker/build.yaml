@@ -1,0 +1,10 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+services:
+  whisper:
+    build:
+      context: ../
+      dockerfile: ./docker/app.Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimchart-whisper:${TAG:?Must set TAG}"

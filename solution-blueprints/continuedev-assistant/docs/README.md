@@ -47,7 +47,7 @@ AIM Solution Blueprints are Kubernetes applications packaged with [Helm](https:/
 - Ability to swap out the development image - have your own packages ready.
 
 ### Software Used in This Blueprint
-- Main coding assistant AIM (gpt-oss-20B)
+- Main coding assistant AIM (Qwen3-32B)
 - An optional separate autocompletion AIM using the AIM Base container (Qwen2.5-Coder-7B)
 - code-server (in the browser)
 - continue.dev extension

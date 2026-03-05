@@ -1,0 +1,109 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Default values for report-generation-engine.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+metadata:
+  labels: {}
+
+image: "python:3.12"
+imagePullPolicy: Always
+
+enableUI: True
+
+# Resource configuration
+gpus: 0
+memory_per_gpu: 4
+cpu_per_gpu: 1
+
+storage:
+  ephemeral:
+    quantity: 20Gi
+    storageClassName: mlstorage
+    accessModes:
+      - ReadWriteOnce
+  dshm:
+    sizeLimit: 32Gi
+
+deployment:
+  ports:
+    api: 8000
+    ui: 8501
+
+# Additional environment variables
+env_vars: {}
+
+# Application configuration (passed as environment variables)
+config:
+  tavily:
+    apiKey: ""  # Set via --set config.tavily.apiKey=tvly-xxx
+  llm:
+    # Model is auto-discovered from vLLM /v1/models endpoint
+    temperature: "0.6"
+    maxRetries: "3"
+  langsmith:
+    tracingEnabled: "false"
+    project: "report-generation-engine"
+  search:
+    numberOfQueries: "2"
+    tavilyTopic: "general"
+    tavilyMaxResults: "5"
+  generation:
+    maxSectionLength: "1000"
+    finalSectionLength: "300"
+    planningContextChars: "5000"
+    sectionContextChars: "8000"
+
+# startupProbe - checks if the container has successfully started
+# livenessProbe - checks if the container is still alive
+# readinessProbe - checks if the container is ready to serve traffic
+startupProbe:
+  httpGet:
+    path: /health
+    port: api
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 180  # 180 × 10s = 30 minutes (matches LLM retry timeout)
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: api
+  periodSeconds: 30       # Check less frequently - LLM calls can take 20-30s
+  timeoutSeconds: 10
+  failureThreshold: 3     # 90s tolerance total
+
+readinessProbe:
+  httpGet:
+    path: /readiness
+    port: api
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+# kaiwo settings (if enabled, use kaiwo CRDs to have kaiwo operator manage the workload)
+kaiwo:
+  enabled: false
+
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
+
+# LLM dependency configuration
+# Set llm.existingService to use an existing LLM instead of deploying one
+# Example: --set llm.existingService=my-llm-service
+llm:
+  existingService: ""  # If set, skips LLM deployment and uses this service
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+  nameOverride: llama33-70b-instruct
+  cpu_per_gpu: 1  # Reduced from 4 to 1 CPU
+  storage:
+    ephemeral:
+      storageClassName: mlstorage  # Set to null for emptyDir (no PVC)
+      quantity: 512Gi

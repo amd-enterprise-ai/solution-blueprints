@@ -1,0 +1,88 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if .Values.ui.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "release.fullname" . }}-ui
+  labels:
+    app.kubernetes.io/name: {{ include "release.name" . }}
+    app.kubernetes.io/component: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "release.name" . }}
+      app.kubernetes.io/component: ui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "release.name" . }}
+        app.kubernetes.io/component: ui
+    spec:
+      containers:
+        - name: ui
+          image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"
+          imagePullPolicy: {{ .Values.ui.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              pip install --no-cache-dir streamlit mcp openai requests && \
+              cd /app && \
+              streamlit run testing_ui.py --server.port={{ .Values.ui.port }} --server.address=0.0.0.0
+          ports:
+            - containerPort: {{ .Values.ui.port }}
+              name: http
+          env:
+            {{- $sub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") }}
+            - name: LLM_BASE_URL
+              value: {{ include "aimchart-llm.url" $sub | quote }}
+            - name: MCP_URL
+              value: {{ printf "http://%s-playwright-mcp:%v/sse" (include "release.fullname" .) .Values.playwrightMcp.port | quote }}
+            - name: MAX_ITERATIONS
+              value: {{ .Values.ui.maxIterations | default 20 | quote }}
+            - name: MAX_RESULT_LENGTH
+              value: {{ .Values.ui.maxResultLength | default 8000 | quote }}
+            - name: SSE_CONNECT_TIMEOUT
+              value: {{ .Values.ui.sseConnectTimeout | default 10 | quote }}
+            - name: SSE_READ_TIMEOUT
+              value: {{ .Values.ui.sseReadTimeout | default 120 | quote }}
+            {{- range $name, $value := .Values.ui.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.ui.resources | nindent 12 }}
+          volumeMounts:
+            - name: ui-code
+              mountPath: /app
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 5
+      volumes:
+        - name: ui-code
+          configMap:
+            name: {{ include "release.fullname" . }}
+            items:
+              - key: testing_ui.py
+                path: testing_ui.py
+              - key: testing_agent.py
+                path: testing_agent.py
+              - key: gherkin.py
+                path: gherkin.py
+              - key: utilities.py
+                path: utilities.py
+              - key: testing_prompts.py
+                path: testing_prompts.py
+{{- end }}

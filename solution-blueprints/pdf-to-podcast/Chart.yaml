@@ -1,0 +1,23 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-pdf-to-podcast
+description: PDF to Podcast blueprint
+type: application
+version: 0.1.0
+maintainers:
+- name: AMD
+  url: https://www.amd.com/
+dependencies:
+- name: aimchart-llm
+  version: 0.2.2
+  repository: oci://registry-1.docker.io/amdenterpriseai
+  alias: llm
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.release.notes: "PDF to Podcast initial release"
+  com.amd.aim.description.full: "This blueprint provides an end-to-end solution for converting PDF documents into podcast-style audio content. It leverages an agentic orchestration architecture with microservices for PDF processing, LLM-powered content generation, and text-to-speech synthesis."
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "PDF to Podcast"

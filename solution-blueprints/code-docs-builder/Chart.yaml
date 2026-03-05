@@ -1,0 +1,24 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-codedocs
+description: Code documentation for software development blueprint
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: AMD
+    url: https://www.amd.com/
+dependencies:
+  - name: aimchart-llm
+    version: 0.2.2
+    repository: oci://registry-1.docker.io/amdenterpriseai
+    alias: llm
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.release.notes: "Code Docs Builder v0.1.0"
+  com.amd.aim.title: "Code Docs Builder"
+  com.amd.aim.description.full: "This agentic code documentation assistant for software development analyzes a Git repository and produces structured documentation that explains the project structure, key components, architectural relationships, and intended system behavior."
+  com.amd.aim.hfToken.required: "not-applicable"

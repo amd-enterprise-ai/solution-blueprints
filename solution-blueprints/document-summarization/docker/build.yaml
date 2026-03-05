@@ -1,0 +1,17 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+
+
+services:
+  docsum:
+    build:
+      context: ../
+      dockerfile: ./docker/app.Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimsb-docsum-application:${TAG:?Must set TAG}"
+  docsum-ui:
+    build:
+      context: ../
+      dockerfile: ./docker/ui.Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimsb-docsum-ui:${TAG:?Must set TAG}"

@@ -1,0 +1,74 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "codedocs.fullname" . }}-frontend
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "codedocs.fullname" . }}-frontend
+  template:
+    metadata:
+      labels:
+        app: {{ include "codedocs.fullname" . }}-frontend
+    spec:
+      initContainers:
+        - name: unpack-workload
+          image: busybox:latest
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -eux
+              mkdir -p /workload/mount
+              for key in $(ls /workload/configmap); do
+                content=$(cat "/workload/configmap/$key")
+                if echo "$key" | grep -q "__init__.py$"; then
+                  filename="__init__.py"
+                  dirpart=$(echo "$key" | sed 's/__init__.py$//')
+                  dirpath=$(echo "$dirpart" | tr '_' '/')
+                else
+                  filename=$(echo "$key" | awk -F'_' '{print $NF}')
+                  dirpath=$(echo "$key" | sed 's/_'"$filename"'$//; s/_/\//g')
+                fi
+                mkdir -p "/workload/mount/$dirpath"
+                echo "$content" > "/workload/mount/$dirpath/$filename"
+              done
+          volumeMounts:
+            - name: workload
+              mountPath: /workload/configmap
+            - name: workload-mount
+              mountPath: /workload/mount
+      containers:
+        - name: codedocs-frontend
+          image: {{ .Values.frontend.image }}
+          command: [ "sh", "-c" ]
+          env:
+            - name: BACKEND_BASE_URL
+              value: {{ include "codedocs.backendUrl" . | trim }}
+          args:
+            - |
+              set -e
+              pip install -v --no-cache-dir -r /workload/mount/CodeDocsFrontend/requirements.txt
+              export PYTHONUNBUFFERED=0
+              export GRADIO_ALLOW_FLAGGING=never
+              export GRADIO_ANALYTICS_ENABLED=0
+              export GRADIO_NUM_PORTS=1
+              export BACKEND_BASE_URL="$BACKEND_BASE_URL"
+              export PORT={{ .Values.frontend.port }}
+              export PYTHONPATH=/workload/mount/CodeDocsFrontend
+              python3 -m main
+          ports:
+            - containerPort: {{ .Values.frontend.port }}
+          volumeMounts:
+            - name: workload-mount
+              mountPath: /workload/mount
+      volumes:
+        - name: workload
+          configMap:
+            name: {{ include "codedocs.fullname" . }}-workload
+        - name: workload-mount
+          emptyDir: {}

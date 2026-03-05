@@ -1,0 +1,32 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "router.complexName" . }}-workload
+data:
+{{ $files := $.Files.Glob "classifier/**" }}
+{{ range $path, $file := $files }}
+  {{ $relPath := $path | trimPrefix "classifier/" }}
+  {{ $key := printf "classifier_%s" (splitList "/" $relPath | join "_") }}
+  {{ $key }}: |
+{{ printf "%s" $file | indent 4 }}
+{{ end }}
+
+{{ $files := $.Files.Glob "controller/**" }}
+{{ range $path, $file := $files }}
+  {{ $relPath := $path | trimPrefix "controller/" }}
+  {{ $key := printf "controller_%s" (splitList "/" $relPath | join "_") }}
+  {{ $key }}: |
+{{ printf "%s" $file | indent 4 }}
+{{ end }}
+
+{{ $files := $.Files.Glob "ui/**" }}
+{{ range $path, $file := $files }}
+  {{ $relPath := $path | trimPrefix "ui/" }}
+  {{ $key := printf "ui_%s" (splitList "/" $relPath | join "_") }}
+  {{ $key }}: |
+{{ printf "%s" $file | indent 4 }}
+{{ end }}

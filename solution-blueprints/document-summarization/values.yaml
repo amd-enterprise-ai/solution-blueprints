@@ -1,0 +1,77 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
+
+# Proxy settings and shared resources
+global:
+  http_proxy: null
+  https_proxy: null
+  no_proxy: null
+
+# LLM Service
+llm:
+  enabled: true
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+
+# Kaiwo Operator integration
+kaiwo: { enabled: false }
+
+# Tokenization Limits
+maxInputTokens: "8192"
+maxTotalTokens: "16384"
+
+# Image settings
+image:
+  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-docsum-application"
+  tag: "{{ .Chart.Version }}"
+
+imagePullPolicy: "Always"
+imagePullSecrets: []
+
+# Network
+port: 8888
+service:
+  type: ClusterIP
+  port: 8888
+
+# --- UI Service ---
+docsum-ui:
+  enabled: true
+  containerPort: 5173
+  service: { type: "NodePort" }
+  image:
+    repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-docsum-ui"
+    tag: "{{ .Chart.Version }}"
+  resources:
+    requests: { cpu: "150m", memory: "256Mi" }
+
+# --- Deployment Settings ---
+replicaCount: 1
+nameOverride: null
+fullnameOverride: null
+metadata: { labels: {} }
+
+# Pod Security
+podAnnotations: {}
+podSecurityContext: {}
+
+# Container Security
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  seccompProfile: { type: "RuntimeDefault" }
+  capabilities: { drop: [ "ALL" ] }
+
+# --- Scheduling ---
+nodeSelector: {}
+tolerations: []
+affinity: {}
+resources: {}

@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-agentic-translation
 description: Agentic translation blueprint
 type: application
-version: 0.7.3
+version: 0.7.4
 maintainers:
 - name: AMD
   url: https://www.amd.com/
@@ -17,7 +17,7 @@ dependencies:
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
-  com.amd.aim.release.notes: "Update AIM version"
-  com.amd.aim.description.full: "This translation blueprint illustrates how language translation can be implemented using AIMs. It is using agentic translation, employing multiple LLM agents agents working collaboratively — where models critique, evaluate, and refine each other's outputs — to improve the overall quality of the translation."
+  com.amd.aim.release.notes: "Add HTTPRoute"
+  com.amd.aim.description.full: "This translation blueprint illustrates how language translation can be implemented using AIMs. It is using agentic translation, employing multiple LLM agents working collaboratively — where models critique, evaluate, and refine each other's outputs — to improve the overall quality of the translation."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "Agentic Machine Translation"

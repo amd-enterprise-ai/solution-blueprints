@@ -1,0 +1,16 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "router.complexName" . }}-router-controller
+  namespace: {{ .Release.namespace }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.ports.routerController }}
+      targetPort: {{ .Values.ports.routerController }}
+  selector:
+    app: {{ include "router.complexName" . }}-router-controller

@@ -3,6 +3,12 @@
 #
 # SPDX-License-Identifier: MIT
 
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
+
 metadata:
   labels: {}
 
@@ -86,10 +92,10 @@ embedding:
     ports:
       http: 7997
     command:
-      - infinity_emb
+    - infinity_emb
     args:
-      - v1
-      - server
+    - v1
+    - server
 
 # -- Values passed to the `chromadb` Subchart (aimchart-chromadb) --
 

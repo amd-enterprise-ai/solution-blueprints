@@ -1,0 +1,70 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
+
+replicaCount: 1
+enableUI: true
+
+images:
+  pythonBase: python:3.11-slim
+ports:
+  routerController: 8084
+  routerClassifier: 8010
+  ui: 8008
+
+deployDemonstrationLLMs: false
+
+primary:
+  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.5"
+
+secondary:
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+
+models:
+- name: primary
+  base_url: http://primary
+  api_key: "" # optional
+  model_name: "" # optional
+- name: secondary
+  base_url: http://secondary
+  api_key: "" # optional
+  model_name: "" # optional
+
+routing:
+  rules:
+    task_router:
+      classifier_path: /classify
+      classes:
+        Code Generation: secondary
+        Summarization: primary
+        Unknown: primary
+
+    complexity_router:
+      classifier_path: /classify
+      classes:
+        Hard: secondary
+        Middle: secondary
+        Easy: primary
+        Unknown: primary
+
+classifier:
+  llmBackend: secondary
+
+secrets:
+  # full | user_only
+  CLASSIFIER_CONTEXT_MODE: full
+  # quantity of last messages for context classifier
+  CLASSIFIER_CONTEXT_TURNS: 5
+
+storage:
+  ephemeral:
+    storageClassName: null
+    quantity: 1Gi
+  dshm:
+    sizeLimit: 1Gi

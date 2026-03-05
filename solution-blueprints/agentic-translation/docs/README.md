@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Agentic translation
 
-This translation blueprint illustrates how language translation can be implemented using AIMs. It is using agentic translation, employing multiple LLM agents agents working collaboratively — where models critique, evaluate, and refine each other's outputs — to improve the overall quality of the translation.
+This translation blueprint illustrates how language translation can be implemented using AIMs. It is using agentic translation, employing multiple LLM agents working collaboratively — where models critique, evaluate, and refine each other's outputs — to improve the overall quality of the translation.
 
 This blueprint follows a trilateral collaboration framework from [arXiv:2405.11804](https://arxiv.org/abs/2405.11804) with an *Action agent*, *Critique agent*, and *Judgment agent* iteratively contributing to the translation task until the Judgment agent approves the output. The prompting strategy is adapted from [andrewyng/translation-agent](https://github.com/andrewyng/translation-agent/tree/main).
 

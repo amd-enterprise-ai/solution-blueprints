@@ -144,7 +144,9 @@ curl -fsSL https://code-server.dev/install.sh | sh
 mkdir -p /root/.local/share/code-server/User/
 cp /workload/mount/default_settings.json /root/.local/share/code-server/User/settings.json
 code-server --install-extension ms-python.python
-code-server --install-extension Continue.continue
+# Install Continue.dev extension from VSIX (platform-specific linux-x64 version)
+curl -L -o /tmp/continue.vsix "https://open-vsx.org/api/Continue/continue/linux-x64/1.1.40/file/Continue.continue-1.1.40@linux-x64.vsix"
+code-server --install-extension /tmp/continue.vsix
 code-server --install-extension GitHub.vscode-pull-request-github
 code-server --install-extension ms-kubernetes-tools.vscode-kubernetes-tools
 pip install requests
@@ -207,6 +209,7 @@ echo "Autocomplete model name retrieved successfully, got: $AUTOCOMPLETE_MODEL_N
 
 # Create config.yaml for Continue (overwrite if exists)
 mkdir -p /root/.continue
+
 cat > /root/.continue/config.yaml << EOF
 name: Local Agent
 version: 1.0.1

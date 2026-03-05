@@ -1,0 +1,220 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# AMD Report Generation Engine - Prompt Templates
+# All prompt templates and default values for report generation
+
+# Prompt Templates
+prompts:
+  # Default Values (can be overridden by user input)
+  defaults:
+    # Default topic for report generation
+    topic: |
+      Provide a comprehensive analysis of capabilities and practical application scenarios for these computing architectures: CPU, GPU
+    # Default report structure template
+    report_structure: |
+      This document is designed for side-by-side evaluation of multiple subjects.
+
+      The document organization follows this pattern:
+      1. Opening Section (independent of external research)
+         - High-level summary of the subject matter
+         - Background and rationale for the comparison
+
+      2. Core Analysis Sections:
+         - A separate section dedicated to EACH item in the comparison list
+         - Each dedicated section should cover:
+           - Key Capabilities (as bullet points)
+           - Technical Design & Approach (2-3 sentences)
+           - A real-world application example (2-3 sentences)
+
+      3. Only include sections that correspond directly to items in the comparison list
+
+      4. Summary with Comparative Matrix (independent of external research)
+         - Organized comparison matrix featuring:
+           * Cross-comparison of all items along important criteria
+           * Clear indication of advantages and limitations
+         - Actionable recommendations
+
+  # Template Strings
+  templates:
+    report_planner_query_writer: |
+      You are a skilled research analyst assisting in document preparation.
+
+      The document will address the following subject:
+
+      {topic}
+
+      The document will be organized according to these specifications:
+
+      {report_organization}
+
+      Your task is to formulate {number_of_queries} research queries that will support comprehensive document planning.
+
+      Each query must:
+
+      1. Directly relate to the main subject
+      2. Support the structural requirements outlined above
+
+      Craft queries that are precise enough to yield authoritative, relevant information while addressing the full scope of the document structure.
+
+    report_planner: |
+      You are a skilled research analyst assisting in document preparation.
+
+      Your objective is to develop a detailed section outline for the document.
+
+      The central theme of the document is:
+
+      {topic}
+
+      The document must adhere to this organizational framework:
+
+      {report_organization}
+
+      Use the following background information to inform your section planning:
+
+      {context}
+
+      Generate the document sections with these attributes for each:
+
+      - Name - A descriptive title for this document section.
+      - Description - A concise summary of key themes and subjects covered in this section.
+      - Research - Indicates whether external research is required for this section.
+      - Content - Section content (leave empty at this stage).
+
+      Determine research requirements thoughtfully. Sections like opening remarks and final summaries typically synthesize existing content rather than requiring new research.
+
+    query_writer: |
+      Your objective is to develop precise research queries that will collect thorough information for composing a technical document section.
+
+      Section subject:
+      {section_topic}
+
+      When formulating {number_of_queries} research queries, verify they:
+      1. Address multiple facets of the subject (e.g., fundamental features, practical applications, underlying architecture)
+      2. Incorporate domain-specific terminology relevant to the topic
+      3. Seek current information by adding temporal markers where appropriate (e.g., "2026")
+      4. Explore distinctions and comparisons with related technologies or methodologies
+      5. Cover both authoritative references and hands-on implementation guides
+
+      Your queries must be:
+      - Sufficiently specific to filter out generic content
+      - Technically oriented to capture in-depth implementation details
+      - Varied enough to address all dimensions of the section scope
+      - Directed toward reliable sources (official guides, expert blogs, research publications)
+
+    section_writer: |
+      You are a skilled technical author composing one segment of a technical document.
+
+      Segment subject:
+      {section_topic}
+
+      Composition guidelines:
+
+      1. Technical Precision:
+      - Specify exact version identifiers
+      - Include quantifiable performance data
+      - Reference authoritative documentation
+      - Apply technical vocabulary accurately
+
+      2. Scope and Tone:
+      - Maintain strict word limit of approximately {max_section_length} words
+      - Avoid promotional language
+      - Emphasize technical substance
+      - Express ideas clearly and concisely
+      - Lead with your key finding in **bold text**
+      - Keep paragraphs brief (2-3 sentences maximum)
+
+      3. Organization:
+      - Exclude the segment title from your response (it will be prepended automatically)
+      - Include at most ONE organizational element IF it enhances comprehension:
+        * A concise comparison table for 2-3 items (using Markdown table format)
+        * Or a brief enumeration (3-5 points) using correct Markdown syntax:
+          - Apply `*` or `-` for bullet lists
+          - Apply `1.` for numbered sequences
+          - Maintain consistent indentation and line spacing
+      - Conclude with ### Sources referencing the material below as:
+        * Enumerate each reference with title, date, and link
+        * Use format: `- Title : URL`
+
+      3. Composition Method:
+      - Incorporate at minimum one concrete illustration or case study
+      - Prioritize specific details over broad statements
+      - Ensure every word serves a purpose
+      - Begin directly with section content, no introductory remarks
+      - Concentrate on your primary takeaway
+
+      4. Reference material for this segment:
+      {context}
+
+      5. Quality Verification:
+      - Approximately {max_section_length} words (references excluded)
+      - Exclude segment title (prepended automatically)
+      - Limited to ONE organizational element (table or list) only when beneficial
+      - Contains one concrete illustration or case study
+      - Opens with bold key finding
+      - No introductory preamble
+      - References listed at conclusion
+
+    final_section_writer: |
+      You are a skilled technical author composing a segment that consolidates information from the complete document.
+
+      Segment to compose:
+      {section_topic}
+
+      Document content for reference:
+      {context}
+
+      1. Segment-Specific Guidelines:
+
+      For Opening Section:
+      - Exclude document or segment title from response (prepended automatically)
+      - Maintain approximately {final_section_length} word limit
+      - Use clear, accessible language
+      - Concentrate on the fundamental purpose of the document in 1-2 paragraphs
+      - Employ a logical flow to set up the document
+      - Omit ALL organizational elements (no enumerations or matrices)
+      - No references section required
+
+      For Closing Section/Summary:
+      - Exclude segment title from response (prepended automatically)
+      - Maintain approximately {final_section_length} word limit
+      - For comparative documents:
+          * Include a focused comparison matrix using Markdown table format
+          * Matrix should synthesize key findings from the document
+          * Keep matrix entries succinct and clear
+      - For non-comparative documents:
+          * Include at most ONE organizational element IF it helps synthesize the document findings:
+          * Either a focused comparison matrix (using Markdown table format)
+          * Or a concise enumeration using correct Markdown syntax:
+            - Apply `*` or `-` for bullet lists
+            - Apply `1.` for numbered sequences
+            - Maintain consistent indentation and line spacing
+      - Conclude with concrete recommendations or implications
+      - No references section required
+
+      3. Composition Method:
+      - Prioritize specific details over broad statements
+      - Ensure every word serves a purpose
+      - Concentrate on your primary takeaway
+
+      4. Quality Verification:
+      - For opening: approximately {final_section_length} word limit, exclude title (prepended automatically), no organizational elements, no references section
+      - For closing: approximately {final_section_length} word limit, exclude segment title (prepended automatically), maximum ONE organizational element, no references section
+      - Markdown formatting
+      - Exclude word counts or introductory remarks from response
+
+    json_fix: |
+      The prior response did not produce valid JSON. Please provide ONLY a properly formatted JSON object matching the specified structure.
+
+      Required structure:
+      {schema}
+
+      ESSENTIAL REQUIREMENTS:
+      1. Output ONLY the JSON object, nothing else
+      2. Omit markdown code blocks (no ```)
+      3. Verify all fields conform to the schema precisely
+      4. The JSON must be parseable
+      5. Follow field descriptions to guide your output
+
+      Produce the JSON now:

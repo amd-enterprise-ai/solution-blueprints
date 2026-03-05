@@ -1,0 +1,18 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+.git/
+app/
+app-ui/
+deployment/
+docs/
+helm-charts/
+
+*.log
+*.tmp
+*.cache
+
+# IDE
+.idea/
+.vscode/

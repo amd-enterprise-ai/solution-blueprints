@@ -1,0 +1,50 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if (index .Values "docsum-ui" "enabled") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "release.fullname" . }}-ui
+  labels:
+    app: {{ include "release.fullname" . }}-ui
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "release.fullname" . }}-ui
+  template:
+    metadata:
+      labels:
+        app: {{ include "release.fullname" . }}-ui
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ .name | quote }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: docsum-ui
+          image: {{ index .Values "docsum-ui" "image" "repository" }}:{{ tpl (index .Values "docsum-ui" "image" "tag") $ }}
+          imagePullPolicy: {{ default "Always" .Values.imagePullPolicy | quote }}
+          env:
+            - name: SUMMARY_SERVICE_URL
+              value: "http://{{ include "release.fullname" . }}:{{ .Values.service.port }}/v1/summarize"
+            - name: http_proxy
+              value: {{ .Values.global.http_proxy | default "" | quote }}
+            - name: https_proxy
+              value: {{ .Values.global.https_proxy | default "" | quote }}
+            - name: no_proxy
+              value: {{ .Values.global.no_proxy | default "" | quote }}
+          ports:
+            - name: http
+              containerPort: {{ index .Values "docsum-ui" "containerPort" | default 5173 }}
+              protocol: TCP
+          resources:
+            {{- toYaml (index .Values "docsum-ui" "resources") | nindent 12 }}
+{{- end }}

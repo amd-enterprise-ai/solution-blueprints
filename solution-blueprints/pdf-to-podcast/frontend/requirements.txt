@@ -1,0 +1,8 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+gradio==6.2.0
+requests==2.32.5
+websockets==15.0.1
+Werkzeug==3.1.4

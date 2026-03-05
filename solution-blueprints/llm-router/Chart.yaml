@@ -1,0 +1,30 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-llm-router
+description: A Helm chart for deploying LLM Router on Kubernetes
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: AMD
+    url: https://www.amd.com/
+dependencies:
+  - name: aimchart-llm
+    version: 0.2.2
+    repository: oci://registry-1.docker.io/amdenterpriseai
+    alias: primary
+    condition: deployDemonstrationLLMs
+  - name: aimchart-llm
+    version: 0.2.2
+    repository: oci://registry-1.docker.io/amdenterpriseai
+    alias: secondary
+    condition: deployDemonstrationLLMs
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.release.notes: "LLM routing service v0.1.0"
+  com.amd.aim.description.full: "Intelligent LLM routing system that automatically classifies prompts and routes them to optimal models based on task type or complexity. It has flexible support for adding custom endpoints and routing rules."
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "LLM Router"

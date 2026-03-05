@@ -1,0 +1,30 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "whisper.fullname" . }}-config
+  labels:
+    component: config-layer
+    {{- include "whisper.labels" . | nindent 4 }}
+data:
+  # --- Network Configuration ---
+  http_proxy: {{ .Values.global.http_proxy | quote }}
+  https_proxy: {{ .Values.global.https_proxy | quote }}
+  no_proxy: {{ .Values.global.no_proxy | quote }}
+
+  # --- Application Paths ---
+  HUGGINGFACE_HUB_CACHE: "/data"
+  HF_HOME: "/tmp/.cache/huggingface"
+  EASYOCR_MODULE_PATH: "/tmp/.EasyOCR"
+
+  # --- Model Settings ---
+  WHISPER_DEVICE: {{ .Values.device | default "cpu" | quote }}
+  ASR_MODEL_PATH: {{ .Values.ASR_MODEL_PATH | quote }}
+
+  # --- Optional Overrides ---
+  {{- with .Values.global.HF_ENDPOINT }}
+  HF_ENDPOINT: {{ . | quote }}
+  {{- end }}

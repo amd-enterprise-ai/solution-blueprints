@@ -1,0 +1,114 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- define "deployment" -}}
+{{- $fullName := include "release.fullname" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ $fullName }}
+    {{- range $k, $v := .Values.metadata.labels }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+  name: {{ $fullName }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ $fullName }}
+  replicas: {{ default 1 .Values.replicaCount }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ $fullName }}
+        component: "doc-processor"
+      {{- if .Values.podAnnotations }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- range $k, $v := .Values.podAnnotations }}
+        {{ $k | quote }}: {{ $v | quote }}
+        {{- end }}
+      {{- end }}
+
+    spec:
+      {{- $scheduling := dict "nodeSelector" .Values.nodeSelector "affinity" .Values.affinity "tolerations" .Values.tolerations -}}
+
+      {{- range $key, $val := $scheduling }}
+      {{- if $val }}
+      {{ $key }}:
+        {{- toYaml $val | nindent 8 }}
+      {{- end }}
+      {{- end }}
+
+      # --- Secrets ---
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - {name: {{ .name | quote }}}
+        {{- end }}
+      {{- end }}
+
+      # --- Pod Security ---
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      # --- Containers ---
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ tpl .Values.image.tag $ }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy | default "Always" | quote }}
+
+          # Environment
+          env:
+            {{- include "container.env" . | nindent 12 }}
+
+          # Network
+          ports:
+            - {name: "docsum", containerPort: {{ .Values.port }}, protocol: "TCP"}
+
+          # Storage
+          volumeMounts:
+            {{- include "container.volumeMounts" . | nindent 12 }}
+
+          # Resources & SecContext
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+
+      # --- Volumes ---
+      volumes:
+        {{- include "container.volumes" . | nindent 8 }}
+{{- end -}}
+
+{{- define "deployment_stripped" -}}
+{{- $raw := include "deployment" . | fromYaml }}
+{{- $clean := unset $raw "metadata" }}
+{{- $cleanTemplate := unset $raw.spec.template "metadata" }}
+{{- $raw | toYaml }}
+{{- end -}}
+
+{{- /* Wrapper for Kaiwo Service */ -}}
+{{- define "kaiwo_wrapper" -}}
+apiVersion: kaiwo.silogen.ai/v1alpha1
+kind: KaiwoService
+metadata:
+  name: {{ include "release.fullname" . }}
+  labels:
+    app: {{ include "release.fullname" . }}
+    {{- range $k, $v := .Values.metadata.labels }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+spec:
+  deployment:
+    {{- include "deployment" . | nindent 4 }}
+{{- end -}}
+
+{{- /* Main Entry Point */ -}}
+{{- if .Values.kaiwo.enabled -}}
+{{ include "kaiwo_wrapper" . }}
+{{- else -}}
+{{ include "deployment" . }}
+{{- end -}}

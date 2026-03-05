@@ -28,7 +28,7 @@ spec:
           args:
           - |
             pip install -r /workload/mount/requirements.txt
-            python /workload/mount/FSI_StockAnalysis.py
+            python /workload/mount/fsi_stock_analysis.py
           env:
             {{- include "container.env" . | nindent 12 }}
           image: {{ .Values.image | quote}}

@@ -1,0 +1,22 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- $claimName := default (printf "%s-app-storage" (include "release.componentName" (dict "root" . "name" "app"))) .Values.storage.appStorage.existingClaim }}
+{{- if not .Values.storage.appStorage.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $claimName }}
+  labels:
+    app: {{ include "release.fullname" . }}
+spec:
+  accessModes:
+    - {{ .Values.storage.appStorage.accessModes | first }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.appStorage.quantity }}
+  {{- if .Values.storage.appStorage.storageClassName }}
+  storageClassName: {{ .Values.storage.appStorage.storageClassName }}
+  {{- end }}
+{{- end }}

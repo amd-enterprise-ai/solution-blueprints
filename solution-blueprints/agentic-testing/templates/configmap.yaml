@@ -5,13 +5,13 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "release.fullname" . }}-source-code
+  name: {{ include "release.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/name: {{ include "release.name" . }}
 data:
-  agent.py: |
-{{ .Files.Get "src/agent.py" | indent 4 }}
-  requirements.txt: |
-{{ .Files.Get "src/requirements.txt" | indent 4 }}
-  gwt_specifications.txt: |
-{{ .Files.Get "src/gwt_specifications.txt" | indent 4 }}
+{{- $files := .Files }}
+{{- range $path, $_ := .Files.Glob "src/*" }}
+  {{ $key := $path | trimPrefix "src/" }}
+  {{- $key }}: |
+{{ $files.Get $path | indent 4 }}
+{{- end }}

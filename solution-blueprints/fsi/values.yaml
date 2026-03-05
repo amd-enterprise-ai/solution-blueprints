@@ -55,6 +55,13 @@ kaiwo:
   enabled: false
 
 
+
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
+
 llm:
   nameOverride: aim-llama-70b
   image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"

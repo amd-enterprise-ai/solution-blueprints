@@ -1,0 +1,16 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+services:
+  application:
+    build:
+      context: ../
+      dockerfile: docker/application.Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimsb-pdf-to-podcast-application:${TAG:?Must set TAG}"
+
+  ui:
+    build:
+      context: ../
+      dockerfile: docker/ui.Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimsb-pdf-to-podcast-ui:${TAG:?Must set TAG}"

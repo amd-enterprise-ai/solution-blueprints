@@ -1,0 +1,121 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+accelerate==1.10.1
+aiohappyeyeballs==2.6.1
+aiohttp==3.12.15
+aiosignal==1.4.0
+annotated-types==0.7.0
+anyio==4.10.0
+async-timeout==5.0.1 ; python_full_version < '3.11'
+attrs==25.3.0
+av==15.0.0
+certifi==2025.8.3
+charset-normalizer==3.4.3
+
+# --- Utilities & Misc ---
+click==8.2.1
+
+# --- Conditional & Platform Specific ---
+colorama==0.4.6 ; sys_platform == 'win32'
+colorlog==6.9.0
+datasets==4.0.0
+dill==0.3.8
+docarray==0.41.0
+embreex==2.17.7.post6 ; platform_machine == 'x86_64'
+exceptiongroup==1.3.0 ; python_full_version < '3.11'
+# --- Core Frameworks & Async ---
+fastapi==0.116.1
+filelock==3.19.1
+frozenlist==1.7.0
+fsspec==2025.3.0
+googleapis-common-protos==1.70.0
+grpcio==1.74.0
+h11==0.16.0
+hf-xet==1.1.8 ; platform_machine == 'x86_64' or platform_machine == 'amd64'
+httpcore==1.0.9
+
+# --- Networking & GRPC ---
+httpx==0.28.1
+
+# --- HuggingFace Utilities ---
+huggingface-hub==0.34.4
+idna==3.10
+importlib-metadata==8.7.0
+
+# --- JAX Ecosystem ---
+jax==0.6.2 ; python_full_version < '3.11'
+jax==0.7.1 ; python_full_version >= '3.11'
+jaxlib==0.6.2 ; python_full_version < '3.11'
+jaxlib==0.7.1 ; python_full_version >= '3.11'
+jsonschema==4.25.1
+jsonschema-specifications==2025.4.1
+lxml==6.0.1
+lz4==4.4.4
+manifold3d==3.2.1
+mapbox-earcut==1.0.3
+markdown-it-py==4.0.0
+markupsafe==3.0.2
+mdurl==0.1.2
+ml-dtypes==0.5.3
+multidict==6.6.4
+multiprocess==0.70.16
+networkx==3.4.2 ; python_full_version < '3.11'
+networkx==3.5 ; python_full_version >= '3.11'
+
+# --- Machine Learning & Math ---
+numpy==2.2.6 ; python_full_version < '3.11'
+numpy==2.3.2 ; python_full_version >= '3.11'
+opt-einsum==3.4.0
+orjson==3.11.2
+packaging==25.0
+pandas==2.3.2
+
+# --- Media & 3D Processing ---
+pillow==11.3.0
+
+# --- Observability ---
+prometheus-client==0.22.1
+prometheus-fastapi-instrumentator==7.1.0
+protobuf==6.32.0
+psutil==7.0.0
+pyarrow==21.0.0
+pycollada==0.9.2
+pydantic==2.7.2
+pydantic-core==2.18.3
+pydantic-settings==2.10.1
+pydub==0.25.1
+pygments==2.19.2
+python-dotenv==1.1.1
+python-multipart==0.0.20
+pyyaml==6.0.2
+referencing==0.36.2
+
+# --- Text Processing ---
+regex==2025.7.34
+requests==2.32.5
+rich==14.1.0
+rpds-py==0.27.0
+rtree==1.4.1
+safetensors==0.6.2
+scipy==1.15.3 ; python_full_version < '3.11'
+scipy==1.16.1 ; python_full_version >= '3.11'
+shapely==2.1.1
+shortuuid==1.0.13
+six==1.17.0
+sniffio==1.3.1
+starlette==0.47.3
+svg-path==7.0
+tokenizers==0.21.4
+tqdm==4.67.1
+transformers==4.55.4
+trimesh==4.7.4
+typing-extensions==4.15.0
+urllib3==2.5.0
+uvicorn==0.35.0
+vhacdx==0.0.8.post2
+xxhash==3.5.0
+yarl==1.20.1
+zhconv==1.4.3
+zipp==3.23.0

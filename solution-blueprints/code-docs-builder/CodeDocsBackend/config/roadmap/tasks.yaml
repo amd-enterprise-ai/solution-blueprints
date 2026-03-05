@@ -1,0 +1,61 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+inspect_codebase_architecture:
+  description:
+    Perform a thorough engineering analysis of the codebase located at {repo_path}.
+    Your task is to extract what is actually implemented, not what is implied or intended.
+    Analyze the repository with the mindset of an engineer who must maintain or extend it.
+    Specifically
+      - Identify the overall purpose of the project and its primary responsibilities
+      - Map the real system architecture and component boundaries
+      - Identify key modules, classes, functions, and their interactions
+      - Document public APIs, interfaces, and extension points with real usage examples
+      - Trace data flows and control flows across components
+      - Identify design patterns and architectural decisions as they appear in code
+      - Capture common usage and integration patterns
+      - Ignore images, videos, and non-code media files.
+    Focus exclusively on details that materially help another engineer understand how the system works internally.
+  expected_output:
+    A detailed technical analysis that includes
+      - Clear explanation of what the project does and why it exists
+      - Deep architectural overview grounded in actual implementation
+      - Structured documentation of core components, including
+        - Method and function signatures
+        - Parameters and return values
+        - Concrete usage examples extracted from code
+        - Integration and extension guidelines
+      - Description of component interactions and responsibilities
+      - Explanation of implementation patterns and their real use cases
+    The output must reflect only verified information derived from the codebase.
+    Do not describe what you are doing. Only produce the final artifact.
+
+design_documentation_roadmap:
+  description:
+    Create an engineering-focused documentation roadmap for the codebase at {repo_path}, based exclusively on the
+    completed code analysis.
+    The roadmap must define a set of standalone documentation documents, ordered from foundational to advanced.
+    Each document should
+      - Address a specific aspect of the system
+      - Build logically on previous documents
+      - Be written for developers, not end users
+    Ensure the plan covers
+      - High-level system overview
+      - Architecture and key design decisions
+      - Core workflows and data flows
+      - Component responsibilities and interactions
+      - Getting started and onboarding guidance
+    Ignore images, videos, and other media files.
+    The goal is to create a clear learning progression that allows an engineer to move from zero context to deep
+    system understanding.
+  expected_output:
+    A structured documentation plan consisting of an ordered by importance and complexity list of documents.
+    For each document, provide
+      - Clear and descriptive title
+      - Detailed explanation of its purpose and scope
+      - Prerequisites required to understand it
+      - Practical examples that will be included (code-focused)
+      - A concise but explicit goal of what the reader will learn
+    The plan must comprehensively cover the system without redundancy and reflect the real architecture of the codebase.
+    Do not describe what you are doing. Only produce the final artifact.

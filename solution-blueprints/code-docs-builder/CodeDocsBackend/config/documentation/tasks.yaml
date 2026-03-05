@@ -1,0 +1,62 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+author_verified_documentation:
+  description:
+    Write a complete documentation document titled {title} for the codebase at {repo_path}.
+    The primary objective of this document is {goal}
+    You must rely only on verified information obtained from the prior code analysis.
+    Use the following inputs
+      - Project overview — {overview}
+      - Document scope description — {description}
+      - Prerequisites — {prerequisites}
+      - Examples to include — {examples}
+    Structure the document clearly and logically.
+    Use Mermaid diagrams to represent workflows and relationships where helpful.
+    Ignore images, videos, and other media files.
+
+  expected_output: >
+    A production-ready Markdown documentation file that
+      - Accurately describes {title} as implemented in {repo_path}
+      - Uses section headers aligned with the real code structure
+      - Contains verified explanations tied directly to code
+      - Includes real code examples extracted from the repository
+      - Provides setup or usage instructions validated against the code
+      - Uses Mermaid diagrams to visualize real system flows
+    The output must be pure Markdown, without fences or meta-commentary.
+    Do not describe what you are doing. Only produce the final artifact.
+
+validate_and_finalize_documentation:
+  description:
+    Review and validate the documentation for "{title}" against the actual codebase at {repo_path} and existing documentation files.
+    The goal is to ensure absolute alignment between documentation and implementation.
+    Perform the following checks
+    1. Technical Accuracy
+      - Verify all architectural descriptions match real code
+      - Confirm component relationships and responsibilities
+      - Validate code examples against actual usage
+      - Ensure Mermaid diagrams represent real flows
+    2. Completeness
+      - Ensure all key components and workflows are covered
+      - Confirm documented integration patterns exist in code
+    3. Quality and Precision
+      - Remove speculative, outdated, or unimplemented features
+      - Update examples to reflect current patterns
+    4. Consistency
+      - Align terminology with codebase conventions
+      - Verify naming consistency
+      - Ensure code style matches repository standards
+    5. Diagram Validation
+      - Ensure all diagram nodes exist in code
+      - Validate flow directions and dependencies
+      - Mermaid diagrams must be wrapped in ```mermaid``` blocks
+  expected_output: >
+    A finalized Markdown documentation file that:
+      - Is fully consistent with {repo_path}
+      - Contains only verified workflows and examples
+      - Uses correct and validated Mermaid diagrams
+      - Maintains consistent technical terminology
+      - Contains no duplication or speculative content
+    The output must be pure Markdown, without fences or meta-commentary.
+    Do not describe what you are doing. Only produce the final artifact.

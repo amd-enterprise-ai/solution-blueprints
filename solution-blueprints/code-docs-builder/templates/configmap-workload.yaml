@@ -1,0 +1,24 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "codedocs.fullname" . }}-workload
+data:
+{{ $files := $.Files.Glob "CodeDocsBackend/**" }}
+{{ range $path, $file := $files }}
+  {{ $relPath := $path | trimPrefix "CodeDocsBackend/" }}
+  {{ $key := printf "CodeDocsBackend_%s" (splitList "/" $relPath | join "_") }}
+  {{ $key }}: |
+{{ printf "%s" $file | indent 4 }}
+{{ end }}
+
+{{ $files := $.Files.Glob "CodeDocsFrontend/**" }}
+{{ range $path, $file := $files }}
+  {{ $relPath := $path | trimPrefix "CodeDocsFrontend/" }}
+  {{ $key := printf "CodeDocsFrontend_%s" (splitList "/" $relPath | join "_") }}
+  {{ $key }}: |
+{{ printf "%s" $file | indent 4 }}
+{{ end }}

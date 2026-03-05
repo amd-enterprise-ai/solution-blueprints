@@ -1,0 +1,37 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ if .Values.http_route.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "release.fullname" . }}
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: https
+    namespace: kgateway-system
+  rules:
+  - matches:
+    - headers:
+      - name: Host
+        type: RegularExpression
+        # Matches "appname." followed by any characters
+        value: {{ include "release.fullname" . }}\..*
+      path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: {{ include "release.componentName" (dict "root" . "name" "frontend") }}
+      # Standardize this port to match your Service's 'port' field
+      port: {{ .Values.pythonServices.frontend.port | default 7860 }}
+      weight: 1
+    timeouts:
+      # Use a long timeout to allow for long-running requests, adjust as needed
+      backendRequest: 3600s
+      request: 3605s
+{{ end }}

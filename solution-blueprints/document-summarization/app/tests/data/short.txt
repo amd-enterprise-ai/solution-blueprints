@@ -1,0 +1,5 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+Modern retrieval-augmented generation (RAG) systems combine dense vector embeddings with keyword search to improve relevance. Popular embedding models like BGE, Instructor, and NV-Embed excel at semantic understanding while BM25 handles exact matches. Hybrid search scores documents using weighted combinations of cosine similarity and term frequency.

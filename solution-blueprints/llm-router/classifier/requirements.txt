@@ -1,0 +1,8 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+aiohttp==3.9.5
+fastapi==0.95.2
+pydantic==1.10.9
+uvicorn[standard]==0.22.0

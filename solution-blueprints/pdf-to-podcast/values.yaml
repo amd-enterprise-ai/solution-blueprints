@@ -1,0 +1,127 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Default values for pdf-to-podcast.
+metadata:
+  labels: {}
+
+http_route:
+  enabled: false
+
+image:
+  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-pdf-to-podcast-application"
+  tag: "{{ .Chart.Version }}"
+imagePullPolicy: Always
+imagePullSecrets: []
+# Example:
+# - name: my-registry-secret
+
+uiImage:
+  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-pdf-to-podcast-ui"
+  tag: "{{ .Chart.Version }}"
+
+storage:
+  ephemeral:
+    quantity: 20Gi
+    storageClassName: mlstorage
+    accessModes:
+      - ReadWriteOnce
+  dshm:
+    sizeLimit: 32Gi
+  appStorage:
+    quantity: 10Gi
+    storageClassName: mlstorage
+    accessModes:
+      - ReadWriteMany
+    existingClaim: ""
+
+# startupProbe - checks if the container has successfully started. It disables liveness and readiness probes until it succeeds, useful for slow-starting applications.
+# livenessProbe - checks if the container is still alive. If it fails, Kubernetes restarts the container to recover from failure.
+# ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+startupProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  failureThreshold: 360 # 360 x 10s => allow for 60 minutes startup time
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  failureThreshold: 1
+  periodSeconds: 10
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "2Gi"
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+
+env_vars: {}
+
+pythonServices:
+  app:
+    enabled: true
+    run: uvicorn main:app --host 0.0.0.0 --port 8000 --ws auto
+    port: 8000
+    # Note: Code should be in Docker image, not ConfigMap
+    # Build image with: docker build -t pdf-to-podcast-app:latest -f docker/application.Dockerfile .
+    # APP_LLM_URL is automatically set from LLM service URL in deployment template
+    env:
+      APP_API_KEY: ""
+      APP_ELEVENLABS_API_KEY: ""
+      APP_CELERY_BROKER_URL: ""
+      APP_CELERY_BACKEND_URL: ""
+      APP_STORAGE_PATH: "/tmp/storage"
+
+  celery-worker:
+    enabled: true
+    run: celery -A infrastructure.celery_client:celery_app worker --autoscale=20,4 --loglevel=info
+    port: null
+    # Note: Uses same Docker image as app service (includes torch and docling)
+    # Build with: docker build -t pdf-to-podcast-app:latest -f docker/application.Dockerfile .
+    # Resources are 2x higher than default to handle heavy PDF processing and LLM tasks
+    resources:
+      requests:
+        cpu: "1"
+        memory: "8Gi"
+      limits:
+        cpu: "4"
+        memory: "16Gi"
+    env:
+      APP_API_KEY: ""
+      APP_ELEVENLABS_API_KEY: ""
+      APP_CELERY_BROKER_URL: ""
+      APP_CELERY_BACKEND_URL: ""
+      APP_STORAGE_PATH: "/tmp/storage"
+
+  frontend:
+    enabled: true
+    run: python -m app.ui
+    port: 7860
+    # Note: Code should be in Docker image, not ConfigMap
+    # Build image with: docker build -t pdf-to-podcast-ui:latest -f docker/ui.Dockerfile .
+    env:
+      API_SERVICE_URL: ""
+
+infraServices:
+  redis:
+    enabled: true
+    image: redis:8.4-alpine
+    ports:
+      - name: redis
+        port: 6379
+    command: ["redis-server", "--appendonly", "no"]
+
+llm:
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+
+  nameOverride: llama33-70b-instruct
+  storage:
+    ephemeral:
+      storageClassName: mlstorage
+      quantity: 512Gi

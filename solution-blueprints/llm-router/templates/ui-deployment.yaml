@@ -1,0 +1,79 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "router.complexName" . }}-ui
+  namespace: {{ .Release.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "router.complexName" . }}-ui
+  template:
+    metadata:
+      labels:
+        app: {{ include "router.complexName" . }}-ui
+    spec:
+      initContainers:
+        - name: unpack-workload
+          image: busybox:latest
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -eux
+              mkdir -p /workload/mount
+
+              for key in $(ls /workload/configmap); do
+                content=$(cat "/workload/configmap/$key")
+
+                if echo "$key" | grep -q "__init__.py$"; then
+                  filename="__init__.py"
+                  dirpart=$(echo "$key" | sed 's/__init__.py$//')
+                  dirpath=$(echo "$dirpart" | tr '_' '/')
+                else
+                  filename=$(echo "$key" | awk -F'_' '{print $NF}')
+                  dirpath=$(echo "$key" | sed 's/_'"$filename"'$//; s/_/\//g')
+                fi
+
+                mkdir -p "/workload/mount/$dirpath"
+                echo "$content" > "/workload/mount/$dirpath/$filename"
+              done
+          volumeMounts:
+            - name: workload
+              mountPath: /workload/configmap
+            - name: workload-mount
+              mountPath: /workload/mount
+      containers:
+        - name: llm-ui
+          image: {{ .Values.images.pythonBase }}
+          command: [ "sh", "-c" ]
+          args:
+            - |
+              set -e
+              pip install -v --no-cache-dir -r /workload/mount/ui/uiApp/requirements.txt
+              export PYTHONUNBUFFERED=0
+              export GRADIO_ALLOW_FLAGGING=never
+              export GRADIO_ANALYTICS_ENABLED=0
+              export GRADIO_NUM_PORTS=1
+              export GRADIO_SERVER_NAME=0.0.0.0
+              export GRADIO_SERVER_PORT={{ .Values.ports.ui }}
+              export LLM_UI_CONFIG=/workload/mount/ui/uiApp/config.yaml
+              export PYTHONPATH=/workload/mount/ui/uiApp
+              python3 -m llmRouterUi
+          ports:
+            - containerPort: {{ .Values.ports.ui }}
+          env:
+            - name: CONTROLLER_URL
+              value: {{ include "controller.url" . }}
+          volumeMounts:
+            - name: workload-mount
+              mountPath: /workload/mount
+      volumes:
+        - name: workload
+          configMap:
+            name: {{ include "router.complexName" . }}-workload
+        - name: workload-mount
+          emptyDir: {}

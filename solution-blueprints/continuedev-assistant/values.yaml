@@ -11,7 +11,8 @@ metadata:
   labels: {}
   project_id: default
   user_id: user
-  workload_id: # defaults to the release name
+  workload_id:
+    # defaults to the release name
 
 image: rocm/pytorch:rocm7.0.2_ubuntu22.04_py3.10_pytorch_release_2.7.1
 imagePullPolicy: Always
@@ -19,21 +20,12 @@ gpus: 1
 memory_per_gpu: 128 # Gi
 cpu_per_gpu: 4
 
-env_vars:
-  BUCKET_STORAGE_HOST: http://minio.minio-tenant-default.svc.cluster.local:80
-  BUCKET_STORAGE_ACCESS_KEY:
-    name: minio-credentials
-    key: minio-access-key
-  BUCKET_STORAGE_SECRET_KEY:
-    name: minio-credentials
-    key: minio-secret-key
-
 storage:
   ephemeral:
     quantity: 128Gi
     storageClassName: mlstorage
     accessModes:
-      - ReadWriteOnce
+    - ReadWriteOnce
   dshm:
     sizeLimit: 16Gi
 
@@ -66,9 +58,9 @@ kaiwo:
 
 http_route:
   enabled: false
-
-ingress:
-  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
 
 persistent_storage:
   enabled: false
@@ -85,14 +77,17 @@ chat:
     minP: 0
 
 chatLLM:
-  nameOverride: gpt-oss-20b
-  image: "amdenterpriseai/aim-openai-gpt-oss-20b:0.9.0"
+  # Use existing external AIM service instead of deploying our own
+  # Set to null or comment out to deploy own AIM service
+  existingService: null
+  nameOverride: qwen3-32b
+  image: "amdenterpriseai/aim-qwen-qwen3-32b:0.8.5"
   storage:
     ephemeral:
       storageClassName: mlstorage
 
-
-autocomplete:  # Make a version of the LLM available for autocomplete. It can have extra values (e.g. thinking turned off.)
+autocomplete:
+  # Make a version of the LLM available for autocomplete. It can have extra values (e.g. thinking turned off.)
   enabled: true
   defaultCompletionOptions:
     temperature: 0.0
@@ -104,6 +99,9 @@ autocomplete:  # Make a version of the LLM available for autocomplete. It can ha
     onlyMyCode: true
 
 autocompleteLLM:
+  # Use existing external AIM service instead of deploying our own
+  # Set to null or comment out to deploy own AIM service
+  existingService: null
   nameOverride: qwen2-5-coder-7b
   image: "amdenterpriseai/aim-base:0.9"
   env_vars:

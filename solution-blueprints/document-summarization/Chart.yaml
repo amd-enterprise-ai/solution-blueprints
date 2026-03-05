@@ -1,0 +1,35 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-docsum
+description: Document Summarization blueprint
+type: application
+
+# Semantic Versioning
+version: 2.0.0
+
+maintainers:
+- name: AMD
+  url: https://www.amd.com/
+
+# External chart dependencies
+dependencies:
+- name: aimchart-llm
+  version: 0.2.2
+  repository: oci://registry-1.docker.io/amdenterpriseai
+  alias: llm
+  condition: llm.enabled
+- name: aimchart-whisper
+  version: 1.3.0
+  repository: oci://registry-1.docker.io/amdenterpriseai
+  alias: whisper
+
+# Metadata
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.release.notes: "Document Summarization initial release"
+  com.amd.aim.description.full: "AI-powered document summarization service with multimodal support. In addition to text, this application can process and summarize PDFs, DOCX files, and multimedia files (audio/video)."
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "Document Summarization"

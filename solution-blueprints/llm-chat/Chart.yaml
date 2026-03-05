@@ -9,7 +9,7 @@ type: application
 maintainers:
 - name: AMD
   url: https://www.amd.com/
-version: 0.6.5
+version: 0.6.6
 dependencies:
 - name: aimchart-llm
   version: 0.2.2
@@ -17,7 +17,7 @@ dependencies:
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
-  com.amd.aim.release.notes: "Update AIM version"
+  com.amd.aim.release.notes: "Add HTTPRoute"
   com.amd.aim.description.full: Get a feel for your LLM in a safe sandbox. Explore prompting techniques, validate outputs, and understand model behavior before embedding LLMs into critical enterprise workflows.
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "LLM Chat Sandbox"

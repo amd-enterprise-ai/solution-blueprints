@@ -1,0 +1,22 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+librosa>=0.10.0
+accelerate
+aiohttp
+docarray[full]
+fastapi
+mcp>=1.10.0
+opentelemetry-api
+opentelemetry-exporter-otlp
+opentelemetry-sdk
+pillow>=11.3.0
+prometheus-fastapi-instrumentator
+pydantic==2.7.2
+pydub
+python-multipart
+shortuuid
+transformers
+uvicorn
+zhconv

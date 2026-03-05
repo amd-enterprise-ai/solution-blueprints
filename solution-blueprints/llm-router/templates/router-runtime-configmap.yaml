@@ -1,0 +1,28 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "router.complexName" . }}-router-runtime
+data:
+  config.yaml: |
+    routing_rules:
+{{- range $ruleName, $rule := .Values.routing.rules }}
+      - rule_name: {{ $ruleName | quote }}
+        classifier_endpoint: "{{ include "classifier.url" $ }}{{ $rule.classifier_path }}"
+        models:
+{{- range $class, $backend := $rule.classes }}
+          - name: {{ $class | quote }}
+            base_url_path: "{{ include "llm.backendBaseUrl" (dict "backend" $backend "Values" $.Values "Release" $.Release) }}"
+{{- $apiKey := include "llm.backendApiKey" (dict "backend" $backend "Values" $.Values "Release" $.Release) }}
+{{- if $apiKey }}
+            api_key: {{ $apiKey | quote }}
+{{- end }}
+{{- $modelName := include "llm.backendModelName" (dict "backend" $backend "Values" $.Values "Release" $.Release) }}
+{{- if $modelName }}
+            model_name: {{ $modelName | quote }}
+{{- end }}
+{{- end }}
+{{- end }}

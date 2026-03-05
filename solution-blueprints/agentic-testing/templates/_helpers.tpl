@@ -14,9 +14,9 @@
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- if ne .Release.Name "release-name" -}}
-agentictesting-{{ .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- include "release.name" . }}-{{ .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-agentictesting-{{ $currentTime | lower | trunc 63 | trimSuffix "-" -}}
+{{- include "release.name" . }}-{{ $currentTime | lower | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}

@@ -1,0 +1,29 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- $svcName := include "whisper.fullname" . -}}
+{{- $selector := include "whisper.selectorLabels" . }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  labels:
+    {{- include "whisper.labels" . | nindent 4 }}
+    helm.sh/resource-type: "service"
+spec:
+  selector:
+    {{- $selector | nindent 4 }}
+
+  sessionAffinity: None
+
+  ports:
+    - {
+      name: "whisper-api",
+      protocol: "TCP",
+      port: {{ .Values.service.port }},
+      targetPort: 7066
+    }
+
+  type: {{ .Values.service.type }}

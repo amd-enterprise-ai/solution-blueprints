@@ -1,0 +1,120 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ define "deployment" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "release.fullname" . }}
+  labels:
+    app: {{ include "release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "release.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "release.fullname" . }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          command: ["bash", "-c"]
+          args:
+          - |
+            # Ensure logs appear immediately
+            export PYTHONUNBUFFERED=1
+
+            # Install uv package manager for faster dependency installation
+            pip install uv
+            uv pip install --system -r /workload/mount/requirements.txt
+            {{- if .Values.enableUI }}
+            # Run API in background, save PID
+            python /workload/mount/rge_api.py &
+            API_PID=$!
+
+            # Run UI in background, save PID
+            python -m streamlit run /workload/mount/rge_ui.py \
+              --server.port {{ .Values.deployment.ports.ui }} \
+              --client.toolbarMode viewer \
+              --browser.gatherUsageStats false \
+              --server.headless true \
+              --server.fileWatcherType none &
+            UI_PID=$!
+
+            # Wait for either process to exit
+            wait -n $API_PID $UI_PID
+            EXIT_CODE=$?
+
+            # Kill remaining process gracefully
+            kill $API_PID $UI_PID 2>/dev/null
+            wait
+
+            exit $EXIT_CODE
+            {{- else }}
+            # Run API only
+            python /workload/mount/rge_api.py
+            {{- end }}
+          env:
+            {{- include "container.env" . | nindent 12 }}
+          image: {{ .Values.image | quote}}
+          imagePullPolicy: {{ default "Always" .Values.imagePullPolicy | quote }}
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- .Values.livenessProbe | toYaml | nindent 12 -}}
+          {{- end }}
+          ports:
+            {{- range $key, $value := .Values.deployment.ports }}
+            {{- if or (ne $key "ui") $.Values.enableUI }}
+            - name: {{ $key }}
+              containerPort: {{ $value }}
+            {{- end }}
+            {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- .Values.readinessProbe | toYaml | nindent 12 -}}
+          {{- end }}
+          resources:
+            {{- include "container.resources" . | nindent 12 }}
+          {{- if .Values.startupProbe }}
+          startupProbe:
+            {{- .Values.startupProbe | toYaml | nindent 12 -}}
+          {{- end }}
+          volumeMounts:
+            {{- include "container.volumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "container.volumes" . | nindent 8 }}
+{{- end -}}
+
+{{ define "deployment_stripped" -}}
+{{- $deployment := include "deployment" . | fromYaml }}
+{{- $ := unset $deployment "metadata" }}
+{{- $ := unset $deployment.spec.template "metadata" }}
+{{- $deployment | toYaml }}
+{{- end -}}
+
+{{ define "deployment_wrapped_with_kaiwoservice" -}}
+apiVersion: kaiwo.silogen.ai/v1alpha1
+kind: KaiwoService
+metadata:
+  name: {{ include "release.fullname" . }}
+  labels:
+    app: {{ include "release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  deployment:
+    {{- include "deployment" . | nindent 4 }}
+{{- end -}}
+
+{{- if .Values.kaiwo.enabled -}}
+{{ include "deployment_wrapped_with_kaiwoservice" . }}
+{{- else -}}
+{{ include "deployment" . }}
+{{- end -}}

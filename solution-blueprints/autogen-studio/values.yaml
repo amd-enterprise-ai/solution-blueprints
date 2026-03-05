@@ -27,6 +27,12 @@ llm:
 kaiwo:
   enabled: false
 
+http_route:
+  enabled: true
+  gateway:
+    name: https
+    namespace: kgateway-system
+
 metadata:
   labels:
     app.kubernetes.io/name: autogenstudio

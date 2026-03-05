@@ -34,10 +34,58 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-chat \
   | kubectl apply -f - -n $namespace
 ```
 
-## Connecting
+## Default AIM image and GPU compatibility
 
-Then, to connect to the UI, port-forward any chosen port, e.g., 8080, to be able to access the UI. The UI will then be available at <http://localhost:8080>.
+By default, the chart deploys Meta Llama 3.1 8B with this AIM: `amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.5`
+
+On newer GPUs, this default image may not be the best match and can fail to start or run sub-optimally.
+To choose a newer AIM or deploy a different LLM, override `llm.image` to a compatible image. See the [catalog of available AIMs](https://enterprise-ai.docs.amd.com/en/latest/aims/catalog/models.html) for options.
+
+Example:
 
 ```bash
-kubectl port-forward services/aimsb-llmc-chat-$name 8080:80 -n $namespace
+name="my-deployment"
+namespace="my-namespace"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-chat \
+  --set llm.image=amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:<NEWER_TAG> \
+  | kubectl apply -f - -n $namespace
 ```
+
+## Connecting
+
+### Option 1: Port Forwarding
+
+To connect to the UI, port-forward any chosen port, e.g., 8080, to be able to access the UI. The UI will then be available at <http://localhost:8080>.
+
+```bash
+kubectl port-forward services/aimsb-llm-chat-$name 8080:80 -n $namespace
+```
+
+### Option 2: HTTPRoute (Gateway Access)
+
+If your cluster has a Gateway API compatible gateway (e.g., Kubernetes Gateway, Istio, etc.), you can enable HTTPRoute creation to route traffic through the gateway.
+
+**Prerequisites:**
+- A Gateway named `https` must exist in the `kgateway-system` namespace (or configure a different gateway)
+- The Gateway must be properly configured with listeners
+
+**Enabling HTTPRoute:**
+
+Use `--set http_route.enabled=true` in the `helm template` command to enable HTTPRoute creation:
+(notice, the command contains an existing Llm service running in the cluster).
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+servicename="aim-llm-my-model-123456"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-chat \
+  --set llm.existingService=$servicename \
+  --set http_route.enabled=true \
+  | kubectl apply -f - -n $namespace
+```
+**Obtaining the URL:**
+
+The URL to access the blueprint via HTTPRoute is formed by the service name and the hostname of the gateway. Use this command to produce the URL by querying the hostname from the cluster:
+   ```bash
+   echo "https://aimsb-llm-chat-$name$(kubectl get gtw -A -o jsonpath='{.items[*].spec.listeners[?(@.name=="https")].hostname}' | tr -d \*)/"
+   ```

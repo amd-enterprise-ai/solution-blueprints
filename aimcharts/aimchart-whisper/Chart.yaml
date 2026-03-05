@@ -1,0 +1,22 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+
+
+apiVersion: v2
+name: aimchart-whisper
+description: AIM ASR service Deployed on Kubernetes
+type: application
+version: 1.3.0
+appVersion: "v1.0"
+maintainers:
+- name: AMD
+  url: https://www.amd.com/
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.title: Whisper ASR Service
+  com.amd.aim.release.notes: "AIM Library Chart for Whisper speech-to-text"
+  com.amd.aim.description.full: >
+    Whisper ASR microservice provides speech-to-text transcription capabilities
+    using OpenAI Whisper models. It can process audio files and return text transcriptions.

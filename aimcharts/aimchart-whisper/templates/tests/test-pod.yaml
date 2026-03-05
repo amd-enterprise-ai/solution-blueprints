@@ -1,0 +1,54 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+
+{{- if .Values.testPod.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "whisper.fullname" . }}-testpod"
+  labels:
+    {{- include "whisper.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+    - name: asr-healthcheck
+      image: python:3.10.14
+      command:
+        - bash
+        - -ec
+      args:
+        - |
+          ENDPOINT="http://{{ include "whisper.fullname" . }}:{{ .Values.service.port }}/v1/asr"
+          PAYLOAD='{"audio":"UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"}'
+
+          MAX_RETRIES=20
+          RETRY_DELAY=10
+
+          for attempt in $(seq 1 "$MAX_RETRIES"); do
+            if curl -sS --fail-with-body \
+              -H "Content-Type: application/json" \
+              -X POST "$ENDPOINT" \
+              -d "$PAYLOAD"
+            then
+              echo "ASR test passed"
+              exit 0
+            fi
+
+            rc=$?
+            if [ "$rc" -eq 7 ]; then
+              echo "ASR not reachable yet (attempt $attempt/$MAX_RETRIES), retrying..."
+              sleep "$RETRY_DELAY"
+            else
+              echo "curl failed with code $rc"
+              exit 1
+            fi
+          done
+
+          echo "ASR test failed after $MAX_RETRIES attempts"
+          exit 1
+{{- end }}

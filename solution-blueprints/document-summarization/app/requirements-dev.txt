@@ -1,0 +1,14 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Dev/test dependencies (not needed at runtime)
+dm-eval>=1.4
+kubernetes
+locust
+prometheus_client
+pytest
+pyyaml
+requests
+sseclient-py
+transformers

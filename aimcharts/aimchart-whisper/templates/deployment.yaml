@@ -1,0 +1,133 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- $ctx := . -}}
+{{- $vals := .Values -}}
+{{- $fullName := include "whisper.fullname" . -}}
+{{- $labels := include "whisper.labels" . -}}
+{{- $selector := include "whisper.selectorLabels" . -}}
+
+{{- $mounts := list
+    (dict "name" "model-storage" "mountPath" "/data")
+    (dict "name" "temp-storage" "mountPath" "/tmp")
+}}
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- $labels | nindent 4 }}
+    helm.sh/gen: "v2"
+
+spec:
+  replicas: {{ $vals.replicaCount | default 1 }}
+
+  selector:
+    matchLabels:
+      {{- $selector | nindent 6 }}
+
+  template:
+    metadata:
+      labels:
+        {{- $selector | nindent 8 }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if $vals.podAnnotations }}
+        {{- range $k, $v := $vals.podAnnotations }}
+        {{ $k }}: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+    spec:
+      # --- Host Constraints ---
+      {{- $constraints := dict "nodeSelector" $vals.nodeSelector "affinity" $vals.affinity "tolerations" $vals.tolerations -}}
+      {{- range $k, $v := $constraints }}
+      {{- if $v }}
+      {{ $k }}:
+        {{- toYaml $v | nindent 8 }}
+      {{- end }}
+      {{- end }}
+
+      # --- Volumes ---
+      volumes:
+        - {name: "model-storage", emptyDir: {}}
+        - {name: "temp-storage", emptyDir: {}}
+
+      # --- Init Phase ---
+      {{- if not (hasPrefix "/data/" $vals.ASR_MODEL_PATH) }}
+      initContainers:
+        - name: "downloader"
+          image: "huggingface/downloader:0.17.3"
+
+          volumeMounts:
+            {{- toYaml $mounts | nindent 12 }}
+
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Init: Downloading {{ $vals.ASR_MODEL_PATH }}..."
+              huggingface-cli download --cache-dir /data {{ $vals.ASR_MODEL_PATH | quote }}
+
+              DIR="/data/models--{{ replace "/" "--" $vals.ASR_MODEL_PATH }}"
+              echo "Init: Setting permissions for $DIR"
+              chmod -R g+w "$DIR"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: false
+            capabilities: {drop: ["ALL"], add: ["DAC_OVERRIDE", "FOWNER"]}
+            seccompProfile: {type: "RuntimeDefault"}
+
+          envFrom:
+            - configMapRef: {name: "{{ $fullName }}-config"}
+      {{- end }}
+
+      # --- Main Workload ---
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ $vals.image.repository }}:{{ $vals.image.tag | default .Chart.Version }}"
+          imagePullPolicy: {{ $vals.imagePullPolicy | default "Always" }}
+
+          ports:
+            {{- range $p := list 7066 }}
+            - name: "http-api"
+              containerPort: {{ $p }}
+              protocol: TCP
+            {{- end }}
+
+          volumeMounts:
+            {{- toYaml $mounts | nindent 12 }}
+
+          envFrom:
+            - configMapRef: {name: "{{ $fullName }}-config"}
+            {{- if $vals.global.extraEnvConfig }}
+            - configMapRef: {name: "{{ $vals.global.extraEnvConfig }}", optional: true}
+            {{- end }}
+
+          # --- Probes ---
+          {{- range $probeName, $probeConfig := dict "livenessProbe" $vals.livenessProbe "readinessProbe" $vals.readinessProbe "startupProbe" $vals.startupProbe }}
+          {{- if $probeConfig }}
+          {{ $probeName }}:
+            {{- toYaml $probeConfig | nindent 12 }}
+          {{- end }}
+          {{- end }}
+
+          resources:
+            {{- toYaml $vals.resources | nindent 12 }}
+
+          securityContext:
+            {{- toYaml $vals.securityContext | nindent 12 }}
+
+      # --- Secrets ---
+      {{- if $vals.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml $vals.imagePullSecrets | nindent 8 }}
+      {{- end }}
+
+      securityContext:
+        {{- toYaml $vals.podSecurityContext | nindent 8 }}

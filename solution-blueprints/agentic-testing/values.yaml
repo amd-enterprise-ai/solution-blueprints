@@ -2,13 +2,35 @@
 #
 # SPDX-License-Identifier: MIT
 
-# Test Agent configuration
-testAgent:
+# Streamlit UI configuration
+ui:
   enabled: true
+  port: 8501
+
   image:
     repository: python
     tag: "3.13-slim"
     pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+
+  # HTTPRoute configuration (Gateway API)
+  httpRoute:
+    enabled: false
+    gatewayName: https
+    gatewayNamespace: kgateway-system
+
+  # Test execution settings
+  maxIterations: 20
+  maxResultLength: 15000
+
+  # SSE client timeout settings (seconds)
+  sseConnectTimeout: 10
+  sseReadTimeout: 120
+
+  env:
+    PYTHONUNBUFFERED: "1"
 
   resources:
     limits:
@@ -18,21 +40,38 @@ testAgent:
       cpu: "1"
       memory: "2Gi"
 
-  # Environment variables
-  env:
-    PYTHONUNBUFFERED: "1"
+# Playwright MCP server configuration
+playwrightMcp:
+  enabled: true
+  port: 8931
+  image:
+    repository: mcr.microsoft.com/playwright/mcp
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+    requests:
+      cpu: "1"
+      memory: "2Gi"
 
 llm:
-  # Use existing external AIM service instead of deploying our own
-  # Set to null or comment out to deploy own AIM service
+  # Use existing LLM service or deploy a new one
   existingService: null
 
-  # Configuration for deploying own AIM service (used when existingService is not set)
-  nameOverride: llama33-70b-instruct
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+  # Change name override according to model name from image (aim-{model}:{version})
+  image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.9.0"
+  nameOverride: openai-gpt-oss-120b
+
   env_vars:
+    AIM_PORT: 8000
+    # Note: tool-server not needed - agent handles MCP tool execution directly
     AIM_ENGINE_ARGS: >-
-      {"enable-auto-tool-choice": null, "tool-call-parser": "llama3_json"}
+      {
+        "enable-auto-tool-choice": true,
+        "tool-call-parser": "openai"
+      }
 
   storage:
     ephemeral:
@@ -42,6 +81,7 @@ llm:
 kaiwo:
   enabled: false
 
+# Labels for Kubernetes resources
 metadata:
   labels:
     app.kubernetes.io/name: agentic-testing

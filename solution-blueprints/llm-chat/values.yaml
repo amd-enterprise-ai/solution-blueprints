@@ -68,6 +68,11 @@ entrypoint: |
 kaiwo:
   enabled: false
 
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
 
 llm:
   image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.5"

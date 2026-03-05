@@ -1,0 +1,10 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+fastapi==0.95.2
+httpx==0.24.1
+pydantic==1.10.9
+python-dotenv==1.0.0
+PyYAML==6.0
+uvicorn[standard]==0.22.0

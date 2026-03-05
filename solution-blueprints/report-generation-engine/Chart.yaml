@@ -1,0 +1,23 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-report-generation-engine
+description: AI-powered report generation engine blueprint
+type: application
+version: 0.1.0
+maintainers:
+- name: AMD
+  url: https://www.amd.com/
+dependencies:
+- name: aimchart-llm
+  version: 0.2.2
+  repository: oci://registry-1.docker.io/amdenterpriseai
+  alias: llm
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.release.notes: "Report Generation Engine initial release"
+  com.amd.aim.description.full: "This report generation engine blueprint illustrates how automated technical report generation can be implemented using AIMs. It uses a multi-stage LLM workflow with integrated web research to produce comprehensive, evidence-based technical documents on any topic."
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "Report Generation Engine"

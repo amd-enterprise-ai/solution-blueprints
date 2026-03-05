@@ -1,0 +1,215 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- range $name, $svc := .Values.pythonServices }}
+{{- if $svc.enabled }}
+{{- $root := $ -}}
+{{- $fullname := include "release.componentName" (dict "root" $root "name" $name) -}}
+{{- $env := merge (dict) (default (dict) $svc.env) -}}
+{{- if or (eq $name "app") (eq $name "celery-worker") }}
+  {{- $redisUrl := printf "redis://%s:6379/0" (include "release.componentName" (dict "root" $root "name" "redis")) }}
+  {{- if or (not (hasKey $env "APP_CELERY_BROKER_URL")) (eq (get $env "APP_CELERY_BROKER_URL") "") }}
+    {{- $_ := set $env "APP_CELERY_BROKER_URL" $redisUrl }}
+  {{- end }}
+  {{- if or (not (hasKey $env "APP_CELERY_BACKEND_URL")) (eq (get $env "APP_CELERY_BACKEND_URL") "") }}
+    {{- $_ := set $env "APP_CELERY_BACKEND_URL" $redisUrl }}
+  {{- end }}
+  {{- $sub := dict
+        "Values" (merge (dict) $.Values.llm)
+        "Release" $.Release
+        "Chart" (dict "Name" "llm")
+  -}}
+  {{- $llmUrl := include "aimchart-llm.url" $sub }}
+  {{- if or (not (hasKey $env "APP_LLM_URL")) (eq (get $env "APP_LLM_URL") "") }}
+    {{- $_ := set $env "APP_LLM_URL" $llmUrl }}
+  {{- end }}
+{{- end }}
+{{- if eq $name "frontend" }}
+  {{- if or (not (hasKey $env "API_SERVICE_URL")) (eq (get $env "API_SERVICE_URL") "") }}
+    {{- $_ := set $env "API_SERVICE_URL" (printf "http://%s:8000" (include "release.componentName" (dict "root" $root "name" "app"))) }}
+  {{- end }}
+{{- end }}
+
+{{- $extraVolumeMounts := list -}}
+{{- $extraVolumes := list -}}
+{{- if or (eq $name "app") (eq $name "celery-worker") }}
+  {{- $claimName := default (printf "%s-app-storage" (include "release.componentName" (dict "root" $root "name" "app"))) $.Values.storage.appStorage.existingClaim }}
+  {{- $extraVolumes = append $extraVolumes (dict "name" "app-storage" "persistentVolumeClaim" (dict "claimName" $claimName)) }}
+  {{- $extraVolumeMounts = append $extraVolumeMounts (dict "name" "app-storage" "mountPath" "/tmp/storage") }}
+{{- end }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}
+  labels:
+    app: {{ $fullname }}
+    component: {{ $name }}
+    chart: {{ $.Chart.Name }}
+    {{- range $key, $value := $.Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: {{ default 1 $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $fullname }}
+  template:
+    metadata:
+      labels:
+        app: {{ $fullname }}
+        component: {{ $name }}
+    spec:
+      {{- if $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $.Values.imagePullSecrets }}
+        - name: {{ .name | quote }}
+        {{- end }}
+      {{- end }}
+      {{- if or (eq $name "app") (eq $name "celery-worker") }}
+      {{- $sub := dict
+            "Values" (merge (dict) $.Values.llm)
+            "Release" $.Release
+            "Chart" (dict "Name" "llm")
+      -}}
+      {{- $llmUrl := include "aimchart-llm.url" $sub }}
+      initContainers:
+        - name: wait-for-llm
+          image: curlimages/curl:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              VLLM_URL="{{ $llmUrl }}/models"
+              echo "Waiting for VLLM service ($$VLLM_URL)..."
+              until curl -s -f -o /dev/null $$VLLM_URL; do sleep 5; done
+              echo "✓ VLLM service is up!"
+      {{- end }}
+      {{- if eq $name "frontend" }}
+      {{- $appServiceName := include "release.componentName" (dict "root" $root "name" "app") }}
+      {{- $appUrl := printf "http://%s:8000" $appServiceName }}
+      initContainers:
+        - name: wait-for-app
+          image: curlimages/curl:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              APP_URL="{{ $appUrl }}/health"
+              echo "Waiting for App service ($$APP_URL)..."
+              until curl -s -f -o /dev/null $$APP_URL; do sleep 5; done
+              echo "✓ App service is up!"
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          {{- if $svc.image }}
+          image: {{ $svc.image | quote }}
+          {{- else if eq $name "frontend" }}
+          image: "{{ $.Values.uiImage.repository }}:{{ tpl $.Values.uiImage.tag $ }}"
+          {{- else }}
+          image: "{{ $.Values.image.repository }}:{{ tpl $.Values.image.tag $ }}"
+          {{- end }}
+          imagePullPolicy: {{ default $.Values.imagePullPolicy $svc.imagePullPolicy | quote }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              {{- if or (eq $name "app") (eq $name "celery-worker") (eq $name "frontend") }}
+              # Code is already in Docker image with all dependencies
+              {{- if eq $name "celery-worker" }}
+              export PYTHONPATH=/app:$PYTHONPATH
+              cd /app
+              {{- else if eq $name "frontend" }}
+              cd /
+              {{- else }}
+              cd /app
+              {{- end }}
+              {{ $svc.run }}
+              {{- end }}
+          env:
+            {{- include "container.env" (dict "env" $env "root" $root) | nindent 12 }}
+            {{- include "container.env" (dict "env" $.Values.env_vars "root" $root) | nindent 12 }}
+          ports:
+            {{- if $svc.port }}
+            - name: http
+              containerPort: {{ $svc.port }}
+            {{- end }}
+          {{- if and (eq $name "app") $.Values.livenessProbe }}
+          livenessProbe:
+            {{- $.Values.livenessProbe | toYaml | nindent 12 -}}
+          {{- end }}
+          {{- if and (eq $name "app") $.Values.startupProbe }}
+          startupProbe:
+            {{- $.Values.startupProbe | toYaml | nindent 12 -}}
+          {{- end }}
+          resources:
+            {{- toYaml (default $.Values.resources $svc.resources) | nindent 12 }}
+          volumeMounts:
+            {{- include "container.volumeMounts" (dict "name" $name "extraVolumeMounts" $extraVolumeMounts) | nindent 12 }}
+      volumes:
+        {{- include "container.volumes" (dict "root" $root "name" $name "extraVolumes" $extraVolumes) | nindent 8 }}
+---
+{{ end }}
+{{ end }}
+
+{{- range $name, $svc := .Values.infraServices }}
+{{- if $svc.enabled }}
+{{- $root := $ -}}
+{{- $fullname := include "release.componentName" (dict "root" $root "name" $name) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}
+  labels:
+    app: {{ $fullname }}
+    component: {{ $name }}
+spec:
+  replicas: {{ default 1 $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $fullname }}
+  template:
+    metadata:
+      labels:
+        app: {{ $fullname }}
+        component: {{ $name }}
+    spec:
+      {{- if $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $.Values.imagePullSecrets }}
+        - name: {{ .name | quote }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ $svc.image }}
+          imagePullPolicy: {{ default "IfNotPresent" $svc.imagePullPolicy }}
+          {{- if $svc.command }}
+          command: {{ toYaml $svc.command | nindent 10 }}
+          {{- end }}
+          {{- if $svc.args }}
+          args: {{ toYaml $svc.args | nindent 10 }}
+          {{- end }}
+          {{- if $svc.env }}
+          env:
+            {{- include "container.env" (dict "env" $svc.env "root" $root) | nindent 12 }}
+          {{- end }}
+          {{- if $svc.ports }}
+          ports:
+            {{- range $svc.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+            {{- end }}
+          {{- end }}
+          {{- if $svc.volume }}
+          volumeMounts:
+            - name: {{ $svc.volume.name }}
+              mountPath: {{ $svc.volume.mountPath }}
+          {{- end }}
+      {{- if $svc.volume }}
+      volumes:
+        - name: {{ $svc.volume.name }}
+          emptyDir: {}
+      {{ end }}
+---
+{{ end }}
+{{ end }}

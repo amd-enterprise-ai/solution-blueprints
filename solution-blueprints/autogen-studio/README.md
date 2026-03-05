@@ -4,9 +4,9 @@ Copyright © Advanced Micro Devices, Inc., or its affiliates.
 SPDX-License-Identifier: MIT
 -->
 
-# AutogenStudio Helm Chart
+# AutoGen Studio Helm Chart
 
-AutogenStudio is a web-based interface for creating, configuring, and managing multi-agent AI conversations. This Helm chart deploys AutogenStudio in a Kubernetes cluster.
+AutoGen Studio is a web-based interface for creating, configuring, and managing multi-agent AI conversations. This Helm chart deploys AutoGen Studio in a Kubernetes cluster.
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ AutogenStudio is a web-based interface for creating, configuring, and managing m
 
 ## Quick Start
 
-### 1. Deploy AutogenStudio
+### 1. Deploy AutoGen Studio
 
 From the `solution-blueprints/autogen-studio` directory:
 
@@ -30,13 +30,13 @@ helm template --name-template "test" . \
 
 This will create:
 - ConfigMap with default gallery configuration
-- Deployment running AutogenStudio on port 8081
+- Deployment running AutoGen Studio on port 8081
 - Service to expose the application
 - AIM deployment and service if an existing service isn't used
 
 ### 2. Access the UI
 
-Forward local port 8080 to AutogenStudio service:
+Forward local port 8080 to AutoGen Studio service:
 ```bash
 kubectl port-forward service/autogenstudio-test 8080:8081
 ```
@@ -110,12 +110,12 @@ If port forwarding fails or you can't access the UI:
 
 4. **Test internal connectivity:**
    ```bash
-   # Test if AutogenStudio responds inside the pod
+   # Test if AutoGen Studio responds inside the pod
    kubectl exec deployment/autogenstudio-test -- curl -s -o /dev/null -w "%{http_code}" http://localhost:8081
    # Should return: 200
    ```
 
-5. **Check AutogenStudio logs:**
+5. **Check AutoGen Studio logs:**
    ```bash
    kubectl logs deployment/autogenstudio-test --tail=20
    # Look for: "Application startup complete. Navigate to http://127.0.0.1:8081"
@@ -130,7 +130,7 @@ If port forwarding fails or you can't access the UI:
    kubectl port-forward service/autogenstudio-test 8080:8081
    ```
 
-## AutogenStudio Features
+## AutoGen Studio Features
 
 Once connected to the UI, you can:
 

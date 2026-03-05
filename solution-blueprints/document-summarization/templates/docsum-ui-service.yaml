@@ -1,0 +1,21 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if (index .Values "docsum-ui" "enabled") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "release.fullname" . }}-ui
+  labels:
+    app: {{ include "release.fullname" . }}-ui
+spec:
+  type: {{ (index .Values "docsum-ui" "service" "type") | default "NodePort" }}
+  ports:
+    - port: {{ index .Values "docsum-ui" "containerPort" | default 5173 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ include "release.fullname" . }}-ui
+{{- end }}
