@@ -1,0 +1,21 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if .Values.knowledgeMcp.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "release.fullname" . }}-knowledge-mcp
+  labels:
+    app.kubernetes.io/component: knowledge-mcp
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ include "release.fullname" . }}
+    app.kubernetes.io/component: knowledge-mcp
+  ports:
+    - name: http
+      port: {{ .Values.knowledgeMcp.port }}
+      targetPort: http
+{{- end }}

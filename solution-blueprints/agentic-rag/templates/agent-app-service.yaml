@@ -1,0 +1,21 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if .Values.agentApp.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "release.fullname" . }}-agent-app
+  labels:
+    app.kubernetes.io/component: agent-app
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: {{ include "release.fullname" . }}
+    app.kubernetes.io/component: agent-app
+{{- end }}
