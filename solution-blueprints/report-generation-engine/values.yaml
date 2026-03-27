@@ -100,8 +100,10 @@ http_route:
 # Example: --set llm.existingService=my-llm-service
 llm:
   existingService: ""  # If set, skips LLM deployment and uses this service
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0"
   nameOverride: llama33-70b-instruct
+  env_vars:
+    AIM_PRECISION: "fp8"
   cpu_per_gpu: 1  # Reduced from 4 to 1 CPU
   storage:
     ephemeral:

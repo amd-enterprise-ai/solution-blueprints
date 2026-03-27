@@ -36,7 +36,7 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-tes
 
 ## Default AIM image and GPU compatibility
 
-By default, the chart deploys GPT-OSS 120B with this AIM: `amdenterpriseai/aim-openai-gpt-oss-120b:0.9.0`
+By default, the chart deploys GPT-OSS 120B with this AIM: `amdenterpriseai/aim-openai-gpt-oss-120b:0.10.0`
 
 On newer GPUs, this default image may not be the best match and can fail to start or run sub-optimally.
 To choose a newer AIM or deploy a different LLM, override `llm.image` to a compatible image. See the [catalog of available AIMs](https://enterprise-ai.docs.amd.com/en/latest/aims/catalog/models.html) for options.

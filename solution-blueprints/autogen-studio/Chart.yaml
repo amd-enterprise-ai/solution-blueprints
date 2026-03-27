@@ -9,16 +9,15 @@ type: application
 maintainers:
 - name: AMD
   url: https://www.amd.com/
-version: 0.4.5
+version: 0.4.6
 appVersion: "0.4.2.2"
 dependencies:
 - name: aimchart-llm
-  version: 0.2.2
+  version: 0.2.3
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
-  com.amd.aim.release.notes: "Fix deep research validation error"
   com.amd.aim.title: "AutoGen Studio Agentic Platform"
-  com.amd.aim.description.full: Create and deploy agentic AI applications with a no-code, visual interface. AutoGen Studio enables users to design, test, and launch AI agents that can autonomously perform complex tasks by integrating language models, tools, and workflows.
+  com.amd.aim.description.full: "A no-code visual interface for building agentic AI workflows. Design, test, and deploy AI agents that autonomously perform complex tasks by combining language models with custom tools and multi-step workflows."
   com.amd.aim.hfToken.required: "not-applicable"

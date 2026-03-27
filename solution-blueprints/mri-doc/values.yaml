@@ -1,0 +1,79 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+metadata:
+  labels: {}
+
+image: "python:3.11-slim"
+imagePullPolicy: Always
+
+enableUI: True
+
+gpus: 0
+memory_per_gpu: 32
+cpu_per_gpu: 0
+cpu_request: "500m"
+cpu_limit: "500m"
+
+env_vars: {}
+
+storage:
+  ephemeral:
+    quantity: 20Gi
+    storageClassName: mlstorage
+    accessModes:
+      - ReadWriteOnce
+  dshm:
+    sizeLimit: 32Gi
+
+deployment:
+  ports:
+    http: 7861
+
+# startupProbe - checks if the container has successfully started. It disables liveness and readiness probes until it succeeds, useful for slow-starting applications.
+# livenessProbe - checks if the container is still alive. If it fails, Kubernetes restarts the container to recover from failure.
+# readinessProbe - checks if the container is ready to serve traffic. If it fails, the container is removed from the service's endpoints but remains running.
+# ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+startupProbe:
+  httpGet:
+    path: /gradio_api/openapi.json
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  failureThreshold: 300
+livenessProbe:
+  httpGet:
+    path: /gradio_api/openapi.json
+    port: http
+  failureThreshold: 1
+  periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /gradio_api/openapi.json
+    port: http
+  initialDelaySeconds: 10
+  failureThreshold: 1
+  periodSeconds: 10
+
+# kaiwo settings (if enabled, use kaiwo CRDs to have kaiwo operator manage the workload)
+kaiwo:
+  enabled: false
+
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
+
+llm:
+  nameOverride: gpt-oss-20b
+  image: "amdenterpriseai/aim-openai-gpt-oss-20b:0.10.0"
+
+  storage:
+    ephemeral:
+      storageClassName: mlstorage
+      quantity: 120Gi
+
+  env_vars:
+    AIM_PORT: 8000

@@ -189,8 +189,8 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router 
 
 When `deployDemonstrationLLMs=true`, the chart deploys two default AIMs:
 
-- `primary.image=amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.5`
-- `secondary.image=amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview`
+- `primary.image=amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.10.0`
+- `secondary.image=amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0`
 
 On newer GPUs, these images may not be the best match and can fail to start or run sub-optimally.
 To choose newer AIMs or deploy a different LLMs, override `primary.image` and/or `secondary.image` to compatible images. See the [catalog of available AIMs](https://enterprise-ai.docs.amd.com/en/latest/aims/catalog/models.html) for options.

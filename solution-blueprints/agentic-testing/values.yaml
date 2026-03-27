@@ -61,17 +61,8 @@ llm:
   existingService: null
 
   # Change name override according to model name from image (aim-{model}:{version})
-  image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.9.0"
+  image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.10.0"
   nameOverride: openai-gpt-oss-120b
-
-  env_vars:
-    AIM_PORT: 8000
-    # Note: tool-server not needed - agent handles MCP tool execution directly
-    AIM_ENGINE_ARGS: >-
-      {
-        "enable-auto-tool-choice": true,
-        "tool-call-parser": "openai"
-      }
 
   storage:
     ephemeral:

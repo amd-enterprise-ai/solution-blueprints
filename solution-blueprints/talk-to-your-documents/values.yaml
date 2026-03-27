@@ -65,8 +65,9 @@ llm:
   service:
     enabled: true
     type: ClusterIP
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
-  model: "llama-3-3-70b-instruct"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0"
+  env_vars:
+    AIM_PRECISION: "fp8"
   storage:
     ephemeral:
       storageClassName: mlstorage

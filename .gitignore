@@ -213,3 +213,4 @@ __marimo__/
 # Helm library chart installation artifacts
 *.tgz
 Chart.lock
+solution-blueprints/mri-doc/docs/architecture-diagram.drawio

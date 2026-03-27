@@ -1,0 +1,15 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Prompts ConfigMap: mounted at /workload/mount/prompts_healthcare so "from prompts_healthcare.xxx" works
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "release.fullname" . }}-prompts
+data:
+  _chart: "prompts_healthcare"
+{{- range $path, $_ := .Files.Glob "src/prompts_healthcare/*.py" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | nindent 4 }}
+{{- end }}

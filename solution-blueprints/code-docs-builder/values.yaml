@@ -31,11 +31,9 @@ llm:
 
   # Configuration for deploying own AIM service (used when existingService is not set)
   nameOverride: llama33-70b-instruct
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
-
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0"
   env_vars:
-    AIM_ENGINE_ARGS: >-
-      {"enable-auto-tool-choice": null, "tool-call-parser": "llama3_json"}
+    AIM_PRECISION: "fp8"
 
   storage:
     ephemeral:

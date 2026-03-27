@@ -19,7 +19,7 @@ Then run
 ```bash
 helm dependency build .
 helm template $name . \
-    | kubectl apply -f - -n$namespace
+    | kubectl apply -f - -n $namespace
 ```
 
 Then, to connect to the code-server, port-forward 8080 to be able to access the UI. The UI will then be available at <http://localhost:8080>.

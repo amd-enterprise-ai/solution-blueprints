@@ -4,11 +4,17 @@
 
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 
 import gradio as gr
 import uvicorn
-from backend import KnowledgeBase
 from config import GRADIO_PORT, TITLE
+
+if TYPE_CHECKING:
+    from .backend import KnowledgeBase
+else:
+    from backend import KnowledgeBase
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from rag import run_rag

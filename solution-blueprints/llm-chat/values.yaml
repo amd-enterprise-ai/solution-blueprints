@@ -75,7 +75,9 @@ http_route:
     namespace: kgateway-system
 
 llm:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.5"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.10.0"
+  env_vars:
+    AIM_PRECISION: "fp8"
   gpus: 1
   storage:
     ephemeral:

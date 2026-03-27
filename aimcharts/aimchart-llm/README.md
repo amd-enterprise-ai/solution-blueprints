@@ -30,7 +30,7 @@ helm template $name . \
 ### Connecting, testing
 It may take a while for an LLM to be ready to accept requests, wait until the deployment shows READY:
 ```bash
-kubectl get deployment.apps/aimchart-llm-$name -n$namespace
+kubectl get deployment.apps/aimchart-llm-$name -n $namespace
 ```
 
 To connect to the LLM, start a port-forward.
@@ -128,7 +128,7 @@ llm:
     user_id: user
     workload_id: # defaults to the release name
 
-  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.5"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.10.0"
   replicas: 1
 
   gpus: 1

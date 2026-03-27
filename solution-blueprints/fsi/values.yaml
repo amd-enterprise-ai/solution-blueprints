@@ -63,13 +63,12 @@ http_route:
     namespace: kgateway-system
 
 llm:
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0"
   nameOverride: aim-llama-70b
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.8.5-preview"
+  env_vars:
+    AIM_PRECISION: "fp8"
 
   storage:
     ephemeral:
       storageClassName: mlstorage
       quantity: 512Gi
-
-  env_vars:
-    AIM_PRECISION: "fp8"

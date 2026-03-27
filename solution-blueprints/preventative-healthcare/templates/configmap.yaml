@@ -1,0 +1,28 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "release.fullname" . }}
+data:
+  # Sentinel so data is never empty (avoids YAML parse error)
+  _chart: "preventative-healthcare"
+{{- $files := .Files }}
+{{- range $path, $_ := .Files.Glob "src/*.py" }}
+  {{ $path | trimPrefix "src/" }}: |
+{{ $files.Get $path | nindent 4 }}
+{{- end }}
+{{- range $path, $_ := .Files.Glob "src/*.json" }}
+  {{ $path | trimPrefix "src/" }}: |
+{{ $files.Get $path | nindent 4 }}
+{{- end }}
+{{- range $path, $_ := .Files.Glob "src/requirements.txt" }}
+  {{ $path | trimPrefix "src/" }}: |
+{{ $files.Get $path | nindent 4 }}
+{{- end }}
+{{- range $path, $_ := .Files.Glob "src/data/*.csv" }}
+  {{ $path | trimPrefix "src/" | replace "/" "_" }}: |
+{{ $files.Get $path | nindent 4 }}
+{{- end }}

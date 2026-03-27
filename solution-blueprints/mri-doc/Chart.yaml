@@ -1,0 +1,22 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-mri-doc
+description: MRI analysis tool blueprint
+type: application
+version: 0.1.1
+maintainers:
+- name: AMD
+  url: https://www.amd.com/
+dependencies:
+- name: aimchart-llm
+  version: 0.2.3
+  repository: oci://registry-1.docker.io/amdenterpriseai
+  alias: llm
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.description.full: "AI-powered MRI analysis tool with Gradio UI and LLM reporting."
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "MRI Analysis Tool"

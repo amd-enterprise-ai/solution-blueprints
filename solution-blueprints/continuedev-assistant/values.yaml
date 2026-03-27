@@ -81,7 +81,7 @@ chatLLM:
   # Set to null or comment out to deploy own AIM service
   existingService: null
   nameOverride: qwen3-32b
-  image: "amdenterpriseai/aim-qwen-qwen3-32b:0.8.5"
+  image: "amdenterpriseai/aim-qwen-qwen3-32b:0.10.0"
   storage:
     ephemeral:
       storageClassName: mlstorage
@@ -103,7 +103,7 @@ autocompleteLLM:
   # Set to null or comment out to deploy own AIM service
   existingService: null
   nameOverride: qwen2-5-coder-7b
-  image: "amdenterpriseai/aim-base:0.9"
+  image: "amdenterpriseai/aim-base:0.10"
   env_vars:
     AIM_MODEL_ID: "Qwen/Qwen2.5-Coder-7B"
   storage:

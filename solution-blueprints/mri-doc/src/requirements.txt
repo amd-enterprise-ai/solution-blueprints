@@ -1,0 +1,36 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+DateTime==6.0
+
+# Web interface
+gradio==6.6.0
+
+# Deep learning and AI
+langchain==0.0.354
+langchain-community==0.0.20
+matplotlib==3.10.8
+
+# Medical imaging formats (for MRI analysis)
+nibabel==5.3.3
+# Core scientific computing
+numpy==1.26.4
+openai==2.21.0
+
+# Computer vision and image processing
+opencv-python==4.11.0.86
+packaging==23.2
+pandas==3.0.1
+Pillow==12.1.1
+pydicom==3.0.1
+
+# Additional utilities
+requests==2.32.5
+scikit-image==0.26.0
+
+# Machine learning
+scikit-learn==1.8.0
+scipy==1.17.0
+SimpleITK==2.5.3
+tqdm==4.67.3

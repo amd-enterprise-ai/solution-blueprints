@@ -12,7 +12,7 @@ metadata:
   user_id: null
   workload_id: null # defaults to the release name
 
-image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.8.5"
+image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.10.0"
 replicas: 1
 imagePullSecrets: []
   # Example:

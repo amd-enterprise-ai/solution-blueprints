@@ -1,0 +1,82 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+metadata:
+  labels: {}
+
+image: "python:3.12"
+imagePullPolicy: Always
+
+enableUI: True
+
+# App pod resources (no GPU)
+gpus: 0
+memory_per_gpu: 4
+cpu_per_gpu: 1
+
+storage:
+  ephemeral:
+    quantity: 20Gi
+    storageClassName: mlstorage
+    accessModes:
+      - ReadWriteOnce
+  dshm:
+    sizeLimit: 32Gi
+
+deployment:
+  ports:
+    http: 8501
+
+# Probes target Streamlit's health endpoint. Startup allows time for pip install (autogen/litellm/streamlit pull many deps).
+# ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+startupProbe:
+  httpGet:
+    path: /_stcore/health
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  failureThreshold: 80
+  # 60 + 80*15 = 1260s (~21 min) before startup fails; adjust down if using a pre-built image
+livenessProbe:
+  httpGet:
+    path: /_stcore/health
+    port: http
+  failureThreshold: 3
+  periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /_stcore/health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+
+# kaiwo settings (if enabled, use kaiwo CRDs to have kaiwo operator manage the workload)
+kaiwo:
+  enabled: false
+
+
+openaiBaseUrl: ""
+openaiApiKey: ""
+
+# Optional extra env vars for the app (e.g. from Secrets)
+env_vars: {}
+
+http_route:
+  enabled: false
+  gateway:
+    name: https
+    namespace: kgateway-system
+
+llm:
+  existingService: ""
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0"
+  nameOverride: llama33-70b-instruct
+  env_vars:
+    AIM_PRECISION: "fp8"
+
+  storage:
+    ephemeral:
+      storageClassName: mlstorage
+      quantity: 512Gi
