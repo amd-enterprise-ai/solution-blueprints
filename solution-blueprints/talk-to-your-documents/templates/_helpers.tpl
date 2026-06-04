@@ -54,6 +54,20 @@ Helper for container environment variables.
 - name: VLLM_URL
   {{ $sub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") }}
   value: {{ include "aimchart-llm.url" $sub }}
+{{- if .Values.llm.apiKeySecretRef }}
+- name: VLLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.llm.apiKeySecretRef.name }}
+      key: {{ .Values.llm.apiKeySecretRef.key }}
+{{- else if .Values.llm.apiKey }}
+- name: VLLM_API_KEY
+  value: {{ .Values.llm.apiKey | quote }}
+{{- end }}
+{{- if .Values.llm.model }}
+- name: VLLM_MODEL
+  value: {{ .Values.llm.model | quote }}
+{{- end }}
 - name: EMBEDDING_URL
   {{ $sub := dict "Values" (merge (dict) .Values.embedding) "Release" .Release "Chart" (dict "Name" "embedding") }}
   value: {{ include "aim-embedding.url" $sub }}/embeddings

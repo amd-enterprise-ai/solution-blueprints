@@ -47,8 +47,15 @@ spec:
           {{ $sub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") }}
           VLLM_URL="{{ include "aimchart-llm.url" $sub }}/models"
           echo "Waiting for VLLM service ($VLLM_URL)..."
-          until curl -s -f -o /dev/null $VLLM_URL; do sleep 5; done
+          if [ -z "${VLLM_API_KEY:-}" ]; then
+            until curl -s -f -o /dev/null $VLLM_URL; do sleep 5; done
+          else
+            until curl -s -f -o /dev/null $VLLM_URL -H "Authorization: Bearer $VLLM_API_KEY"; do sleep 5; done
+          fi
+
           echo "✓ VLLM service is up!"
+        env:
+          {{- include "aimsb-talk-to-your-documents.container.env" . | nindent 12 }}
 
       containers:
         - name: {{ .Chart.Name }}

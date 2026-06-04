@@ -1,0 +1,49 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-telecom-assistant
+description: A Helm chart for deploying Telecom Assistant on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: AMD
+    url: https://www.amd.com
+dependencies:
+  - name: aimchart-chromadb
+    version: 0.1.4
+    repository: oci://registry-1.docker.io/amdenterpriseai
+    alias: chromadb
+  - name: aimchart-embedding
+    version: 0.1.3
+    repository: oci://registry-1.docker.io/amdenterpriseai
+    alias: embedding
+  - name: livekit-server
+    version: 1.9.0
+    repository: https://helm.livekit.io
+    alias: livekit
+  - name: aimchart-qwen-asr
+    version: 0.1.1
+    repository: oci://registry-1.docker.io/amdenterpriseai
+    alias: stt
+  - name: aimchart-llm
+    version: 0.2.5
+    repository: oci://registry-1.docker.io/amdenterpriseai
+    alias: llm
+  - name: aimchart-qwen-tts
+    version: 0.1.2
+    repository: oci://registry-1.docker.io/amdenterpriseai
+    alias: tts
+  - name: stunner
+    version: 1.1.0
+    repository: https://l7mp.io/stunner
+    alias: stunner
+    condition: stunner.enabled
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.release.notes: "Telecom Assistant service v0.1.0"
+  com.amd.aim.description.full: "Intelligent telecom assistant that automatically provide required information and perform actions with customer's account."
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "Telecom Assistant"

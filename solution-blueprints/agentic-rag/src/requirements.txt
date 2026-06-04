@@ -13,6 +13,7 @@ langchain-core==1.1.2
 langchain-openai==1.1.1
 langchain-text-splitters==1.0.0
 langgraph==1.0.10
+langgraph-checkpoint==4.0.2
 mcp==1.6.0
 openai==2.9.0
 pymupdf==1.26.6

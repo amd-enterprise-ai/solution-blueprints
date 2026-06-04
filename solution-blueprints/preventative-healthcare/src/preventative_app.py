@@ -85,7 +85,9 @@ with st.expander("Ask something to the AI Doctor", expanded=False):
             with st.spinner("Calling LLM..."):
                 try:
                     client = OpenAI(api_key=api_key or "dummy", base_url=base_url)
-                    test_model = discover_model(base_url, api_key)
+                    test_model = (
+                        st.secrets.get("OPENAI_MODEL") or os.environ.get("OPENAI_MODEL") or ""
+                    ).strip() or discover_model(base_url, api_key)
                     r = client.chat.completions.create(
                         model=test_model,
                         messages=[{"role": "user", "content": test_question}],
@@ -347,7 +349,9 @@ if generate:
                 st.stop()
 
             try:
-                model_name = discover_model(env_base_url, api_key)
+                model_name = (
+                    st.secrets.get("OPENAI_MODEL") or os.environ.get("OPENAI_MODEL") or ""
+                ).strip() or discover_model(env_base_url, api_key)
             except Exception as e:
                 st.error(f"Could not discover model from {env_base_url}: {e}")
                 st.stop()

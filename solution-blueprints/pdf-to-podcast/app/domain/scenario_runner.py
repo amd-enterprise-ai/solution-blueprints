@@ -71,7 +71,7 @@ class ScenarioRunner:
 
         # Initialize LLM (with retry logic and caching)
         logger.info("Task %s: Initializing LLM from %s", task_id, settings.llm_url)
-        llm = await init_llm(settings.llm_url, settings.api_key)
+        llm = await init_llm(settings.llm_url, settings.api_key, settings.llm_model)
 
         prompt_tracker = PromptTracker(task_id=task_id, user_id=user_id, storage=self._storage)
 

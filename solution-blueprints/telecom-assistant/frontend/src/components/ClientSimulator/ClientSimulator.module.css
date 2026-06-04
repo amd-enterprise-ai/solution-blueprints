@@ -1,0 +1,514 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: stretch;
+  flex-shrink: 0;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.content {
+  display: flex;
+  padding: var(--space-2xl);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2xl);
+  align-self: stretch;
+}
+
+/* ---- Header ---- */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2xl);
+  align-self: stretch;
+}
+
+.headerInner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--space-xxs);
+  flex: 1 0 0;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  align-self: stretch;
+}
+
+/* ---- Tools panel toggle ---- */
+.toolsToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toolsToggleLabel {
+  color: var(--text-tertiary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.toolsToggleActive .toolsToggleLabel {
+  color: var(--text-secondary);
+}
+
+.switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.switchActive {
+  background: var(--accent-teal);
+  border-color: var(--accent-teal);
+}
+
+.switchKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.switchActive .switchKnob {
+  transform: translateX(16px);
+  background: var(--text-white);
+}
+
+.toolsToggleIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.toolsToggleActive .toolsToggleIcon {
+  color: var(--text-secondary);
+}
+
+.title {
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.subtitle {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  align-self: stretch;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  line-height: 20px;
+}
+
+/* ---- Passphrase hint ---- */
+.passphraseHint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-self: stretch;
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-card);
+}
+
+.passphraseLabel {
+  color: var(--text-tertiary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.passphraseOptions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.passphraseCode {
+  font-family: "Roboto Mono", monospace;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+
+.passphrasePlan {
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  line-height: 18px;
+}
+
+/* ---- Control bar ---- */
+.controlBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  align-self: stretch;
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-surface);
+}
+
+/* ---- Chat input row ---- */
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  align-self: stretch;
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.input {
+  flex: 1 1 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  line-height: 20px;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--text-disabled);
+}
+
+.sendBtn {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.sendBtn:hover:not(:disabled) {
+  background: var(--border-primary);
+}
+
+.sendBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sendIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ---- Controls row ---- */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  align-self: stretch;
+}
+
+.toggleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex: 1 1 0;
+}
+
+.toggleBtn {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.toggleBtn:hover:not(:disabled) {
+  background: var(--bg-input);
+  border-color: var(--border-primary);
+}
+
+.toggleBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toggleBtnActive {
+  background: var(--bg-input);
+  border-color: var(--border-primary);
+}
+
+.toggleBtnActive:hover:not(:disabled) {
+  background: var(--border-primary);
+}
+
+.toggleBtnMuted {
+  background: var(--bg-card);
+  border-color: var(--border-secondary);
+}
+
+.toggleBtnMuted .toggleIcon {
+  color: var(--color-error-fg);
+}
+
+.toggleIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.toggleBtnActive .toggleIcon {
+  color: var(--text-secondary);
+}
+
+/* ---- Compound mic button ---- */
+.micCompound {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.micToggle {
+  display: flex;
+  height: 36px;
+  padding: 0 10px;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--border-secondary);
+  border-right: none;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.micToggle:hover:not(:disabled) {
+  background: var(--bg-input);
+}
+
+.micToggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.micToggleActive {
+  background: var(--bg-input);
+  border-color: var(--border-primary);
+}
+
+.micToggleActive:hover:not(:disabled) {
+  background: var(--border-primary);
+}
+
+.micToggleMuted {
+  background: var(--bg-card);
+  border-color: var(--border-secondary);
+}
+
+.micToggleMuted .toggleIcon {
+  color: var(--color-error-fg);
+}
+
+.micToggleActive .toggleIcon {
+  color: var(--text-secondary);
+}
+
+.micDropdown {
+  display: flex;
+  width: 28px;
+  height: 36px;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--border-secondary);
+  border-left: none;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.micDropdown::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--border-primary);
+}
+
+.micDropdown:hover:not(:disabled) {
+  background: var(--bg-input);
+}
+
+.micDropdown:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.micDropdownActive {
+  background: var(--bg-input);
+  border-color: var(--border-primary);
+}
+
+.micDropdownActive::before {
+  background: var(--text-muted);
+}
+
+.micDropdownActive:hover:not(:disabled) {
+  background: var(--border-primary);
+}
+
+.micDropdownMuted {
+  background: var(--bg-card);
+  border-color: var(--border-secondary);
+}
+
+.micDropdownMuted::before {
+  background: var(--border-primary);
+}
+
+.chevronIcon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.micDropdownActive .chevronIcon {
+  color: var(--text-secondary);
+}
+
+/* ---- End call button ---- */
+.endCallBtn {
+  display: flex;
+  height: 36px;
+  padding: 0 var(--space-lg);
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-error-border);
+  background: var(--color-error-bg);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.endCallBtn:hover {
+  background: rgba(85, 22, 12, 0.7);
+}
+
+.endCallIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.endCallText {
+  color: var(--color-error-fg);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ---- Start call button ---- */
+.callBtn {
+  display: flex;
+  height: 36px;
+  padding: 0 var(--space-lg);
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-success-border);
+  background: var(--color-success-bg);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.callBtn:hover {
+  background: var(--color-success-border);
+}
+
+.callText {
+  color: var(--color-success-fg);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

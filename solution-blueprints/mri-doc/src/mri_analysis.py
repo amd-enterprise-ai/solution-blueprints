@@ -24,8 +24,10 @@ llm: ChatOpenAI | None = None
 def readiness_check():
     """Check if the OpenAI-compatible endpoint is available."""
     try:
-        models_url = os.environ["OPENAI_API_BASE_URL"] + "/models"
-        r = requests.get(models_url, timeout=2)
+        models_url = os.environ["LLM_API_BASE_URL"] + "/models"
+        api_key = os.environ.get("LLM_API_KEY")
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        r = requests.get(models_url, headers=headers, timeout=2)
         if r.status_code == 200:
             return (r.json()["data"][0]["id"], 200)
         return (r.reason, r.status_code)
@@ -40,11 +42,11 @@ def init_llm():
     output, status_code = readiness_check()
 
     if status_code == 200:
-        model_name = output
+        model_name = os.environ.get("LLM_MODEL") or output
         llm = ChatOpenAI(
             model_name=model_name,
-            openai_api_base=os.environ["OPENAI_API_BASE_URL"],
-            openai_api_key="dummy",
+            openai_api_base=os.environ["LLM_API_BASE_URL"],
+            openai_api_key=os.environ.get("LLM_API_KEY", "dummy"),
             temperature=0.1,
         )
     else:

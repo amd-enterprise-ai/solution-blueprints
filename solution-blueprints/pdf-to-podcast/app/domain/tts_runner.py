@@ -12,7 +12,7 @@ from typing import Iterable
 
 from core.models import Conversation, DialogueEntry, ServiceType, TaskStatus
 from core.task_store import TaskStore
-from elevenlabs.client import ElevenLabs
+from openai import OpenAI
 from settings import settings
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class TtsRunner:
         """
         self._task_store = task_store
         self._executor = ThreadPoolExecutor(max_workers=settings.tts_concurrent_limit)
-        self._client = ElevenLabs(api_key=settings.elevenlabs_api_key, timeout=120.0)
+        self._client = OpenAI(api_key=settings.tts_api_key, base_url=settings.tts_base_url, timeout=120.0)
 
     async def synthesize(self, *, task_id: str, conversation: Conversation, voice_mapping: dict[str, str]) -> bytes:
         """Convert conversation dialogue to audio bytes.
@@ -85,25 +85,21 @@ class TtsRunner:
         loop = asyncio.get_running_loop()
         futures = []
         for line in batch:
-            voice_id = line.voice_id or mapping.get(line.speaker, settings.tts_voice_1_default)
-            futures.append(loop.run_in_executor(self._executor, self._synthesize_text, line.text, voice_id))
+            voice = line.voice_id or mapping.get(line.speaker, settings.tts_voice_1_default)
+            futures.append(loop.run_in_executor(self._executor, self._synthesize_text, line.text, voice))
         results = await asyncio.gather(*futures)
         return b"".join(results)
 
-    def _synthesize_text(self, text: str, voice_id: str) -> bytes:
+    def _synthesize_text(self, text: str, voice: str) -> bytes:
         try:
-            stream = self._client.text_to_speech.convert(
-                text=text,
-                voice_id=voice_id,
-                model_id=settings.tts_model,
-                output_format=settings.tts_audio_format,
-                voice_settings={
-                    "stability": settings.tts_stability_level,
-                    "similarity_boost": settings.tts_similarity_boost,
-                    "style": settings.tts_style_exaggeration,
-                },
+            response = self._client.audio.speech.create(
+                model=settings.tts_model,
+                voice=voice,
+                input=text,
+                response_format=settings.tts_audio_format,
+                speed=settings.tts_speed,
             )
-            return b"".join(stream)
+            return response.content
         except Exception as exc:
             logger.error("TTS synthesis error: %s", exc)
             raise

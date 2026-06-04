@@ -1,0 +1,193 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3xl);
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.container {
+  display: flex;
+  padding: 0 var(--space-4xl);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2xl);
+  align-self: stretch;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xl) var(--space-3xl);
+  align-self: stretch;
+  flex-wrap: wrap;
+}
+
+/* ---- Left side: logo + badges ---- */
+.brandGroup {
+  display: flex;
+  min-width: 320px;
+  align-items: center;
+  gap: var(--space-3xl);
+  flex: 1 0 0;
+}
+
+.logo {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-display-md);
+  font-weight: 700;
+  line-height: normal;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.logoAccent {
+  background: var(--logo-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stateBadges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.badge {
+  display: flex;
+  padding: var(--space-xs) 10px var(--space-xs) var(--space-md);
+  align-items: center;
+  gap: var(--space-xs);
+  border-radius: var(--radius-full);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.badgeLive {
+  border: 1px solid var(--color-error-badge-border);
+  background: var(--color-error-badge-bg);
+}
+
+.badgeListening {
+  border: 1px solid var(--color-blue-light-border);
+  background: var(--color-blue-light-bg);
+}
+
+.badgeIcon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.badgeLiveText {
+  color: var(--color-error-badge-fg);
+  text-align: center;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.badgeListeningText {
+  color: var(--color-listening-fg);
+  text-align: center;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.badgeMuted {
+  border: 1px solid var(--border-primary);
+  background: var(--bg-card);
+}
+
+.badgeMutedText {
+  color: var(--text-tertiary);
+  text-align: center;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+}
+
+/* ---- Right side: customer info + plan badges ---- */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3xl);
+}
+
+.customerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.customerName {
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.customerPhone {
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.planBadges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.planBadge {
+  display: flex;
+  padding: var(--space-xs) 10px;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-warning-badge-border);
+  background: var(--color-warning-badge-bg);
+}
+
+.planBadgeText {
+  color: var(--color-warning-badge-fg);
+  text-align: center;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.statusBadge {
+  display: flex;
+  padding: var(--space-xs) 10px;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.statusBadgeText {
+  color: var(--color-success-fg);
+  text-align: center;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+}

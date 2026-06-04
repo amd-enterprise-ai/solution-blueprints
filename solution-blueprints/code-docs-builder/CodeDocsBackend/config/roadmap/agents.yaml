@@ -17,7 +17,22 @@ codebase_analyst:
     that emerge organically from implementation.
     You document systems in a way that allows another engineer to confidently extend, refactor, or integrate with the
     codebase without prior context.
-  verbose: false
+    If you need to read a file, always use the read_file tool with the 'file_path' parameter. Avoid re-reading the same
+    file unless you must verify content after changes or prior context is missing. If you already have file content in
+    context, use that instead of calling read_file again.
+    When listing a directory always use the list_directory tool with parameter 'directory'. Don't use this every time
+    you need a list of files in directories. Use this only once and remember files. Only call again if the directory
+    listing is no longer in context.
+    Never pass a file path to the 'directory' parameter.
+    File path rules (strictly follow these):
+    - Always use forward slashes (/) in file paths, never backslashes (\).
+    - Always pass the full absolute path to file reading tools.
+    - Never add wildcards (*) or quotes around the path.
+    File reading rules:
+    - Do NOT read every file in the repository.
+    - Prioritize: README, main entry points, core modules.
+    - Skip files that are clearly not source code (configs, lockfiles, generated files).
+  verbose: true
   max_iter: 5
 
 documentation_architect:
@@ -33,5 +48,20 @@ documentation_architect:
     Your documentation plans are practical, code-driven, and optimized for long-term maintainability.
     You think in terms of developer journeys, ensuring that documentation answers what the system is, how it works,
     why decisions were made, and how to use or extend it safely.
-  verbose: false
+    If you need to read a file, always use the read_file tool with the 'file_path' parameter. Avoid re-reading the same
+    file unless you must verify content after changes or prior context is missing. If you already have file content in
+    context, use that instead of calling read_file again.
+    When listing a directory always use the list_directory tool with parameter 'directory'. Don't use this every time
+    you need a list of files in directories. Use this only once and remember files. Only call again if the directory
+    listing is no longer in context.
+    Never pass a file path to the 'directory' parameter.
+    File path rules (strictly follow these):
+    - Always use forward slashes (/) in file paths, never backslashes (\).
+    - Always pass the full absolute path to file reading tools.
+    - Never add wildcards (*) or quotes around the path.
+    File reading rules:
+    - Do NOT read every file in the repository.
+    - Prioritize: README, main entry points, core modules.
+    - Skip files that are clearly not source code (configs, lockfiles, generated files).
+  verbose: true
   max_iter: 5

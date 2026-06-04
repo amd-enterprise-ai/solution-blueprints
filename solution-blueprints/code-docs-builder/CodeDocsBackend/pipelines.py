@@ -1,24 +1,134 @@
 # Copyright © Advanced Micro Devices, Inc., or its affiliates.
 #
 # SPDX-License-Identifier: MIT
-
+import fnmatch
 import os
 from pathlib import Path
 from typing import Any, Optional, Type
 
 import yaml
 from crewai import LLM, Agent, Crew, Task
+from crewai.tools import BaseTool
 from crewai_tools import DirectoryReadTool, FileReadTool
 from pydantic import BaseModel
 
-documentation_agents_config_path = os.getenv(
-    key="DOCUMENTATION_AGENTS_CONFIG", default="./config/documentation/agents.yaml"
-)
-documentation_tasks_config_path = os.getenv(
-    key="DOCUMENTATION_TASKS_CONFIG", default="./config/documentation/tasks.yaml"
-)
-roadmap_agents_config_path = os.getenv(key="PLANNER_AGENTS_CONFIG", default="./config/roadmap/agents.yaml")
-roadmap_tasks_config_path = os.getenv(key="PLANNER_TASKS_CONFIG", default="./config/roadmap/tasks.yaml")
+_BASE_DIR = Path(__file__).resolve().parent
+
+# Roadmap config paths
+roadmap_agents_config_path = _BASE_DIR / "config/roadmap/agents.yaml"
+roadmap_tasks_config_path = _BASE_DIR / "config/roadmap/tasks.yaml"
+
+# Documentation config paths
+documentation_agents_config_path = _BASE_DIR / "config/documentation/agents.yaml"
+documentation_tasks_config_path = _BASE_DIR / "config/documentation/tasks.yaml"
+
+# Files and directories tools ignore list
+IGNORED_DIRS = {".git", ".github", ".venv", "node_modules", "__pycache__", ".idea", ".vscode"}
+IGNORED_PATTERNS = [
+    "*dataset*",
+    "*prompt*",
+    "*.env*",
+    "*.*env*",
+    "*.lock",
+    ".gitattributes",
+    ".gitignore",
+    ".gitmodules",
+    ".editorconfig",
+]
+IGNORED_EXTENSIONS = {
+    ".csv",
+    ".log",
+    ".jsonl",
+    ".ndjson",
+    ".tmp",
+    ".dump",
+    ".db",
+    ".sqlite",
+    ".sqlite3",
+    ".bak",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".svg",
+    ".ico",
+    ".pdf",
+    ".docx",
+    ".xlsx",
+}
+
+
+class FilteredDirectoryReadTool(DirectoryReadTool):
+
+    def __init__(self, directory: Optional[str] = None, **kwargs):
+        super().__init__(directory, **kwargs)
+
+    def _run(self, **kwargs: Any) -> Any:
+        raw: str = super()._run(**kwargs)
+
+        filtered_lines = []
+        for line in raw.splitlines():
+            stripped = line.strip()
+
+            if not stripped:
+                continue
+
+            if not stripped.startswith("-"):
+                continue
+
+            path_str = stripped.lstrip("-").strip()
+            if self.should_ignore(Path(path_str)):
+                continue
+
+            filtered_lines.append(line)
+
+        return "\n".join(filtered_lines) if filtered_lines else "No relevant files found."
+
+    @staticmethod
+    def should_ignore(path: Path) -> bool:
+        if any(part in IGNORED_DIRS for part in path.parts):
+            return True
+
+        if path.suffix.lower() in IGNORED_EXTENSIONS:
+            return True
+
+        if any(fnmatch.fnmatch(path.name.lower(), p) for p in IGNORED_PATTERNS):
+            return True
+
+        return False
+
+
+class FilteredFileReadTool(FileReadTool):
+
+    def __init__(self, file_path: Optional[str] = None, **kwargs: Any):
+        super().__init__(file_path, **kwargs)
+        if file_path is not None:
+            self.description = (
+                f"A tool that reads the content of the file at {self.file_path}. "
+                "You can provide a different 'file_path' to read another file."
+            )
+            self._generate_description()
+
+    def _generate_description(self) -> None:
+        BaseTool._generate_description(self)
+
+    def _run(self, **kwargs) -> str:
+        file_path: str = kwargs.pop("file_path", self.file_path) or ""
+
+        # Removing trailing wildcards
+        file_path = file_path.strip().strip("*").strip('"').strip("'").strip()
+        kwargs["file_path"] = file_path
+
+        if not file_path:
+            return "Error: file_path is empty after cleanup. Provide an absolute path to a specific file."
+
+        if FilteredDirectoryReadTool.should_ignore(Path(file_path)):
+            return f"Reading '{file_path}' is not allowed because it may contain a large or noisy amount of data."
+
+        return super()._run(**kwargs)
 
 
 class DocumentationSection(BaseModel):
@@ -77,7 +187,11 @@ def create_llm(model: str) -> LLM:
     )
 
 
-def _create_agent(config: dict[str, Any], llm: LLM) -> Agent:
+def _create_agent(
+    config: dict[str, Any],
+    llm: LLM,
+    directory: Path | None = None,
+) -> Agent:
     """
     Create a CrewAI Agent with shared defaults.
 
@@ -94,7 +208,25 @@ def _create_agent(config: dict[str, Any], llm: LLM) -> Agent:
         system_template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>{{ .System }}<|eot_id|>""",
         prompt_template="""<|start_header_id|>user<|end_header_id|>{{ .Prompt }}<|eot_id|>""",
         response_template="""<|start_header_id|>assistant<|end_header_id|>{{ .Response }}<|eot_id|>""",
-        tools=[DirectoryReadTool(), FileReadTool()],
+        tools=[
+            FilteredDirectoryReadTool(
+                directory=str(directory) if directory else None,
+                name="list_directory",
+                description=(
+                    "List all files in a directory. "
+                    "Provide the absolute path to the directory as the directory parameter. "
+                    "Example directory value: /home/user/project"
+                ),
+            ),
+            FilteredFileReadTool(
+                name="read_file",
+                description=(
+                    "Read the full content of a single source code file. "
+                    "Provide the absolute path to the file as the file_path parameter. "
+                    "Example file_path value: /home/user/project/main.py"
+                ),
+            ),
+        ],
         llm=llm,
     )
 
@@ -104,6 +236,7 @@ def _create_task(
     agent: Agent,
     output_pydantic: Optional[Type[BaseModel]] = None,
     max_retries: Optional[int] = None,
+    context: Optional[list[Task]] = None,
 ) -> Task:
     """
     Create a CrewAI Task with optional output model and retry policy.
@@ -126,6 +259,8 @@ def _create_task(
         kwargs["output_pydantic"] = output_pydantic
     if max_retries:
         kwargs["max_retries"] = max_retries
+    if context:
+        kwargs["context"] = context
 
     return Task(**kwargs)
 
@@ -148,7 +283,7 @@ def _load_yaml_config(path: str | Path) -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
-def create_roadmap_crew(llm: LLM) -> Crew:
+def create_roadmap_crew(llm: LLM, repo_path: Path) -> Crew:
     """
     Create the documentation roadmap crew responsible for code analysis and planning documentation roadmap.
 
@@ -162,6 +297,7 @@ def create_roadmap_crew(llm: LLM) -> Crew:
 
     Args:
         llm (LLM): Preconfigured LLM instance to be used by all agents.
+        repo_path: Path to the repository.
 
     Returns:
         Crew: Initialized roadmap crew with inspect codebase architecture and design documentation roadmap tasks.
@@ -171,8 +307,10 @@ def create_roadmap_crew(llm: LLM) -> Crew:
     tasks_config = _load_yaml_config(roadmap_tasks_config_path)
 
     # Create agents
-    codebase_analyst = _create_agent(config=agents_config["codebase_analyst"], llm=llm)
-    documentation_architect = _create_agent(config=agents_config["documentation_architect"], llm=llm)
+    codebase_analyst = _create_agent(config=agents_config["codebase_analyst"], llm=llm, directory=repo_path)
+    documentation_architect = _create_agent(
+        config=agents_config["documentation_architect"], llm=llm, directory=repo_path
+    )
 
     # Create tasks
     inspect_codebase_architecture = _create_task(
@@ -192,7 +330,7 @@ def create_roadmap_crew(llm: LLM) -> Crew:
     )
 
 
-def create_documentation_crew(llm: LLM) -> Crew:
+def create_documentation_crew(llm: LLM, repo_path: Path) -> Crew:
     """
     Create the documentation crew responsible for drafting and reviewing documentation.
 
@@ -206,6 +344,7 @@ def create_documentation_crew(llm: LLM) -> Crew:
 
     Args:
         llm: Preconfigured LLM instance to be used by the documentation agents.
+        repo_path: Path to the repository.
 
     Returns:
         Crew: Initialized documentation crew with documentation, validation and finalization tasks.
@@ -215,22 +354,20 @@ def create_documentation_crew(llm: LLM) -> Crew:
     tasks_config = _load_yaml_config(documentation_tasks_config_path)
 
     # Create agents
-    tech_documentation_writer = _create_agent(config=agents_config["tech_documentation_writer"], llm=llm)
-    documentation_auditor = Agent(
-        config=agents_config["documentation_auditor"],
-        tools=[
-            DirectoryReadTool(directory="../documentations/", name="Check documentation folder"),
-            FileReadTool(),
-        ],
-        llm=llm,
+    tech_documentation_writer = _create_agent(
+        config=agents_config["tech_documentation_writer"], llm=llm, directory=repo_path
     )
+    documentation_auditor = _create_agent(config=agents_config["documentation_auditor"], llm=llm, directory=repo_path)
 
     # Create tasks
     author_verified_documentation = _create_task(
         config=tasks_config["author_verified_documentation"], agent=tech_documentation_writer
     )
     validate_and_finalize_documentation = _create_task(
-        config=tasks_config["validate_and_finalize_documentation"], agent=documentation_auditor, max_retries=5
+        config=tasks_config["validate_and_finalize_documentation"],
+        agent=documentation_auditor,
+        max_retries=5,
+        context=[author_verified_documentation],
     )
 
     # Create and return the crew

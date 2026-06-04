@@ -24,8 +24,7 @@ From the `solution-blueprints/autogen-studio` directory:
 # First, build dependencies
 helm dependency build
 # Deploy helm chart
-helm template --name-template "test" . \
-  | kubectl apply -f -
+helm template "test" . | kubectl apply -f -
 ```
 
 This will create:
@@ -38,7 +37,7 @@ This will create:
 
 Forward local port 8080 to AutoGen Studio service:
 ```bash
-kubectl port-forward service/autogenstudio-test 8080:8081
+kubectl port-forward service/aimsb-autogenstudio-test 8080:8081
 ```
 
 Then open your browser to: **http://localhost:8080**

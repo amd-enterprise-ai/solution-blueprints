@@ -25,6 +25,8 @@ from utilities import clean_tool_name, extract_playwright_code, fetch_model_name
 # Configuration from environment
 MCP_URL = os.getenv("MCP_URL")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "empty")
+LLM_MODEL = os.getenv("LLM_MODEL", None)
 MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "20"))
 MAX_RESULT_LENGTH = int(os.getenv("MAX_RESULT_LENGTH", "15000"))
 
@@ -67,7 +69,7 @@ def generate_pytest_with_llm(feature_name: str, results: list[dict], model_name:
         scenarios_json=json.dumps(scenarios_info, indent=2),
     )
 
-    client = OpenAI(base_url=LLM_BASE_URL, api_key="empty")
+    client = OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
 
     response = client.chat.completions.create(
         model=model_name,
@@ -393,15 +395,19 @@ async def run_tests(
     if not LLM_BASE_URL:
         log_func("ERROR: LLM_BASE_URL not configured")
         return [], ""
-    model_name = fetch_model_name(LLM_BASE_URL)
-    if not model_name:
-        log_func("ERROR: Failed to fetch model name from LLM service")
-        return [], ""
+    if LLM_MODEL:
+        model_name = LLM_MODEL
+    else:
+        received_model_name = fetch_model_name(LLM_BASE_URL, api_key=LLM_API_KEY)
+        if not received_model_name:
+            log_func("ERROR: Failed to fetch model name from LLM service")
+            return [], ""
+        model_name = received_model_name
 
     log_func(f"Using model: {model_name}")
 
     # Create async OpenAI client
-    client = AsyncOpenAI(base_url=LLM_BASE_URL, api_key="empty")
+    client = AsyncOpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
 
     results = []
     total_scenarios = len(feature.scenarios)

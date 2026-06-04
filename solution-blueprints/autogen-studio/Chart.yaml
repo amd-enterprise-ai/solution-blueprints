@@ -9,11 +9,11 @@ type: application
 maintainers:
 - name: AMD
   url: https://www.amd.com/
-version: 0.4.6
+version: 0.5.0
 appVersion: "0.4.2.2"
 dependencies:
 - name: aimchart-llm
-  version: 0.2.3
+  version: 0.2.5
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:

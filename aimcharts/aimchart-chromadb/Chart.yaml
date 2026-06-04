@@ -6,4 +6,4 @@ apiVersion: v2
 name: aimchart-chromadb
 description: A reusable library chart for deploying a ChromaDB server.
 type: application
-version: 0.1.3
+version: 0.1.4

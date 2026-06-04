@@ -1,0 +1,19 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+[project]
+name = "livekit-voice-agent"
+version = "0.1.0"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "livekit-agents[cartesia,openai,silero,turn-detector]==1.4.1",
+    "python-dotenv>=1.2.1",
+    "chromadb>=0.5.5",
+    "rank-bm25>=0.2.2",
+    "redis>=5.0.8",
+    "aiohttp>=3.9.5",
+    "numpy>=1.26.4",
+    "torch>=2.10.0",
+    "pydantic-settings>=2.13.1",
+]

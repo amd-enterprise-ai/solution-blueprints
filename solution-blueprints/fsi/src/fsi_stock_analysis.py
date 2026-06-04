@@ -13,7 +13,10 @@ import gradio as gr
 import matplotlib.pyplot as plt
 import pandas as pd
 import requests
+import uvicorn
 import yfinance as yf
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from langchain.chat_models import init_chat_model
 from langchain_core.prompts import PromptTemplate
 from pandas.errors import OutOfBoundsDatetime
@@ -189,13 +192,17 @@ llm = None
 def readiness_check():
     # check if LLM is available
     try:
-        models_url = os.environ["OPENAI_API_BASE_URL"] + "/models"
-        r = requests.get(models_url, timeout=2)
+        models_url = os.environ["LLM_API_BASE_URL"] + "/models"
+        if "LLM_API_KEY" in os.environ:
+            headers = {"Authorization": f"Bearer {os.environ['LLM_API_KEY']}"}
+        else:
+            headers = {}
+        r = requests.get(models_url, headers=headers, timeout=2)
         if r.status_code == 200:
             return (r.json()["data"][0]["id"], 200)
         else:
             return (r.reason, r.status_code)
-    except requests.exceptions.RequestException:
+    except (requests.exceptions.RequestException, KeyError, IndexError, ValueError):
         return ("Error", 0)
 
 
@@ -206,7 +213,7 @@ def get_readiness_status():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if code == 200:
-        return f"### ✅ System Status: READY\n**LLM Service status:** Connected to model {status} \n**Last Check:** {timestamp}"
+        return f"### ✅ System Status: READY\n**LLM Service status:** Connected \n**Last Check:** {timestamp}"
     else:
         return f"### ⚠️ System Status: NOT READY\n**LLM Service status:** {status} (Code: {code})  \n**Last Check:** {timestamp}"
 
@@ -220,12 +227,15 @@ def init_llm():
     output, status_code = readiness_check()
 
     if status_code == 200:
-        model_name = output
+        if "LLM_MODEL" in os.environ:
+            model_name = os.environ["LLM_MODEL"]
+        else:
+            model_name = output
         llm = init_chat_model(
             model=model_name,
             model_provider="openai",
-            base_url=os.environ["OPENAI_API_BASE_URL"],
-            api_key="dummy",
+            base_url=os.environ["LLM_API_BASE_URL"],
+            api_key=os.environ.get("LLM_API_KEY", "dummy"),
             temperature=0.3,
         )
     else:
@@ -912,5 +922,24 @@ def create_interface():
 iface = create_interface()
 
 
+app = FastAPI(title="FSI Stock Analysis API")
+
+
+@app.get("/healthz")
+def health_check():
+    status, code = readiness_check()
+    is_ready = code == 200
+    payload = {
+        "status": "ready" if is_ready else "not_ready",
+        "llm_status": status,
+        "llm_status_code": code,
+        "timestamp": datetime.now().isoformat(),
+    }
+    return JSONResponse(content=payload, status_code=200 if is_ready else 503)
+
+
+app = gr.mount_gradio_app(app, iface, path="/")
+
+
 if __name__ == "__main__":
-    iface.launch(server_name="0.0.0.0")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("GRADIO_SERVER_PORT", 7860)))

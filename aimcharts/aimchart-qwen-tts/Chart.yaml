@@ -1,0 +1,9 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimchart-qwen-tts
+description: AIM Qwen TTS deployed on Kubernetes
+type: application
+version: 0.1.2

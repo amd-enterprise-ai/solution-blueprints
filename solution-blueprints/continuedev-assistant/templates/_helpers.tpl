@@ -72,6 +72,20 @@ limits:
         "Chart" (dict "Name" "chatLLM")
   -}}
   value: {{ include "aimchart-llm.url" $sub }}
+{{- if .Values.chatLLM.apiKeySecretRef }}
+- name: AIM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.chatLLM.apiKeySecretRef.name }}
+      key: {{ .Values.chatLLM.apiKeySecretRef.key }}
+{{- else if .Values.chatLLM.apiKey }}
+- name: AIM_API_KEY
+  value: {{ .Values.chatLLM.apiKey | quote }}
+{{- end }}
+{{- if .Values.chatLLM.model }}
+- name: AIM_MODEL
+  value: {{ .Values.chatLLM.model | quote }}
+{{- end }}
 - name: AIM_AUTOCOMPLETE_BASE_URL
   {{/*
     Build a context that has the right .Values, .Release, and .Chart metadata.
@@ -83,6 +97,20 @@ limits:
         "Chart" (dict "Name" "autocompleteLLM")
   -}}
   value: {{ include "aimchart-llm.url" $sub }}
+{{- if .Values.autocompleteLLM.apiKeySecretRef }}
+- name: AIM_AUTOCOMPLETE_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.autocompleteLLM.apiKeySecretRef.name }}
+      key: {{ .Values.autocompleteLLM.apiKeySecretRef.key }}
+{{- else if .Values.autocompleteLLM.apiKey }}
+- name: AIM_AUTOCOMPLETE_API_KEY
+  value: {{ .Values.autocompleteLLM.apiKey | quote }}
+{{- end }}
+{{- if .Values.autocompleteLLM.model }}
+- name: AIM_AUTOCOMPLETE_MODEL
+  value: {{ .Values.autocompleteLLM.model | quote }}
+{{- end }}
 {{- end -}}
 
 # Container volume mounts helper
@@ -151,19 +179,23 @@ code-server --install-extension GitHub.vscode-pull-request-github
 code-server --install-extension ms-kubernetes-tools.vscode-kubernetes-tools
 pip install requests
 
-MODEL_NAME=$(python << 'EOF'
+if [ -z "${LLM_MODEL:-}" ]; then
+  echo "[patch] extracting model name from AIM service..."
+  MODEL_NAME=$(python << 'EOF'
 import os
 import sys
 import time
 import requests
 import urllib.parse
+api_key = os.getenv("AIM_API_KEY")
+headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 for retry in range(120):
     if retry != 0:
         print("Couldn't retrieve model name - AIM probably not up yet. Waiting 10 seconds...", file=sys.stderr)
         time.sleep(10)
     print(f"Trying to retrieve model name (attempt {retry+1})", file=sys.stderr)
     try:
-        r = requests.get(urllib.parse.urljoin(os.getenv("AIM_BASE_URL"), "v1/models"), timeout=0.5)
+        r = requests.get(urllib.parse.urljoin(os.getenv("AIM_BASE_URL"), "v1/models"), headers=headers, timeout=0.5)
         if r.status_code == 200:
             try:
                 print(r.json()["data"][0]["id"], end="")
@@ -176,22 +208,30 @@ else:
     raise RuntimeError("Failed to retrieve model name")
 EOF
 )
-echo "Model name retrieved successfully, got: $MODEL_NAME"
+  echo "Model name retrieved successfully, got: $MODEL_NAME"
+else
+  echo "Using provided model name from environment variable: $LLM_MODEL"
+  MODEL_NAME="$LLM_MODEL"
+fi
 
 {{ if .Values.autocomplete.enabled }}
-AUTOCOMPLETE_MODEL_NAME=$(python << 'EOF'
+if [ -z "${AIM_AUTOCOMPLETE_MODEL:-}" ]; then
+  echo "[patch] extracting model name from AIM service..."
+  AUTOCOMPLETE_MODEL_NAME=$(python << 'EOF'
 import os
 import sys
 import time
 import requests
 import urllib.parse
+api_key = os.getenv("AIM_AUTOCOMPLETE_API_KEY")
+headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 for retry in range(120):
     if retry != 0:
-        print("Couldn't retrieve model name - AIM probably not up yet. Waiting 10 seconds...", file=sys.stderr)
+        print("Couldn't retrieve autocomplete model name - AIM probably not up yet. Waiting 10 seconds...", file=sys.stderr)
         time.sleep(10)
     print(f"Trying to retrieve autocomplete model name (attempt {retry+1})", file=sys.stderr)
     try:
-        r = requests.get(urllib.parse.urljoin(os.getenv("AIM_AUTOCOMPLETE_BASE_URL"), "v1/models"), timeout=0.5)
+        r = requests.get(urllib.parse.urljoin(os.getenv("AIM_AUTOCOMPLETE_BASE_URL"), "v1/models"), headers=headers, timeout=0.5)
         if r.status_code == 200:
             try:
                 print(r.json()["data"][0]["id"], end="")
@@ -204,7 +244,11 @@ else:
     raise RuntimeError("Failed to retrieve model name")
 EOF
 )
-echo "Autocomplete model name retrieved successfully, got: $AUTOCOMPLETE_MODEL_NAME"
+  echo "Autocomplete model name retrieved successfully, got: $AUTOCOMPLETE_MODEL_NAME"
+else
+  echo "Using provided Autocomplete model name from environment variable: $AIM_AUTOCOMPLETE_MODEL"
+  AUTOCOMPLETE_MODEL_NAME="$AIM_AUTOCOMPLETE_MODEL"
+fi
 {{ end }}
 
 # Create config.yaml for Continue (overwrite if exists)
@@ -218,7 +262,7 @@ models:
   - name: ${MODEL_NAME}
     provider: openai
     model: ${MODEL_NAME}
-    apiKey: none
+    apiKey: ${AIM_API_KEY:-none}
     apiBase: ${AIM_BASE_URL}
     defaultCompletionOptions:
 {{ toYaml .Values.chat.defaultCompletionOptions | indent 6 }}
@@ -226,7 +270,7 @@ models:
   - name: ${AUTOCOMPLETE_MODEL_NAME} for Autocomplete
     provider: openai
     model: ${AUTOCOMPLETE_MODEL_NAME}
-    apiKey: none
+    apiKey: ${AIM_AUTOCOMPLETE_API_KEY:-none}
     apiBase: ${AIM_AUTOCOMPLETE_BASE_URL}
     roles:
       - autocomplete

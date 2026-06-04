@@ -49,11 +49,10 @@ A medical imaging analysis tool that combines computer vision, deep learning, an
 
 If you need sample MRI scans to test with, these public resources are a good starting point (always review each dataset's license/terms and any access requirements):
 
-- The Cancer Imaging Archive (TCIA): https://www.cancerimagingarchive.net/ (multiple MRI collections)
-- OpenNeuro: https://openneuro.org/ (public neuroimaging datasets, often NIfTI)
-- fastMRI (NYU/Facebook): https://fastmri.org/ (MRI dataset and tools; access may require agreement)
-
-Additionally, an example abddomen MRI DICOM image `abdomen_MRI.dcm` is included under`./src` as well.
+- The [DICOM Library](https://www.dicomlibrary.com/) has a few samples, e.g., [this abdomen scan](https://www.dicomlibrary.com/?manage=feb6447a72c9a0a31e1bb4459e547964)
+- [The Cancer Imaging Archive (TCIA)](https://www.cancerimagingarchive.net/): multiple MRI collections
+- [OpenNeuro](https://openneuro.org/): public neuroimaging datasets, often NIfTI
+- [fastMRI (NYU/Facebook)](https://fastmri.org/): MRI dataset and tools; access may require agreement
 
 ### Disclaimer
 

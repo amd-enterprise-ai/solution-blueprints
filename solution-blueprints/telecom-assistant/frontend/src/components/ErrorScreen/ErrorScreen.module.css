@@ -1,0 +1,170 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+
+.backdrop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--bg-page);
+  padding: var(--space-3xl);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3xl);
+  max-width: 420px;
+  width: 100%;
+  padding: var(--space-5xl) var(--space-4xl);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs);
+  text-align: center;
+}
+
+/* ---- icon ring ---- */
+.iconWrap {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ringOuter {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-error-fg);
+  opacity: 0.1;
+}
+
+.ringInner {
+  position: absolute;
+  inset: 8px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-error-fg);
+  opacity: 0.3;
+}
+
+.icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* ---- text ---- */
+.textGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.title {
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.description {
+  color: var(--text-tertiary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  line-height: 20px;
+  max-width: 320px;
+}
+
+.errorDetail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error-badge-fg);
+  font-family: "Roboto Mono", monospace;
+  font-size: var(--font-size-xs);
+  line-height: 18px;
+  word-break: break-word;
+  max-width: 100%;
+  text-align: left;
+}
+
+/* ---- actions ---- */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  width: 100%;
+}
+
+.retryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-2xl);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-teal);
+  background: var(--accent-teal);
+  color: var(--text-white);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 20px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+  box-shadow: var(--shadow-xs-skeuomorphic);
+}
+
+.retryButton:hover:not(:disabled) {
+  background: var(--accent-teal-hover);
+  border-color: var(--accent-teal-hover);
+}
+
+.retryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.retryIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.retryButton:not(:disabled) .retryIcon {
+  animation: none;
+}
+
+.retryButton:disabled .retryIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

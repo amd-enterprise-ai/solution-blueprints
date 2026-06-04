@@ -12,7 +12,7 @@ This UI provides an interface to:
 import asyncio
 
 import streamlit as st
-from testing_agent import LLM_BASE_URL, MAX_ITERATIONS, MAX_RESULT_LENGTH, MCP_URL, run_tests
+from testing_agent import LLM_API_KEY, LLM_BASE_URL, MAX_ITERATIONS, MAX_RESULT_LENGTH, MCP_URL, run_tests
 from utilities import check_service_ready
 
 # Number of recent log lines to show in live view
@@ -96,7 +96,11 @@ def main():
     with st.sidebar:
         st.header("Service Status")
 
-        llm_status = "🟢 Ready" if LLM_BASE_URL and check_service_ready(f"{LLM_BASE_URL}/models") else "🔴 Not Ready"
+        llm_status = (
+            "🟢 Ready"
+            if LLM_BASE_URL and check_service_ready(f"{LLM_BASE_URL}/models", LLM_API_KEY)
+            else "🔴 Not Ready"
+        )
         st.write(f"**LLM Service:** {llm_status}")
 
         mcp_status = "🟢 Ready" if MCP_URL else "🔴 Not Configured"

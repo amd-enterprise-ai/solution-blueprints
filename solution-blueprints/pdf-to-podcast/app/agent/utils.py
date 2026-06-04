@@ -17,7 +17,7 @@ _llm_cache: ChatLLM | None = None
 INIT_RETRIES = 30
 
 
-async def init_llm(base_url: str, api_key: str) -> ChatLLM:
+async def init_llm(base_url: str, api_key: str, model_override: str = "") -> ChatLLM:
     """Initialize the LLM.
 
     Fetches the model information from the model listing endpoint with retry logic.
@@ -38,6 +38,17 @@ async def init_llm(base_url: str, api_key: str) -> ChatLLM:
     # Return cached instance if available
     if _llm_cache is not None:
         return _llm_cache
+
+    if model_override:
+        llm = ChatLLM(
+            model=model_override,
+            base_url=base_url,
+            api_key=api_key,
+            max_tokens=None,
+        )
+        _llm_cache = llm
+        logger.info("Using configured LLM model: %s", model_override)
+        return llm
 
     models_url = urllib.parse.urljoin(base_url, "v1/models")
     headers = {}

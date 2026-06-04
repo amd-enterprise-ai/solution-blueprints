@@ -327,8 +327,11 @@ def _plan_and_generate_docs_job(repo_id: str) -> None:
 
     repo_path = subdirs[0]
 
+    docs_path = DOCUMENTATIONS_ROOT / repo_id
+    docs_path.mkdir(parents=True, exist_ok=True)
+
     # Initialize and execute the documentation flow (planning + generation)
-    flow = CreateDocumentationFlow(repo_id=repo_id, repo_path=repo_path, docs_path=DOCUMENTATIONS_ROOT)
+    flow = CreateDocumentationFlow(repo_id=repo_id, repo_path=repo_path, docs_path=docs_path)
     flow.run()
 
 

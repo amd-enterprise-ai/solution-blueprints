@@ -43,6 +43,7 @@
                             "config": {
                                 "model": "${MODEL_NAME}",
                                 "base_url": "${OPENAI_API_BASE_URL}",
+                                "api_key": "${LLM_API_KEY}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -115,6 +116,7 @@
                             "config": {
                                 "model": "${MODEL_NAME}",
                                 "base_url": "${OPENAI_API_BASE_URL}",
+                                "api_key": "${LLM_API_KEY}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -152,6 +154,7 @@
                             "config": {
                                 "model": "${MODEL_NAME}",
                                 "base_url": "${OPENAI_API_BASE_URL}",
+                                "api_key": "${LLM_API_KEY}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -213,6 +216,7 @@
                     "config": {
                         "model": "${MODEL_NAME}",
                         "base_url": "${OPENAI_API_BASE_URL}",
+                        "api_key": "${LLM_API_KEY}",
                         "model_info": {
                             "vision": false,
                             "function_calling": true,
@@ -521,6 +525,7 @@
                                         "config": {
                                             "model": "${MODEL_NAME}",
                                             "base_url": "${OPENAI_API_BASE_URL}",
+                                            "api_key": "${LLM_API_KEY}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -631,7 +636,7 @@
                                 "config": {
                                     "name": "assistant_agent",
                                     "model_client": {
-                                        "provider": "autogen_ext.models.openai.OpenAI ChatCompletionClient",
+                                        "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
                                         "component_type": "model",
                                         "version": 1,
                                         "component_version": 1,
@@ -640,6 +645,7 @@
                                         "config": {
                                             "model": "${MODEL_NAME}",
                                             "base_url": "${OPENAI_API_BASE_URL}",
+                                            "api_key": "${LLM_API_KEY}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -712,6 +718,7 @@
                                         "config": {
                                             "model": "${MODEL_NAME}",
                                             "base_url": "${OPENAI_API_BASE_URL}",
+                                            "api_key": "${LLM_API_KEY}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -760,6 +767,7 @@
                             "config": {
                                 "model": "${MODEL_NAME}",
                                 "base_url": "${OPENAI_API_BASE_URL}",
+                                "api_key": "${LLM_API_KEY}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -838,6 +846,7 @@
                                         "config": {
                                             "model": "${MODEL_NAME}",
                                             "base_url": "${OPENAI_API_BASE_URL}",
+                                            "api_key": "${LLM_API_KEY}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -875,6 +884,7 @@
                                         "config": {
                                             "model": "${MODEL_NAME}",
                                             "base_url": "${OPENAI_API_BASE_URL}",
+                                            "api_key": "${LLM_API_KEY}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -935,6 +945,7 @@
                             "config": {
                                 "model": "${MODEL_NAME}",
                                 "base_url": "${OPENAI_API_BASE_URL}",
+                                "api_key": "${LLM_API_KEY}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,
@@ -1013,6 +1024,7 @@
                                         "config": {
                                             "model": "${MODEL_NAME}",
                                             "base_url": "${OPENAI_API_BASE_URL}",
+                                            "api_key": "${LLM_API_KEY}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -1059,6 +1071,7 @@
                                             "temperature": 0.7,
                                             "model": "${MODEL_NAME}",
                                             "base_url": "${OPENAI_API_BASE_URL}",
+                                            "api_key": "${LLM_API_KEY}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -1116,6 +1129,7 @@
                                             "temperature": 0.7,
                                             "model": "${MODEL_NAME}",
                                             "base_url": "${OPENAI_API_BASE_URL}",
+                                            "api_key": "${LLM_API_KEY}",
                                             "model_info": {
                                                 "vision": false,
                                                 "function_calling": true,
@@ -1165,6 +1179,7 @@
                                 "temperature": 0.7,
                                 "model": "${MODEL_NAME}",
                                 "base_url": "${OPENAI_API_BASE_URL}",
+                                "api_key": "${LLM_API_KEY}",
                                 "model_info": {
                                     "vision": false,
                                     "function_calling": true,

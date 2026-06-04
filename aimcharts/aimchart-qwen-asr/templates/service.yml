@@ -1,0 +1,24 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ define "aimchart-qwen-asr.service" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aimchart-qwen-asr.release.fullname" . }}
+  labels:
+    app: {{ include "aimchart-qwen-asr.release.fullname" . }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort | default .Values.container.port }}
+  selector:
+    app: {{ include "aimchart-qwen-asr.release.fullname" . }}
+{{- end }}
+
+{{- if not .Values.existingService }}
+{{- include "aimchart-qwen-asr.service" . }}
+{{- end }}

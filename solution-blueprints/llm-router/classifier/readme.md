@@ -8,101 +8,131 @@ SPDX-License-Identifier: MIT
 
 ## Overview
 
-The `routing-classifier` service is a FastAPI-based service that classifies conversation messages into predefined categories using a Large Language Model (LLM). It acts as an intelligent classifier that determines the most appropriate category for a given conversation context, enabling dynamic routing decisions in the LLM Router system.
+The `routing-classifier` service is a FastAPI-based service that classifies conversation messages
+into predefined categories. It supports two classification approaches: **embedding-based** (using
+semantic similarity via Infinity embedding server) and **LLM-based** (using a language model). The
+approach is selected via the `CLASSIFIER_APPROACH` environment variable.
 
 ## API Endpoints
 
 ### `/classify`
+
 - **Description**: Classifies conversation messages into one of the specified classes.
 - **Method**: `POST`
 - **Response**: JSON object containing the chosen classification.
 
 #### Request Payload
 
-```
+```json
 {
-    "messages": [
-        {
-            "role": "user",
-            "content": "Create a quicksort on go language"
-        }
-    ],
-    "classes": [
-        "Code Generation",
-        "Summarization",
-        "Unknown"
-    ]
+  "messages": [
+    {
+      "role": "user",
+      "content": "Create a quicksort on go language"
+    }
+  ],
+  "classes": [
+    "Code Generation",
+    "Summarization",
+    "Unknown"
+  ]
 }
 ```
 
 **Parameters:**
-- `messages` (array of Message objects, required): Conversation messages to classify, including role and content.
-- `classes` (array of strings, optional): List of possible classification categories. Defaults to empty array.
+
+- `messages` (array of Message objects, required): Conversation messages to classify, including role
+  and content.
+- `classes` (array of strings, optional): List of possible classification categories. If omitted,
+  all known classes are used.
 
 #### Response Format
 
+```json
 {
-"chosen_class": "Code Generation"
+  "chosen_class": "Code Generation"
 }
+```
 
 **Response Fields:**
-- `chosen_class` (string): The selected classification category. Returns "Unknown" if classification fails.
+
+- `chosen_class` (string): The selected classification category. Returns `"Unknown"` if
+  classification fails or confidence is too low.
 
 ## Configuration
 
-The routing classifier requires the following environment variable:
+The required environment variables depend on the selected `CLASSIFIER_APPROACH`.
 
-| Environment Variable  | Description              | Example Value                |
-|-----------------------|--------------------------|------------------------------|
-| `CLASSIFIER_BASE_URL` | Base URL for the LLM API | `http://129.212.176.80:8000` |
+### Common Variables
 
-### Setting Environment Variables
+| Environment Variable  | Description                                   | Example Value            |
+|-----------------------|-----------------------------------------------|--------------------------|
+| `CLASSIFIER_APPROACH` | Classification approach: `embedding` or `llm` | `embedding`              |
+| `CONTROLLER_URL`      | URL of the router-controller service          | `http://controller:8084` |
 
-export CLASSIFIER_BASE_URL=http://YOUR_MODEL_HOST:8000
+### Embedding Approach (`CLASSIFIER_APPROACH=embedding`)
+
+| Environment Variable | Description                               | Example Value           |
+|----------------------|-------------------------------------------|-------------------------|
+| `INFINITY_URL`       | Base URL of the Infinity embedding server | `http://embedding:7997` |
+
+### LLM Approach (`CLASSIFIER_APPROACH=llm`)
+
+| Environment Variable    | Description                                            | Example Value       |
+|-------------------------|--------------------------------------------------------|---------------------|
+| `CLASSIFIER_BASE_URL`   | Base URL for the LLM API                               | `http://llama:8000` |
+| `CLASSIFIER_API_KEY`    | API key for the LLM (optional)                         | `sk-...`            |
+| `CLASSIFIER_MODEL_NAME` | Model name to use (optional, auto-detected if omitted) | `meta-llama/...`    |
 
 ## How It Works
 
-### Classification Process
+### Embedding Approach
 
-1. **Initialization**: The service automatically fetches the available model name from the LLM API endpoint.
-2. **Conversation Reception**: The service receives conversation messages and classification categories.
-3. **LLM Query**: It sends a structured request to the configured LLM with system and user prompts.
-4. **Response Parsing**: The service parses the LLM's response to extract the classification.
-5. **Result Return**: Returns the chosen classification or "Unknown" if parsing fails.
+1. **Initialization**: On startup, fetches class names and descriptions from the router-controller
+   `/config` endpoint and computes their embeddings via the Infinity server.
+2. **Classification**: Encodes the conversation as a query embedding and computes cosine similarity
+   against all class embeddings.
+3. **Threshold**: If the highest similarity score is below the threshold (0.70 for ≤5 classes, 0.68
+   otherwise), returns `"Unknown"`.
+4. **Result**: Returns the class with the highest similarity score.
 
-### Internal Logic
+### LLM Approach
 
-The classifier uses the following approach:
-1. **Model Discovery**: Automatically detects available model from the LLM API
-2. **JSON First**: Attempts to parse the LLM response as JSON
-3. **Fallback Parsing**: If JSON parsing fails, attempts `ast.literal_eval`
-4. **Default Response**: Returns "Unknown" if all parsing attempts fail
+1. **Initialization**: Automatically fetches the available model name from the LLM API (unless
+   `CLASSIFIER_MODEL_NAME` is set explicitly).
+2. **Classification**: Sends a structured prompt with the conversation and class list to the LLM.
+3. **Response Parsing**: Attempts JSON parsing first, falls back to `ast.literal_eval`.
+4. **Default Response**: Returns `"Unknown"` if all parsing attempts fail.
 
 ## Error Handling
 
 ### Success Cases
-- **200 OK**: Successful classification with valid JSON response
-- **200 OK with "Unknown"**: Classification attempted but model didn't return valid output
+
+- **200 OK**: Successful classification.
+- **200 OK with `"Unknown"`**: Classification attempted but confidence too low (embedding) or model
+  returned unparseable output (LLM).
 
 ### Error Cases
+
 - **500 Internal Server Error**:
-    - Missing required environment variables
-    - LLM API request failure
-    - Critical parsing errors
+    - Missing required environment variables for the selected approach.
+    - LLM API or Infinity server request failure.
+    - Controller `/config` endpoint unreachable during initialization.
 
 ### Debug Logging
 
-The service provides detailed debug logging:
-- Model discovery process
-- Received classification requests
-- Raw LLM responses
-- Parsing results
+The service provides detailed debug logging for both approaches:
+
+- Received messages and classes
+- Full dialogue context sent for classification
+- Similarity scores per class (embedding approach)
+- Raw LLM response and parsed result (LLM approach)
+- Selected class and confidence
 
 ## Integration with Router Controller
 
-The routing classifier is typically called by the router-controller service. The integration flow is:
-
-1. Router-controller receives conversation messages
-2. Router-controller calls `/classify` endpoint with messages and policy classes
-3. Routing classifier returns the classification
-4. Router-controller uses classification to select the appropriate LLM
+1. Router-controller receives conversation messages.
+2. Router-controller calls `/classify` with messages and the list of class names for the active
+   routing rule.
+3. Classifier returns the chosen class.
+4. Router-controller uses the classification to select the appropriate LLM backend.

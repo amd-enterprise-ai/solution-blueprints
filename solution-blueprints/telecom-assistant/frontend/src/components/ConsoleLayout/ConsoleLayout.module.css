@@ -1,0 +1,46 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--bg-page);
+  padding-top: var(--space-3xl);
+}
+
+.body {
+  display: flex;
+  padding: var(--space-3xl) 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3xl);
+  flex: 1 0 0;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.panelsContainer {
+  display: flex;
+  padding: 0 var(--space-4xl);
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.panels {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3xl);
+  flex: 1 0 0;
+  align-self: stretch;
+  min-height: 0;
+}

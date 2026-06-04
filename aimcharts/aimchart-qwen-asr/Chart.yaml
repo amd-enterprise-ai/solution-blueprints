@@ -1,0 +1,9 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimchart-qwen-asr
+description: AIM Qwen ASR deployed on Kubernetes
+type: application
+version: 0.1.1

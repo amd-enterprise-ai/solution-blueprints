@@ -24,6 +24,24 @@
   {{- if or (not (hasKey $env "APP_LLM_URL")) (eq (get $env "APP_LLM_URL") "") }}
     {{- $_ := set $env "APP_LLM_URL" $llmUrl }}
   {{- end }}
+  {{- if and (or (not (hasKey $env "APP_API_KEY")) (eq (get $env "APP_API_KEY") "")) $.Values.llm.apiKey }}
+    {{- $_ := set $env "APP_API_KEY" $.Values.llm.apiKey }}
+  {{- end }}
+  {{- if and (or (not (hasKey $env "APP_LLM_MODEL")) (eq (get $env "APP_LLM_MODEL") "")) $.Values.llm.model }}
+    {{- $_ := set $env "APP_LLM_MODEL" $.Values.llm.model }}
+  {{- end }}
+  {{- if and (or (not (hasKey $env "APP_API_KEY")) (eq (get $env "APP_API_KEY") "")) $.Values.llm.apiKeySecretRef }}
+    {{- $_ := set $env "APP_API_KEY" (dict "name" $.Values.llm.apiKeySecretRef.name "key" $.Values.llm.apiKeySecretRef.key) }}
+  {{- end }}
+  {{- $ttsSub := dict
+        "Values" (merge (dict) (index $.Values "qwen-tts"))
+        "Release" $.Release
+        "Chart" (dict "Name" "qwen-tts")
+  -}}
+  {{- $ttsUrl := include "aimchart-qwen-tts.url" $ttsSub }}
+  {{- if or (not (hasKey $env "APP_TTS_BASE_URL")) (eq (get $env "APP_TTS_BASE_URL") "") }}
+    {{- $_ := set $env "APP_TTS_BASE_URL" $ttsUrl }}
+  {{- end }}
 {{- end }}
 {{- if eq $name "frontend" }}
   {{- if or (not (hasKey $env "API_SERVICE_URL")) (eq (get $env "API_SERVICE_URL") "") }}
@@ -74,6 +92,12 @@ spec:
             "Chart" (dict "Name" "llm")
       -}}
       {{- $llmUrl := include "aimchart-llm.url" $sub }}
+      {{- $ttsSub := dict
+            "Values" (merge (dict) (index $.Values "qwen-tts"))
+            "Release" $.Release
+            "Chart" (dict "Name" "qwen-tts")
+      -}}
+      {{- $ttsUrl := include "aimchart-qwen-tts.url" $ttsSub }}
       initContainers:
         - name: wait-for-llm
           image: curlimages/curl:latest
@@ -82,8 +106,25 @@ spec:
             - |
               VLLM_URL="{{ $llmUrl }}/models"
               echo "Waiting for VLLM service ($$VLLM_URL)..."
-              until curl -s -f -o /dev/null $$VLLM_URL; do sleep 5; done
+              if [ -z "${APP_API_KEY:-}" ]; then
+                until curl -s -f -o /dev/null $$VLLM_URL; do sleep 5; done
+              else
+                until curl -s -f -o /dev/null $$VLLM_URL -H "Authorization: Bearer $APP_API_KEY"; do sleep 5; done
+              fi
               echo "✓ VLLM service is up!"
+          {{- if hasKey $env "APP_API_KEY" }}
+          env:
+            {{- include "container.env" (dict "env" (dict "APP_API_KEY" (get $env "APP_API_KEY")) "root" $root) | nindent 12 }}
+          {{- end }}
+        - name: wait-for-tts
+          image: curlimages/curl:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              TTS_URL="{{ $ttsUrl }}/models"
+              echo "Waiting for TTS service ($$TTS_URL)..."
+              until curl -s -f -o /dev/null $$TTS_URL; do sleep 5; done
+              echo "✓ TTS service is up!"
       {{- end }}
       {{- if eq $name "frontend" }}
       {{- $appServiceName := include "release.componentName" (dict "root" $root "name" "app") }}

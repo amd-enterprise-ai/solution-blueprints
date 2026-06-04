@@ -26,7 +26,7 @@ The blueprint deploys CodeDocs as a containerized web application with pre-confi
 > [!WARNING]
 > This blueprint is created for demonstration purposes. It has some limitations when the repository size is large, and
 > processing may take a while (sometimes hours). In such cases, the quality of the generated documentation may be
-> worse than for smaller repositories.
+> worse than for smaller repositories. Adjust the agent prompts in `config/` to better suit your use case and repository structure.
 
 ## Key Features
 

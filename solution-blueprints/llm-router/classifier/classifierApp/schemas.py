@@ -4,7 +4,7 @@
 
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Message(BaseModel):
@@ -14,7 +14,7 @@ class Message(BaseModel):
 
 class ClassifierRequest(BaseModel):
     messages: List[Message]
-    classes: List[str]
+    classes: List[str] = Field(default_factory=list)
 
 
 class ClassifierResponse(BaseModel):

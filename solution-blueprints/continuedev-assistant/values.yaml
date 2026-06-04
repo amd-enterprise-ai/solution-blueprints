@@ -82,6 +82,9 @@ chatLLM:
   existingService: null
   nameOverride: qwen3-32b
   image: "amdenterpriseai/aim-qwen-qwen3-32b:0.10.0"
+  model: ""  # If connecting to an external LLM service, optionally specify model to use
+  apiKey: "" # If connecting to an external LLM service, optionally specify an API key
+  apiKeySecretRef: {}
   storage:
     ephemeral:
       storageClassName: mlstorage
@@ -106,6 +109,9 @@ autocompleteLLM:
   image: "amdenterpriseai/aim-base:0.10"
   env_vars:
     AIM_MODEL_ID: "Qwen/Qwen2.5-Coder-7B"
+  model: ""  # If connecting to an external LLM service, optionally specify model to use
+  apiKey: "" # If connecting to an external LLM service, optionally specify an API key
+  apiKeySecretRef: {}
   storage:
     ephemeral:
       storageClassName: mlstorage

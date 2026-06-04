@@ -46,7 +46,7 @@ playwrightMcp:
   port: 8931
   image:
     repository: mcr.microsoft.com/playwright/mcp
-    tag: latest
+    tag: v0.0.68
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -63,6 +63,13 @@ llm:
   # Change name override according to model name from image (aim-{model}:{version})
   image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.10.0"
   nameOverride: openai-gpt-oss-120b
+  model: ""  # If connecting to an external LLM service, optionally specify model to use
+  apiKey: "" # If connecting to an external LLM service, optionally specify an API key
+  apiKeySecretRef: {}
+  # You may alternatively provide an API key that's stored in a Secret called `my-secretname` in the key `api-key` by adding:
+  # apiKeySecretRef:
+  #   name: my-secretname
+  #   key: api-key
 
   storage:
     ephemeral:

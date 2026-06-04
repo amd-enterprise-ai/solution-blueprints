@@ -1,0 +1,136 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+:root {
+  /* ===== Background layers ===== */
+  --bg-page: #0c0e12;
+  --bg-surface: #13161b;
+  --bg-card: #22262f;
+  --bg-input: #2d333b;
+
+  /* ===== Borders ===== */
+  --border-primary: #373a41;
+  --border-secondary: #22262f;
+
+  /* ===== Text ===== */
+  --text-primary: #f7f7f7;
+  --text-secondary: #cecfd2;
+  --text-tertiary: #94979c;
+  --text-disabled: #85888e;
+  --text-muted: #61656c;
+  --text-white: #fff;
+
+  /* ===== Accent / brand ===== */
+  --accent-teal: #2ea7a0;
+  --accent-teal-hover: #35bdb5;
+  --accent-blue: #0086c9;
+  --accent-blue-hover: #0098e1;
+
+  /* ===== Logo ===== */
+  --logo-gradient: linear-gradient(90deg, #22b5ff 0%, #5ae3de 100%);
+
+  /* ===== Listening / voice state ===== */
+  --color-listening-icon: #0ba5ec;
+  --color-listening-fg: #7cd4fd;
+
+  /* ===== Error / critical ===== */
+  --color-error-fg: #f97066;
+  --color-error-fg-hover: #fda29b;
+  --color-error-bg: rgba(85, 22, 12, 0.5);
+  --color-error-border: #55160c;
+  --color-error-badge-bg: #55160c;
+  --color-error-badge-border: #912018;
+  --color-error-badge-fg: #fda29b;
+
+  /* ===== Warning ===== */
+  --color-warning-badge-bg: #4e1d09;
+  --color-warning-badge-border: #93370d;
+  --color-warning-badge-fg: #fec84b;
+
+  /* ===== Info ===== */
+  --color-info-badge-bg: #102a56;
+  --color-info-badge-border: #1849a9;
+  --color-info-badge-fg: #84caff;
+
+  /* ===== Success ===== */
+  --color-success: #17b26a;
+  --color-success-bg: #053321;
+  --color-success-border: #085d3a;
+  --color-success-fg: #75e0a7;
+  --color-success-icon: #079455;
+  --color-success-check: #3ccb7f;
+
+  /* ===== Blue-light utility ===== */
+  --color-blue-light-fg: #36bffa;
+  --color-blue-light-bg: #062c41;
+  --color-blue-light-border: #0b4a6f;
+  --color-blue-light-bg-hover: #0b3d5b;
+
+  /* ===== Orange / stop ===== */
+  --color-orange-fg: #ff692e;
+  --color-orange-bg: #57130a;
+  --color-orange-border: #771a0d;
+  --color-orange-bg-hover: #6b170c;
+
+  /* ===== Recording states ===== */
+  --color-recording: #f04438;
+  --color-recording-paused: #d29922;
+  --color-recording-stopped: #85888e;
+
+  /* ===== Speaker / avatar ===== */
+  --color-doctor-accent: #36bffa;
+  --color-patient-accent: #47cd89;
+  --color-patient-icon: #3ccb7f;
+
+  /* ===== Decorative ===== */
+  --color-icon-success-fg: #abefc6;
+
+  /* ===== Gradient / skeuomorphic ===== */
+  --gradient-border: rgba(255, 255, 255, 0.12);
+  --shadow-skeu-inner-border: rgba(12, 14, 18, 0.18);
+  --shadow-skeu-inner: rgba(12, 14, 18, 0.05);
+
+  /* ===== Shadows ===== */
+  --shadow-xs: 0 1px 2px 0 rgba(255, 255, 255, 0);
+  --shadow-xs-skeuomorphic:
+    0 0 0 1px rgba(12, 14, 18, 0.18) inset, 0 -2px 0 0 rgba(12, 14, 18, 0.05) inset, 0 1px 2px 0 rgba(255, 255, 255, 0);
+
+  /* ===== Overlay ===== */
+  --overlay-bg: rgba(0, 0, 0, 0.6);
+
+  /* ===== Spacing ===== */
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-sm: 6px;
+  --space-md: 8px;
+  --space-lg: 12px;
+  --space-xl: 16px;
+  --space-2xl: 20px;
+  --space-3xl: 24px;
+  --space-4xl: 32px;
+  --space-5xl: 40px;
+  --space-6xl: 48px;
+
+  /* ===== Radius ===== */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* ===== Font ===== */
+  --font-family: "Inter", system-ui, -apple-system, sans-serif;
+  --font-family-display: "Inter Tight", "Inter", system-ui, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-base: 16px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-display-xs: 24px;
+  --font-size-display-sm: 30px;
+  --font-size-display-md: 38px;
+}

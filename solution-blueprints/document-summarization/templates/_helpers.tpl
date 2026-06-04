@@ -33,6 +33,21 @@
   -}}
   value: {{ include "aimchart-llm.url" $sub }}
 
+{{- if .Values.llm.apiKeySecretRef }}
+- name: OPENAI_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.llm.apiKeySecretRef.name }}
+      key: {{ .Values.llm.apiKeySecretRef.key }}
+{{- else if .Values.llm.apiKey }}
+- name: OPENAI_API_KEY
+  value: {{ .Values.llm.apiKey | quote }}
+{{- end }}
+{{- if .Values.llm.model }}
+- name: LLM_MODEL
+  value: {{ .Values.llm.model | quote }}
+{{- end }}
+
 {{/* Whisper (ASR) Configuration */}}
 {{- $whisperValues := index .Values "whisper" | default dict -}}
 {{- $whisperPort := index $whisperValues "service" "port" | default "7066" -}}

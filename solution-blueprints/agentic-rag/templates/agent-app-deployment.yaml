@@ -37,6 +37,20 @@ spec:
             - name: VLLM_URL
               {{- $sub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") }}
               value: {{ include "aimchart-llm.url" $sub | quote }}
+              {{- if .Values.llm.apiKeySecretRef }}
+            - name: VLLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.llm.apiKeySecretRef.name }}
+                  key: {{ .Values.llm.apiKeySecretRef.key }}
+            {{- else if .Values.llm.apiKey }}
+            - name: VLLM_API_KEY
+              value: {{ .Values.llm.apiKey | quote }}
+            {{- end }}
+            {{- if .Values.llm.model }}
+            - name: VLLM_MODEL
+              value: {{ .Values.llm.model | quote }}
+            {{- end }}
             - name: GRADIO_PORT
               value: {{ .Values.agentApp.service.port | quote }}
             - name: PYTHONPATH

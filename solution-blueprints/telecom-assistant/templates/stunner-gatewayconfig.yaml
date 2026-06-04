@@ -1,0 +1,17 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+  #
+  # SPDX-License-Identifier: MIT
+
+{{- if .Values.stunner.enabled }}
+---
+apiVersion: stunner.l7mp.io/v1
+kind: GatewayConfig
+metadata:
+  name: {{ include "release.fullname" . }}-stunner-config
+  namespace: {{ .Release.Namespace }}
+spec:
+  realm: stunner.l7mp.io
+  authType: static
+  userName: {{ .Values.stunner.auth.username | quote }}
+  password: {{ .Values.stunner.auth.password | quote }}
+{{- end }}

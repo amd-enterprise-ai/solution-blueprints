@@ -39,6 +39,35 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-continuedev
   | kubectl apply -f - -n $namespace
 ```
 
+### API Key and Model Configuration for External LLMs
+
+You can independently configure API authentication and explicit model names for the chat and autocomplete backends:
+
+- `chatLLM.apiKey`, `chatLLM.model`
+- `autocompleteLLM.apiKey`, `autocompleteLLM.model`
+
+If a model name is not provided, the chart queries the backend `/v1/models` endpoint and uses the first available model.
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+chat_api_url="https://chat-llm-api.example.com"
+chat_api_key="<CHAT_API_KEY>"
+chat_model="openai/gpt-oss-20b"
+autocomplete_api_url="https://autocomplete-llm-api.example.com"
+autocomplete_api_key="<AUTOCOMPLETE_API_KEY>"
+autocomplete_model="Qwen/Qwen2.5-Coder-7B"
+
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-continuedev-assistant \
+  --set chatLLM.existingService=$chat_api_url \
+  --set chatLLM.apiKey=$chat_api_key \
+  --set chatLLM.model=$chat_model \
+  --set autocompleteLLM.existingService=$autocomplete_api_url \
+  --set autocompleteLLM.apiKey=$autocomplete_api_key \
+  --set autocompleteLLM.model=$autocomplete_model \
+  | kubectl apply -f - -n $namespace
+```
+
 ## Default AIM image and GPU compatibility
 
 By default, the chart deploys these AIMs:

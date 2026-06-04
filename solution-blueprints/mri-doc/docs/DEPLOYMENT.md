@@ -41,6 +41,53 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-mri-doc \
   | kubectl apply -f - -n $namespace
 ```
 
+### API Key and Model Configuration for External LLM
+
+When using an external LLM service, you can optionally configure the API authentication credentials and specify a particular model:
+
+- `llm.apiKey` (optional): Bearer token for API authentication
+- `llm.model` (optional): The specific model identifier to use (e.g., `openai/gpt-oss-20b`, `gpt-4-turbo`)
+
+Specifying the model is not needed when using AIMs, as the instance typically only serves one model. If `llm.model` is left empty, the list of models is queried from the API, and the first available model is used.
+
+Example command:
+
+```bash
+name="mri-doc"
+namespace="default"
+api_url="https://llm-api.example.com"
+api_key="<YOUR_API_KEY>"
+model_name="openai/gpt-oss-20b"
+
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-mri-doc \
+  --set llm.existingService=$api_url \
+  --set llm.apiKey=$api_key \
+  --set llm.model=$model_name \
+  | kubectl apply -f - -n $namespace
+```
+
+### Using Kubernetes Secrets for API Key
+
+For enhanced security, you can store the API key in a Kubernetes secret and reference it:
+
+```bash
+name="mri-doc"
+namespace="default"
+secretname="my-secretname"
+api_url="https://llm-api.example.com"
+
+# Create the secret
+kubectl create secret generic $secretname -n $namespace \
+  --from-literal=api-key="<YOUR_API_KEY>"
+
+# Deploy with secret reference
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-mri-doc \
+  --set llm.existingService=$api_url \
+  --set llm.apiKeySecretRef.name=$secretname \
+  --set llm.apiKeySecretRef.key=api-key \
+  | kubectl apply -f - -n $namespace
+```
+
 ## Connecting
 
 ### Option 1: Port Forwarding

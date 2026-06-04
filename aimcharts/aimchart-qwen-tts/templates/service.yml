@@ -1,0 +1,24 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ define "aimchart-qwen-tts.service" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aimchart-qwen-tts.release.fullname" . }}
+  labels:
+    app: {{ include "aimchart-qwen-tts.release.fullname" . }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: {{ default 8091 .Values.service.targetPort }}
+  selector:
+    app: {{ include "aimchart-qwen-tts.release.fullname" . }}
+{{- end }}
+
+{{- if not .Values.existingService }}
+{{- include "aimchart-qwen-tts.service" . }}
+{{- end }}

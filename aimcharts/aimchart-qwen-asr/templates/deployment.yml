@@ -1,0 +1,80 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- define "aimchart-qwen-asr.deployment.bare" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aimchart-qwen-asr.release.fullname" . }}
+  labels:
+    app: {{ include "aimchart-qwen-asr.release.fullname" . }}
+    {{- range $key, $value := .Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ include "aimchart-qwen-asr.release.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "aimchart-qwen-asr.release.fullname" . }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.dshm.sizeLimit }}
+      containers:
+        - name: {{ .Values.container.name }}
+          image: {{ .Values.image | quote }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | default "Always" | quote }}
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Checking audio dependencies..."
+
+              apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+                ffmpeg \
+                libsndfile1 \
+                git \
+                curl
+
+              echo "Updating Transformers..."
+              pip install --ignore-installed blinker==1.9.0
+              pip install qwen-asr==0.0.6
+
+              cd ..
+              pip install "vllm[audio]"==0.14.0rc3.dev30+gb026cf14e.rocm700
+
+              echo "Starting vLLM for Qwen3-ASR..."
+              qwen-asr-serve \
+                {{ .Values.model }} \
+                --host 0.0.0.0 \
+                --port 8000 \
+                --gpu-memory-utilization 0.95
+          ports:
+            - name: http
+              containerPort: {{ .Values.container.port }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- include "aimchart-qwen-asr.container.resources" . | nindent 12 }}
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: dshm
+{{- end }}
+
+{{ if not .Values.existingService -}}
+{{ include "aimchart-qwen-asr.deployment.bare" . }}
+{{- end }}

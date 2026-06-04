@@ -48,7 +48,33 @@ spec:
           command: [ "sh", "-c" ]
           env:
             - name: AMD_AIM_BASE_URL
-              value: {{ printf "%s/v1" (include "codedocs.llm.url" .) | quote }}
+              value: {{ include "codedocs.llm.apiBaseUrl" . | quote }}
+            {{- if .Values.llm.apiKeySecretRef }}
+            - name: AMD_AIM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.llm.apiKeySecretRef.name }}
+                  key: {{ .Values.llm.apiKeySecretRef.key }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.llm.apiKeySecretRef.name }}
+                  key: {{ .Values.llm.apiKeySecretRef.key }}
+            {{- else if .Values.llm.apiKey }}
+            - name: AMD_AIM_API_KEY
+              value: {{ .Values.llm.apiKey | quote }}
+            - name: OPENAI_API_KEY
+              value: {{ .Values.llm.apiKey | quote }}
+            {{- else }}
+            - name: AMD_AIM_API_KEY
+              value: {{ .Values.backend.env.OPENAI_API_KEY | quote }}
+            - name: OPENAI_API_KEY
+              value: {{ .Values.backend.env.OPENAI_API_KEY | quote }}
+            {{- end }}
+            {{- if .Values.llm.model }}
+            - name: AMD_AIM_MODEL
+              value: {{ .Values.llm.model | quote }}
+            {{- end }}
           args:
             - |
               set -e
@@ -58,13 +84,7 @@ spec:
               rm -rf /var/lib/apt/lists/*
 
               pip install -v --no-cache-dir -r /workload/mount/CodeDocsBackend/requirements.txt
-              export DOCUMENTATION_AGENTS_CONFIG={{ .Values.backend.env.DOCUMENTATION_AGENTS_CONFIG }}
-              export DOCUMENTATION_TASKS_CONFIG={{ .Values.backend.env.DOCUMENTATION_TASKS_CONFIG }}
-              export PLANNER_AGENTS_CONFIG={{ .Values.backend.env.PLANNER_AGENTS_CONFIG }}
-              export PLANNER_TASKS_CONFIG={{ .Values.backend.env.PLANNER_TASKS_CONFIG }}
               export AMD_AIM_BASE_URL="$AMD_AIM_BASE_URL"
-              export AMD_AIM_API_KEY={{ .Values.backend.env.OPENAI_API_KEY }}
-              export OPENAI_API_KEY={{ .Values.backend.env.OPENAI_API_KEY }}
               export PORT={{ .Values.backend.port }}
               export PYTHONPATH=/workload/mount/CodeDocsBackend
               python3 -m main

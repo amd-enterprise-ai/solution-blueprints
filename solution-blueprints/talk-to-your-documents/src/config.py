@@ -16,6 +16,8 @@ GRADIO_PORT = int(os.getenv("GRADIO_PORT", "7860"))
 # Services
 INFINITY_EMBEDDING_URL = os.getenv("EMBEDDING_URL", "http://embedding-e5-large:7997/embeddings")
 VLLM_BASE_URL = os.getenv("VLLM_URL", "http://llama-3-3-70b:8000/v1")
+VLLM_API_KEY = os.getenv("VLLM_API_KEY", "")
+VLLM_MODEL = os.getenv("VLLM_MODEL", "")
 CHROMADB_URL = os.getenv("CHROMADB_URL", "")
 CHROMADB_HOST = os.getenv("CHROMADB_HOST", "chromadb-store")
 CHROMADB_PORT = int(os.getenv("CHROMADB_PORT", "8000"))
@@ -50,6 +52,9 @@ EMBED_MODEL = init_embed_model()
 
 
 def init_gen_model():
+    if VLLM_MODEL:
+        return VLLM_MODEL
+
     for retry in range(INIT_RETRIES):
         if retry != 0:
             print(
@@ -65,7 +70,8 @@ def init_gen_model():
                 base += "/"
             url = urllib.parse.urljoin(base, "models")
 
-            r = requests.get(url, timeout=2.0)
+            headers = {"Authorization": f"Bearer {VLLM_API_KEY}"} if VLLM_API_KEY else {}
+            r = requests.get(url, headers=headers, timeout=2.0)
             if r.status_code == 200:
                 try:
                     return r.json()["data"][0]["id"]

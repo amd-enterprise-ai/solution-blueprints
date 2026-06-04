@@ -6,13 +6,13 @@ apiVersion: v2
 name: aimsb-mri-doc
 description: MRI analysis tool blueprint
 type: application
-version: 0.1.1
+version: 0.2.0
 maintainers:
 - name: AMD
   url: https://www.amd.com/
 dependencies:
 - name: aimchart-llm
-  version: 0.2.3
+  version: 0.2.5
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:

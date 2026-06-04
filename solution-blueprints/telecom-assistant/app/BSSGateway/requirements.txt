@@ -1,0 +1,6 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+fastapi==0.110.0
+uvicorn[standard]==0.29.0

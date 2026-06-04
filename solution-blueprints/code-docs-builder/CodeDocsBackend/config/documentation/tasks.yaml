@@ -4,21 +4,21 @@
 
 author_verified_documentation:
   description:
-    Write a complete documentation document titled {title} for the codebase at {repo_path}.
-    The primary objective of this document is {goal}
+    Write a complete documentation document titled "{title}" for the codebase at "{repo_path}".
+    The primary objective of this document is "{goal}".
     You must rely only on verified information obtained from the prior code analysis.
     Use the following inputs
-      - Project overview — {overview}
-      - Document scope description — {description}
-      - Prerequisites — {prerequisites}
-      - Examples to include — {examples}
+      - Project overview — "{overview}"
+      - Document scope description — "{description}"
+      - Prerequisites — "{prerequisites}"
+      - Examples to include — "{examples}"
     Structure the document clearly and logically.
     Use Mermaid diagrams to represent workflows and relationships where helpful.
     Ignore images, videos, and other media files.
 
   expected_output: >
     A production-ready Markdown documentation file that
-      - Accurately describes {title} as implemented in {repo_path}
+      - Accurately describes "{title}" as implemented in "{repo_path}"
       - Uses section headers aligned with the real code structure
       - Contains verified explanations tied directly to code
       - Includes real code examples extracted from the repository
@@ -29,7 +29,9 @@ author_verified_documentation:
 
 validate_and_finalize_documentation:
   description:
-    Review and validate the documentation for "{title}" against the actual codebase at {repo_path} and existing documentation files.
+    You are given a draft documentation document for "{title}".
+    The draft was written by the Technical Documentation Author and is provided above.
+    Review and validate it against the actual codebase at "{repo_path}".
     The goal is to ensure absolute alignment between documentation and implementation.
     Perform the following checks
     1. Technical Accuracy
@@ -53,7 +55,7 @@ validate_and_finalize_documentation:
       - Mermaid diagrams must be wrapped in ```mermaid``` blocks
   expected_output: >
     A finalized Markdown documentation file that:
-      - Is fully consistent with {repo_path}
+      - Is fully consistent with "{repo_path}"
       - Contains only verified workflows and examples
       - Uses correct and validated Mermaid diagrams
       - Maintains consistent technical terminology

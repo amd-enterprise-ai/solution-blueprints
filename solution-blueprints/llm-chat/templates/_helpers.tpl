@@ -47,6 +47,16 @@ limits:
         "Chart" (dict "Name" "llm")
   -}}
   value: {{ include "aimchart-llm.url" $sub }}
+{{- if .Values.llm.apiKeySecretRef }}
+- name: OPENAI_API_KEYS
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.llm.apiKeySecretRef.name }}
+      key: {{ .Values.llm.apiKeySecretRef.key }}
+{{- else if .Values.llm.apiKey }}
+- name: OPENAI_API_KEYS
+  value: {{ .Values.llm.apiKey | quote }}
+{{- end }}
 {{- range $key, $value := .Values.env_vars }}
 {{- if (typeIs "string" $value) }}
 - name: {{ $key }}

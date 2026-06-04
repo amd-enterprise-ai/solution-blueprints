@@ -22,19 +22,19 @@ class Settings(BaseSettings):
     model_api_timeout: int = Field(default=600, description="Timeout in seconds for PDF conversion requests")
     api_key: str = Field(default="test_key", description="API key for LLM")
     llm_url: str = Field(description="Base URL for LLM service (OpenAI-compatible API)")
+    llm_model: str = Field(default="", description="Optional explicit LLM model identifier")
 
-    elevenlabs_api_key: str = Field(default="test_key", description="API key for ElevenLabs")
+    tts_api_key: str = Field(default="", description="API key for TTS service")
+    tts_base_url: str = Field(description="Base URL for TTS service (OpenAI-compatible API)")
     celery_broker_url: str = Field(default="redis://localhost:6379/0", description="Celery broker URL (Redis)")
     celery_backend_url: str = Field(default="redis://localhost:6379/0", description="Celery result backend URL")
 
-    tts_model: str = Field(default="eleven_multilingual_v2", description="TTS model identifier")
-    tts_audio_format: str = Field(default="mp3_44100_128", description="Output audio format")
+    tts_model: str = Field(default="Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice", description="TTS model identifier")
+    tts_audio_format: str = Field(default="mp3", description="Output audio format (mp3, opus, aac, flac, wav)")
     tts_concurrent_limit: int = Field(default=1, description="Max concurrent TTS batch size")
-    tts_voice_1_default: str = Field(default="Xb7hH8MSUJpSbSDYk0k2", description="Default voice for speaker-1")
-    tts_voice_2_default: str = Field(default="IKne3meq5aSn9XLyUdCD", description="Default voice for speaker-2")
-    tts_stability_level: float = Field(default=0.5, description="ElevenLabs stability parameter")
-    tts_similarity_boost: float = Field(default=0.75, description="ElevenLabs similarity boost")
-    tts_style_exaggeration: float = Field(default=0.0, description="ElevenLabs style exaggeration")
+    tts_voice_1_default: str = Field(default="Ryan", description="Default voice for speaker-1")
+    tts_voice_2_default: str = Field(default="Aiden", description="Default voice for speaker-2")
+    tts_speed: float = Field(default=1.0, description="TTS speech speed (0.25-4.0)")
 
     @field_validator("storage_path", mode="before")
     @classmethod

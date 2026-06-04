@@ -21,11 +21,13 @@ This blueprint provides an end-to-end solution for converting PDF documents into
 - End-to-end pipeline: ingest PDFs, extract text, summarize/plan, generate dialogue or monologue with LLM, synthesize audio via TTS, and store artifacts.
 - Agentic orchestration: agent service coordinates PDF/TTS/LLM calls, uses Redis for tasks and MinIO for artifacts.
 - LLM via `aimchart-llm` dependency by default; override with `llm.existingService` to reuse an existing endpoint.
+- TTS via `aimchart-qwen-tts` dependency by default; override with `qwen-tts.existingService` to reuse an existing endpoint.
 - Multiple modes: podcast dialogue or monologue, controlled via request parameters.
 
 ## Components
 
 - **LLM service** (default from `aimchart-llm`; can point to external LLM via `llm.existingService`).
+- **TTS service** (default from `aimchart-qwen-tts`; can point to external TTS via `qwen-tts.existingService`). Uses an OpenAI-compatible TTS API.
 - **App service** (`app`) - Main API service running on port 8000, handles HTTP requests and coordinates the pipeline.
 - **Celery worker** (`celery-worker`) - Background task processor for PDF processing, LLM calls, and TTS generation.
 - **Frontend service** (`frontend`) - Web UI on port 7860 for uploading PDFs and managing conversions.
@@ -33,31 +35,27 @@ This blueprint provides an end-to-end solution for converting PDF documents into
 
 ## System Requirements
 
-- Kubernetes cluster; GPU nodes recommended for LLM workloads.
+- Kubernetes cluster; GPU nodes recommended for LLM and TTS workloads.
 - Persistent storage:
   - Ephemeral storage: 20Gi (ReadWriteOnce) for temporary workloads
   - App storage: 10Gi (ReadWriteMany) for shared PDF/temp data
   - Shared memory (dshm): 32Gi for /dev/shm
-- Network egress to reach external APIs if using hosted LLM/TTS (ElevenLabs).
 - Resource requirements (defaults in `values.yaml`):
   - **Total CPU requests**: 2 CPU (app: 500m, celery-worker: 1, frontend: 500m)
   - **Total CPU limits**: 8 CPU (app: 2, celery-worker: 4, frontend: 2)
   - **Total memory requests**: 12Gi (app: 2Gi, celery-worker: 8Gi, frontend: 2Gi)
   - **Total memory limits**: 24Gi (app: 4Gi, celery-worker: 16Gi, frontend: 4Gi)
   - Note: celery-worker resources are increased to handle OOM issues during heavy PDF processing and LLM tasks. The specified memory requests for celery-worker are suitable for processing PDF files up to 20 MB in size. For larger files, significantly more memory may be required (proportionally to file size).
+- Model serving GPU requirements (default in this Blueprint):
+  - **LLM model** (`amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0` via `aimchart-llm`): **1 GPU** (`amd.com/gpu: 1`)
+  - **Speech model** (`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` via `aimchart-qwen-tts`): **1 GPU** (`amd.com/gpu: 1`)
+  - **Total when both internal services are enabled**: **2 GPUs** (1 for LLM + 1 for TTS)
+  - If you use `llm.existingService` and/or `qwen-tts.existingService`, GPU requirements for those external services are defined by their own deployments.
 
 ## Usage (overview)
 
-### ElevenLabs API key
-
-- Sign up at https://elevenlabs.io/ (new accounts typically receive ~10,000 free credits, ~10 minutes of TTS audio).
-- Create an API key with access to TTS and set it in `pythonServices.app.env.APP_ELEVENLABS_API_KEY`.
-
-If you only need the no‑TTS mode, you can omit the ElevenLabs API key entirely.
-
-1) Set secrets: `APP_ELEVENLABS_API_KEY` for the app service. Skip this if you only use the no‑TTS mode.
-2) Run `helm dependency build`, then `helm template … | kubectl apply -f -`. See `docs/DEPLOYMENT.md` for full commands.
-3) Port-forward the frontend UI: `kubectl port-forward svc/aimsb-pdf-to-podcast-<release>-frontend 7860:7860 -n <namespace>` and open `http://localhost:7860`.
+1) Run `helm dependency build`, then `helm template … | kubectl apply -f -`. See `docs/DEPLOYMENT.md` for full commands.
+2) Port-forward the frontend UI: `kubectl port-forward svc/aimsb-pdf-to-podcast-<release>-frontend 7860:7860 -n <namespace>` and open `http://localhost:7860`.
 
 ### Frontend options
 
@@ -79,8 +77,9 @@ when generating the podcast from the target document (e.g. terminology, or backg
 ## Configuration Highlights
 
 - **LLM**: set `llm.existingService` to reuse an external LLM; otherwise the chart deploys the default via `aimchart-llm` dependency.
+- **TTS**: set `qwen-tts.existingService` to reuse an external OpenAI-compatible TTS service; otherwise the chart deploys the default via `aimchart-qwen-tts` dependency. `APP_TTS_BASE_URL` is auto-configured from the subchart.
 - **Secrets**: configure API and TTS keys under `pythonServices.app.env`:
-  - `APP_ELEVENLABS_API_KEY` - ElevenLabs API key for TTS
+  - `APP_TTS_API_KEY` - API key for the TTS service (if required by the TTS backend)
   - `APP_API_KEY` - Optional API key for authentication
   - `APP_CELERY_BROKER_URL` and `APP_CELERY_BACKEND_URL` - Auto-configured if not set
 - **Storage**: adjust persistent volume settings in `values.yaml`:

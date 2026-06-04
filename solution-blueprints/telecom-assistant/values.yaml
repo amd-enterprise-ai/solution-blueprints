@@ -1,0 +1,276 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Default values for telecom-assistant.
+metadata:
+  labels: {}
+
+http_route:
+  enabled: false
+
+imagePullPolicy: Always
+imagePullSecrets: []
+
+storage:
+  ephemeral:
+    quantity: 20Gi
+    storageClassName: mlstorage
+    accessModes:
+      - ReadWriteOnce
+  dshm:
+    sizeLimit: 4Gi
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "2"
+    memory: "2Gi"
+
+env_vars: {}
+
+mainServices:
+  bssgateway:
+    enabled: true
+    replicas: 1
+    image:
+      repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-telecom-assistant-bssgateway"
+      tag: "{{ .Chart.Version }}"
+    port: 8001
+    run: "uvicorn main:app --host 0.0.0.0 --port 8001"
+
+  agent:
+    enabled: true
+    replicas: 1
+    image:
+      repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-telecom-assistant-agent"
+      tag: "{{ .Chart.Version }}"
+    port: null
+    run: "uv run python agent.py start"
+    env:
+      LOG_LEVEL: "INFO"
+      LIVEKIT_URL: ""
+      LIVEKIT_API_KEY: "APIhSHdhCSBtLXU"
+      LIVEKIT_API_SECRET: "hueQUixySH0Yu6Vo6EYnLZYeIaQvhQfMLZTezKNNqgLA"
+      STT_MODEL: "Qwen/Qwen3-ASR-1.7B"
+      STT_BASE_URL: ""
+      STT_API_KEY: "no-key-required"
+      LLM_MODEL: "openai/gpt-oss-120b"
+      LLM_BASE_URL: ""
+      LLM_API_KEY: "no-key-required"
+      TTS_MODEL: "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+      TTS_BASE_URL: ""
+      TTS_API_KEY: "no-key-required"
+      TTS_VOICE: "Aiden"
+      BSSGATEWAY_URL: ""
+      COLLECTION_NAME: "billing_docs"
+      CHROMA_URL: ""
+      EMBEDDINGS_URL: ""
+      EMBEDDINGS_API_KEY: "no-key-required"
+      EMBEDDINGS_MODEL: "intfloat/multilingual-e5-large-instruct"
+      LIBREDESK_URL: ""
+      LIBREDESK_TOKEN: "UWDxRuedjlKH7LNfZ6jKzrfmGR4wF77I:KvduSjwCOF4AVsslYJ76rC6JTAcm1KgOadyioChy38HAPTMApGN1GJIZNVokoc7d"
+      LIBREDESK_INBOX_ID: 1
+
+  frontend:
+    enabled: true
+    replicas: 1
+    image:
+      repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-telecom-assistant-frontend"
+      tag: "{{ .Chart.Version }}"
+    run: "node server/index.cjs"
+    port: 3000
+    env:
+      NODE_ENV: production
+      LIVEKIT_URL: ""
+      LIVEKIT_API_KEY: "APIhSHdhCSBtLXU"
+      LIVEKIT_API_SECRET: "hueQUixySH0Yu6Vo6EYnLZYeIaQvhQfMLZTezKNNqgLA"
+
+
+infraServices:
+  redis:
+    enabled: true
+    image: "redis:7.2-alpine"
+    ports:
+      - name: redis
+        port: 6379
+    command: ["redis-server", "--appendonly", "no"]
+    readinessProbe:
+      exec:
+        command: [ "redis-cli", "ping" ]
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  postgres:
+    enabled: true
+    image: postgres:17-alpine
+    ports:
+      - name: postgres
+        port: 5432
+    env:
+      # Change envs if additional security in prod required
+      POSTGRES_USER: libredesk
+      POSTGRES_PASSWORD: libredesk
+      POSTGRES_DB: libredesk
+    volumeMounts:
+      - name: postgres-data
+        mountPath: /var/lib/postgresql/data
+    volumes:
+      - name: postgres-data
+        emptyDir: {}
+    readinessProbe:
+      exec:
+        command: [ "pg_isready", "-U", "libredesk" ]
+      initialDelaySeconds: 10
+      periodSeconds: 5
+
+  libredesk:
+    enabled: true
+    image: libredesk/libredesk:v1.0.3
+    ports:
+      - name: http
+        port: 9000
+    env:
+      #System user password. Change in prod if required.
+      LIBREDESK_SYSTEM_USER_PASSWORD: "QWwerty1@#$"
+    # Postgres config
+    db:
+      port: 5432
+      name: libredesk
+      username: libredesk
+      password: libredesk
+      ssl_mode: disable
+    # Encryption key. Generate using `openssl rand -hex 16` must be 32 characters long.
+    encryptionKey: "9bcf8b1ba47bc5e79a6188e908274706"
+    command: [ "sh", "-c" ]
+    args:
+      - >
+        ./libredesk --install --idempotent-install --yes --config /libredesk/config.toml &&
+        ./libredesk --upgrade --yes --config /libredesk/config.toml &&
+        ./libredesk --config /libredesk/config.toml
+    volumeMounts:
+      - name: libredesk-config
+        mountPath: /libredesk/config.toml
+        subPath: config.toml
+      - name: libredesk-uploads
+        mountPath: /libredesk/uploads
+    volumes:
+      - name: libredesk-config
+        configMap:
+          name: libredesk-config
+      - name: libredesk-uploads
+        emptyDir: {}
+    readinessProbe:
+      tcpSocket:
+        port: 9000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    livenessProbe:
+      tcpSocket:
+        port: 9000
+      initialDelaySeconds: 60
+      periodSeconds: 30
+
+# Vector storage
+chromadb:
+  existingService: null
+  resources:
+    requests: { cpu: "1", memory: "4Gi" }
+    limits: { cpu: "2", memory: "8Gi" }
+  deployment:
+    ports:
+      http: 8000
+  persistence:
+    enabled: true
+    size: 25Gi
+    storageClassName: mlstorage
+
+# Embedding
+embedding:
+  metadata:
+    labels: { }
+  image: "michaelf34/infinity:0.0.70-amd-gfx942"
+  model: "intfloat/multilingual-e5-large-instruct"
+  gpus: 1
+  resources:
+    requests: { cpu: "2", memory: "32Gi" }
+    limits: { cpu: "4", memory: "192Gi" }
+  storage:
+    ephemeral:
+      quantity: 20Gi
+    dshm:
+      sizeLimit: 16Gi
+  deployment:
+    ports:
+      http: 7997
+    command:
+      - infinity_emb
+    args:
+      - v1
+      - server
+
+# LiveKit
+livekit:
+  enabled: true
+  nameOverride: livekit
+  nodeSelector: {}
+  image:
+    tag: v1.9.12
+  livekit:
+    port: 7880
+    rtc:
+      tcp_port: 7881
+      # When stunner.enabled=true, LiveKit does NOT need to expose UDP range directly —
+      # media comes in via STUNner TURN. use_external_ip is false so LiveKit doesn't
+      # try to self-detect and advertise a node IP; STUNner's LoadBalancer IP is used instead.
+      use_external_ip: false
+      port_range_start: 50000
+      port_range_end: 60000
+    keys:
+      APIhSHdhCSBtLXU: hueQUixySH0Yu6Vo6EYnLZYeIaQvhQfMLZTezKNNqgLA
+
+# Models
+stt:
+  nameOverride: "qwen-asr"
+
+llm:
+  nameOverride: "aim-openai-gpt-oss-120b"
+  image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.10.0"
+
+  storage:
+    ephemeral:
+      quantity: 512Gi
+      storageClassName: mlstorage
+
+tts:
+  nameOverride: "qwen-tts"
+
+# =============================================================================
+# STUNner — Kubernetes-native WebRTC media gateway.
+#
+# Acts as a TURN server ingress proxy: browsers connect to STUNner via UDP:3478
+# (single LoadBalancer port), STUNner routes media internally to LiveKit pods.
+# This replaces the wide UDP 50000-60000 node-level exposure entirely.
+#
+# PREREQUISITE: stunner-gateway-operator must be installed cluster-wide.
+# Run ./install-prerequisites.sh once per cluster before deploying this chart.
+# =============================================================================
+stunner:
+  enabled: true
+
+  # STUNner subchart values (alias: stunner).
+  # The subchart installs only the CRDs/controller — actual gateway pods are
+  # provisioned automatically by the operator per Gateway resource below.
+  stunner: {}  # override stunner subchart values here if needed
+
+  # TURN credentials used by browsers to authenticate with STUNner.
+  # Must match what LiveKit advertises to clients in its TURN config.
+  auth:
+    username: "stunner-user"
+    password: "stunner-pass"
+
+  # UDP port exposed via LoadBalancer for TURN signaling.
+  gateway:
+    port: 3478

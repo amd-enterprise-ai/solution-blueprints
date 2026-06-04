@@ -51,6 +51,23 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-talk-to-you
 
 You can combine these flags as needed.
 
+### API Key and Model Configuration for External LLM
+
+When using an external LLM service, you can optionally configure the API authentication credentials and specify a particular model:
+
+- `llm.apiKey` (optional): Bearer token for API authentication
+- `llm.model` (optional): The specific model identifier to use (e.g., `openai/gpt-oss-20b`, `gpt-4-turbo`)
+
+If `llm.model` is left empty, the model list is queried from the API and the first available model is used.
+
+```bash
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-talk-to-your-documents \
+  --set llm.existingService="https://llm-api.example.com" \
+  --set llm.apiKey="<YOUR_API_KEY>" \
+  --set llm.model="openai/gpt-oss-20b" \
+  | kubectl apply -f - -n $namespace
+```
+
 ## Default AIM image and GPU compatibility
 
 By default, the chart deploys Meta Llama 3.3 70B with this AIM: `amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0`

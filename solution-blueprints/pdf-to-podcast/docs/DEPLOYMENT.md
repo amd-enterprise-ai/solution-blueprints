@@ -6,27 +6,23 @@ SPDX-License-Identifier: MIT
 
 # Helm deployment
 
-Solution Blueprints are provided as Helm charts. Recommended flow: render with `helm template` and pipe to `kubectl apply -f -` (avoids Helm release Secrets that may be restricted).
-
-## ElevenLabs API key
-
-- Sign up at https://elevenlabs.io/. New accounts typically get ~10,000 free credits (around 10 minutes of TTS audio).
-- Create an API key with TTS access and pass it as `pythonServices.app.env.APP_ELEVENLABS_API_KEY`.
-- If you only need the no‑TTS mode, you can omit the ElevenLabs API key entirely.
+Solution Blueprints are provided as Helm Charts.
+The recommended approach to deploy them is to pipe the output of `helm template` to `kubectl apply -f -`.
+We do not recommend `helm install`, which by default uses a Secret to keep track of the related resources. This does not work well with Enterprise clusters that often have limitations on the kinds of resources that regular users are allowed to create.
 
 ## Deploy
+
+Both the LLM and TTS services are deployed automatically via subchart dependencies (`aimchart-llm` and `aimchart-qwen-tts`). The environment variables `APP_LLM_URL` and `APP_TTS_BASE_URL` are auto-configured from the subchart service URLs.
 
 ```bash
 name="my-deployment"
 namespace="my-namespace"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-pdf-to-podcast \
-  --set pythonServices.app.env.APP_ELEVENLABS_API_KEY="<your_11labs_key>" \
   | kubectl apply -f - -n $namespace
 ```
 
-LLM is deployed via the `aimchart-llm` dependency by default.
-
 ## Using an existing deployment or external LLM
+
 By default, any required AIMs are deployed by the helm chart. If you already have a compatible AIM deployed, you can use that instead, and reuse resources.
 
 To use an existing deployment or external LLM, set the value `llm.existingService` to that endpoint. Then, any other values you pass in the `llm` mapping are simply ignored, and your existing service is used instead. You should use the Kubernetes Service name, or if the service is in a different namespace, you can use the long form `<SERVICENAME>.<NAMESPACE>.svc.cluster.local:<SERVICEPORT>`. If needed, you can pass a whole URL.
@@ -38,8 +34,64 @@ namespace="my-namespace"
 servicename="aim-llm-my-model-123456"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-pdf-to-podcast \
   --set llm.existingService=$servicename \
-  --set pythonServices.app.env.APP_ELEVENLABS_API_KEY="<your_11labs_key>" \
   | kubectl apply -f - -n $namespace
+```
+
+### API Key and Model Configuration for External LLM
+
+When using an external LLM service, you can optionally configure API authentication and model override:
+
+- `llm.apiKey` (optional): Bearer token for API authentication
+- `llm.model` (optional): Explicit model id to use
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+api_url="https://llm-api.example.com"
+api_key="<YOUR_API_KEY>"
+model_name="openai/gpt-oss-20b"
+
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-pdf-to-podcast \
+  --set llm.existingService=$api_url \
+  --set llm.apiKey=$api_key \
+  --set llm.model=$model_name \
+  | kubectl apply -f - -n $namespace
+```
+
+### Using Kubernetes Secrets for API Key
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+secretname="my-secretname"
+api_url="https://llm-api.example.com"
+
+kubectl create secret generic $secretname -n $namespace \
+  --from-literal=api-key="<YOUR_API_KEY>"
+
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-pdf-to-podcast \
+  --set llm.existingService=$api_url \
+  --set llm.apiKeySecretRef.name=$secretname \
+  --set llm.apiKeySecretRef.key=api-key \
+  | kubectl apply -f - -n $namespace
+```
+
+## Using an existing deployment or external TTS
+
+Similarly, to use an existing TTS service instead of the default `aimchart-qwen-tts` deployment, set `qwen-tts.existingService` to the endpoint. The TTS service must expose an OpenAI-compatible API (`POST /v1/audio/speech`).
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+ttsservice="my-tts-service"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-pdf-to-podcast \
+  --set qwen-tts.existingService=$ttsservice \
+  | kubectl apply -f - -n $namespace
+```
+
+If the TTS service requires an API key, pass it via:
+```bash
+  --set pythonServices.app.env.APP_TTS_API_KEY="<your_tts_api_key>"
 ```
 
 ## Default AIM image and GPU compatibility
@@ -56,7 +108,6 @@ name="my-deployment"
 namespace="my-namespace"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-pdf-to-podcast \
   --set llm.image=amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:<NEWER_TAG> \
-  --set pythonServices.app.env.APP_ELEVENLABS_API_KEY="<your_11labs_key>" \
   | kubectl apply -f - -n $namespace
 ```
 
@@ -76,7 +127,6 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-pdf-to-podc
   --set uiImage.repository=$uiimagerepository \
   --set uiImage.tag=$uiimagetag\
   --set imagePullSecrets[0].name=$secretname \
-  --set pythonServices.app.env.APP_ELEVENLABS_API_KEY="<your_11labs_key>" \
   | kubectl apply -f - -n $namespace
 ```
 
@@ -104,14 +154,12 @@ If your cluster has a Gateway API compatible gateway (e.g., Kubernetes Gateway, 
 **Enabling HTTPRoute:**
 
 Use `--set http_route.enabled=true` in the `helm template` command to enable HTTPRoute creation:
-(notice, the command contains an existing Llm service running in the cluster).
+(notice, the command contains an existing LLM service running in the cluster).
 
 ```bash
-key="your_ELEVENLABS_API_KEY"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-pdf-to-podcast \
     --set http_route.enabled=true \
     --set llm.existingService=$servicename \
-    --set pythonServices.app.env.APP_ELEVENLABS_API_KEY=$key \
      | kubectl apply -f - -n $namespace
 ```
 

@@ -30,14 +30,18 @@ secondary:
   env_vars:
     AIM_PRECISION: "fp8"
 
+# NOTE: Any number of models with arbitrary names can be declared in this section.
+# You can add as many models as needed, each with a unique name and corresponding configuration.
 models:
 - name: primary
   base_url: http://primary
   api_key: "" # optional
+  api_key_secret_ref: {} # optional: {name: <secret-name>, key: <secret-key>}
   model_name: "" # optional
 - name: secondary
   base_url: http://secondary
   api_key: "" # optional
+  api_key_secret_ref: {} # optional: {name: <secret-name>, key: <secret-key>}
   model_name: "" # optional
 
 routing:
@@ -45,20 +49,36 @@ routing:
     task_router:
       classifier_path: /classify
       classes:
-        Code Generation: secondary
-        Summarization: primary
-        Unknown: primary
+        Code Generation:
+          backend: secondary
+          description: "Any request to create, write, generate, implement or provide code in any programming language, algorithm implementations, scripts, functions, or code examples. Also includes 'how to code X', 'write a program that'."
+        Summarization:
+          backend: primary
+          description: "Tasks related to summarizing text, condensing articles, conversations, documents, providing key points or brief overviews."
+        Unknown:
+          backend: primary
+          description: "Requests that are completely unclear, off-topic, spam, or do not match ANY of the defined categories at all. Use only as last resort when the message has no relation to other categories."
 
     complexity_router:
       classifier_path: /classify
       classes:
-        Hard: secondary
-        Middle: secondary
-        Easy: primary
-        Unknown: primary
+        Hard:
+          backend: secondary
+          description: "High-effort tasks: algorithms, complex math, deep multi-step reasoning, code writing, advanced technical topics."
+        Middle:
+          backend: secondary
+          description: "Medium effort tasks: short explanations, standard how-to questions, everyday problem solving, moderate knowledge recall."
+        Easy:
+          backend: primary
+          description: "Very low-effort interactions: greetings, simple yes/no questions, basic facts, casual chat. No deep thinking required."
+        Unknown:
+          backend: primary
+          description: "Requests that are completely unclear, off-topic, spam, or do not match ANY of the defined categories at all. Use only as last resort when the message has no relation to other categories."
 
 classifier:
   llmBackend: secondary
+
+logLevel: "DEBUG"
 
 secrets:
   # full | user_only
@@ -72,3 +92,27 @@ storage:
     quantity: 1Gi
   dshm:
     sizeLimit: 1Gi
+
+embedding:
+  enabled: true
+  metadata:
+    labels: {}
+  image: "michaelf34/infinity:0.0.70-amd-gfx942"
+  model: "intfloat/multilingual-e5-large-instruct"
+  gpus: 1
+  resources:
+    requests: { cpu: "2", memory: "32Gi" }
+    limits: { cpu: "4", memory: "192Gi" }
+  storage:
+    ephemeral:
+      quantity: 20Gi
+    dshm:
+      sizeLimit: 16Gi
+  deployment:
+    ports:
+      http: 7997
+    command:
+      - infinity_emb
+    args:
+      - v1
+      - server

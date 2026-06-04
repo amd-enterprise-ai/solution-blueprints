@@ -20,7 +20,10 @@ Generate a concise answer based on the context."""
 
 def get_llm():
     return ChatOpenAI(
-        base_url=config.VLLM_BASE_URL, api_key=SecretStr("not-needed"), model=config.GEN_MODEL, temperature=0
+        base_url=config.VLLM_BASE_URL,
+        api_key=SecretStr(config.VLLM_API_KEY or "not-needed"),
+        model=config.GEN_MODEL,
+        temperature=0,
     )
 
 

@@ -21,3 +21,12 @@ http://{{ .Values.llm.existingService }}
 {{- define "codedocs.backendUrl" -}}
 http://{{ include "codedocs.fullname" . }}-backend:{{ .Values.backend.port }}
 {{- end -}}
+
+{{- define "codedocs.llm.apiBaseUrl" -}}
+{{- $base := include "codedocs.llm.url" . | trim | trimSuffix "/" -}}
+{{- if hasSuffix "/v1" $base -}}
+{{- $base -}}
+{{- else -}}
+{{- printf "%s/v1" $base -}}
+{{- end -}}
+{{- end -}}

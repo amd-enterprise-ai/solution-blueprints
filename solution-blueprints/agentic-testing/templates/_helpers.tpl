@@ -23,7 +23,7 @@
 
 # Container environment variables helper
 {{- define "container.env" -}}
-- name: OPENAI_API_BASE_URL
+- name: LLM_API_BASE_URL
   {{/* Build a context that has the right .Values, .Release, and .Chart metadata. */}}
   {{- $sub := dict
         "Values" (merge (dict) .Values.llm)
@@ -31,6 +31,20 @@
         "Chart" (dict "Name" "llm")
   -}}
   value: {{ include "aimchart-llm.url" $sub }}
+{{- if .Values.llm.apiKeySecretRef }}
+- name: LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.llm.apiKeySecretRef.name }}
+      key: {{ .Values.llm.apiKeySecretRef.key }}
+{{- else if .Values.llm.apiKey }}
+- name: LLM_API_KEY
+  value: {{ .Values.llm.apiKey | quote }}
+{{- end }}
+{{- if .Values.llm.model }}
+- name: LLM_MODEL
+  value: {{ .Values.llm.model | quote }}
+{{- end }}
 {{- range $key, $value := .Values.envVars }}
 {{- if (typeIs "string" $value) }}
 - name: {{ $key }}

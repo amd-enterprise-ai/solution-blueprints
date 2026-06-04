@@ -1,0 +1,183 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if $.Values.infraServices.libredesk.enabled }}
+{{- $fullname := include "release.componentName" (dict "root" . "name" "postgres-dump-restore-job") -}}
+{{- $libredeskHost := include "release.componentName" (dict "root" $ "name" "libredesk") }}
+{{- $libredeskPort := (index ($.Values.infraServices.libredesk.ports | first) "port") | default 9000 }}
+{{- $dbHost := include "release.componentName" (dict "root" $ "name" "postgres") }}
+{{- $dbPort := $.Values.infraServices.libredesk.db.port }}
+{{- $dbUsername := $.Values.infraServices.libredesk.db.username }}
+{{- $dbPassword := $.Values.infraServices.libredesk.db.password }}
+{{- $dbName := $.Values.infraServices.libredesk.db.name }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $fullname }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: [ "sh", "-c" ]
+          args:
+            - |
+              DB_HOST="{{ $dbHost }}"
+              DB_PORT="{{ $dbPort }}"
+              echo "Waiting for LibreDesk DB($DB_HOST:$DB_PORT)..."
+              until nc -z $DB_HOST $DB_PORT; do sleep 5; done
+              echo "LibreDesk DB is up"
+        - name: wait-for-libredesk
+          image: busybox:1.36
+          command: [ "sh", "-c" ]
+          args:
+            - |
+              LIBREDESK_HOST="{{ $libredeskHost }}"
+              LIBREDESK_PORT="{{ $libredeskPort }}"
+              echo "Waiting for LibreDesk..."
+              until nc -z $LIBREDESK_HOST $LIBREDESK_PORT; do sleep 5; done
+              echo "LibreDesk is up"
+      containers:
+        - name: restore
+          image: postgres:17-alpine
+          command: [ "sh", "-c" ]
+          args:
+            - |
+              echo "Restoring data..."
+
+              psql -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" <<'SQL'
+              INSERT INTO public.inboxes (
+                id, created_at, updated_at, name, deleted_at, channel, enabled, csat_enabled, config, "from"
+              )
+              VALUES (
+                1,
+                '2026-03-23 14:24:24.393691+00',
+                '2026-03-23 14:24:41.740447+00',
+                'Primary Inbox',
+                NULL,
+                'email',
+                true,
+                false,
+                '{"from": "", "imap": [], "smtp": [], "oauth": null, "auth_type": "", "enable_plus_addressing": true}'::jsonb,
+                'support@example.com'
+              )
+              ON CONFLICT (id) DO NOTHING;
+
+              INSERT INTO public.users (
+                id, created_at, updated_at, type, deleted_at, enabled, email, first_name, last_name,
+                phone_number_country_code, phone_number, country, password, avatar_url, custom_attributes,
+                reset_password_token, reset_password_token_expiry, availability_status, last_active_at,
+                last_login_at, api_key, api_secret, api_key_last_used_at, phone_number_calling_code
+              )
+              VALUES (
+                2,
+                '2026-03-23 11:02:56.93404+00',
+                '2026-03-23 13:09:10.791053+00',
+                'agent',
+                NULL,
+                true,
+                'support@example.com',
+                'Support Agent',
+                '',
+                NULL,
+                NULL,
+                NULL,
+                '$2a$10$aDZOg8lPEkAJczyVQn/yG.DvEXHhYekItwBtpPqYZNR2HJXtN/DgK',
+                NULL,
+                '{}'::jsonb,
+                NULL,
+                NULL,
+                'offline',
+                NULL,
+                NULL,
+                'UWDxRuedjlKH7LNfZ6jKzrfmGR4wF77I',
+                '$2a$10$5HA3VhTfzSQ5d9jDomYU1ezk5q6vHlPGEvoKvvTwRyjQTdOobuB.C',
+                NULL,
+                NULL
+              )
+              ON CONFLICT (id) DO NOTHING;
+
+              INSERT INTO public.user_roles (
+                id, created_at, updated_at, user_id, role_id
+              )
+              VALUES (
+                2,
+                '2026-03-23 11:02:56.93404+00',
+                '2026-03-23 13:09:10.791053+00',
+                2,
+                2
+              )
+              ON CONFLICT (id) DO NOTHING;
+
+              INSERT INTO public.users (
+                id, created_at, updated_at, type, deleted_at, enabled, email, first_name, last_name,
+                phone_number_country_code, phone_number, country, password, avatar_url, custom_attributes,
+                reset_password_token, reset_password_token_expiry, availability_status, last_active_at,
+                last_login_at, api_key, api_secret, api_key_last_used_at, phone_number_calling_code
+                )
+              VALUES (
+                3,
+                NOW(),
+                NOW(),
+                'contact',
+                NULL,
+                true,
+                'support@support.com',
+                'chat',
+                'bot',
+                NULL,
+                NULL,
+                NULL,
+                '',
+                NULL,
+              '{}'::jsonb,
+                NULL,
+                NULL,
+                'offline',
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL
+              )
+              ON CONFLICT (id) DO NOTHING;
+
+
+              SELECT setval('users_id_seq', GREATEST(10, (SELECT COALESCE(MAX(id::bigint), 1) FROM users)), true)
+              WHERE EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'users_id_seq');
+
+              SELECT setval('inboxes_id_seq', GREATEST(10, (SELECT COALESCE(MAX(id::bigint), 1) FROM public.inboxes)), true)
+              WHERE EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'inboxes_id_seq');
+
+              SELECT setval('users_id_seq', GREATEST(10, (SELECT COALESCE(MAX(id::bigint), 1) FROM public.users)), true)
+              WHERE EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'users_id_seq');
+
+              SELECT setval('user_roles_id_seq', GREATEST(10, (SELECT COALESCE(MAX(id::bigint), 1) FROM public.user_roles)), true)
+              WHERE EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'user_roles_id_seq');
+
+              SQL
+
+              echo "Data migration completed successfully"
+          env:
+            - name: PGHOST
+              value: "{{ $dbHost }}"
+            - name: PGPORT
+              value: "{{ $dbPort }}"
+            - name: PGDATABASE
+              value: "{{ $dbName }}"
+            - name: PGUSER
+              value: "{{ $dbUsername }}"
+            - name: PGPASSWORD
+              value: "{{ $dbPassword }}"
+
+
+{{- end }}

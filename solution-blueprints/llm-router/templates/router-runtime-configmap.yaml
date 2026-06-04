@@ -13,16 +13,20 @@ data:
       - rule_name: {{ $ruleName | quote }}
         classifier_endpoint: "{{ include "classifier.url" $ }}{{ $rule.classifier_path }}"
         models:
-{{- range $class, $backend := $rule.classes }}
-          - name: {{ $class | quote }}
-            base_url_path: "{{ include "llm.backendBaseUrl" (dict "backend" $backend "Values" $.Values "Release" $.Release) }}"
-{{- $apiKey := include "llm.backendApiKey" (dict "backend" $backend "Values" $.Values "Release" $.Release) }}
+{{- range $className, $classData := $rule.classes }}
+          - name: {{ $className | quote }}
+            description: {{ $classData.description | default "" | quote }}
+{{- $apiKey := include "llm.backendApiKey" (dict "backend" $classData.backend "Values" $.Values "Release" $.Release) }}
+{{- $apiKeyEnvVar := include "llm.backendApiKeyEnvVar" (dict "backend" $classData.backend "Values" $.Values "Release" $.Release) | trim }}
 {{- if $apiKey }}
             api_key: {{ $apiKey | quote }}
+{{- else if $apiKeyEnvVar }}
+            api_key: {{ printf "${%s}" $apiKeyEnvVar | quote }}
 {{- end }}
-{{- $modelName := include "llm.backendModelName" (dict "backend" $backend "Values" $.Values "Release" $.Release) }}
+{{- $modelName := include "llm.backendModelName" (dict "backend" $classData.backend "Values" $.Values "Release" $.Release) }}
 {{- if $modelName }}
             model_name: {{ $modelName | quote }}
 {{- end }}
+            base_url_path: "{{ include "llm.backendBaseUrl" (dict "backend" $classData.backend "Values" $.Values "Release" $.Release) }}"
 {{- end }}
 {{- end }}

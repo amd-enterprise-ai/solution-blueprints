@@ -17,10 +17,11 @@ Example:
 {{ if not .Values.existingService -}}
 http://{{ include "aimchart-llm.release.fullname" . }}/v1
 {{- else -}}
-{{ if hasPrefix .Values.existingService "http" }}
-{{ .Values.existingService }}/v1
+{{- $baseUrl := trimSuffix "/v1" .Values.existingService -}}
+{{- if hasPrefix "http"  $baseUrl -}}
+{{- $baseUrl -}}/v1
 {{- else -}}
-http://{{ .Values.existingService }}/v1
+http://{{ $baseUrl }}/v1
 {{- end -}}
 {{- end -}}
 {{- end -}}

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import json
+import os
 
 import httpx
 
@@ -16,12 +17,16 @@ async def classify(messages: list, classes: list, url: str) -> str:
     print(f"[router_classifier] POST {url} with payload:")
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    timeout_s = float(os.getenv("CLASSIFIER_HTTP_TIMEOUT_SECONDS", "30"))
+    async with httpx.AsyncClient(timeout=timeout_s) as client:
         try:
             response = await client.post(url, json=payload)
+        except httpx.TimeoutException as e:
+            print(f"[router_classifier] Timeout while requesting classifier: {type(e).__name__}: {repr(e)}")
+            raise Exception(f"Classifier HTTP timeout after {timeout_s}s: {type(e).__name__}: {repr(e)}")
         except Exception as e:
-            print(f"[router_classifier] Exception while requesting classifier: {e}")
-            raise Exception(f"Classifier HTTP error: {e}")
+            print(f"[router_classifier] Exception while requesting classifier: {type(e).__name__}: {repr(e)}")
+            raise Exception(f"Classifier HTTP error: {type(e).__name__}: {repr(e)}")
 
     print(f"[router_classifier] Classifier status={response.status_code}")
     print("[router_classifier] Classifier raw response:", response.text)

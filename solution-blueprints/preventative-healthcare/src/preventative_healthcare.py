@@ -581,7 +581,7 @@ if __name__ == "__main__":
     if not env_base_url:
         raise SystemExit("OPENAI_BASE_URL is not set. Set it to your LLM endpoint (e.g. via Helm).")
 
-    model_name = discover_model(env_base_url, api_key)
+    model_name = os.environ.get("OPENAI_MODEL") or discover_model(env_base_url, api_key)
     config_list_llama = [{"model": model_name, "base_url": env_base_url, "api_key": api_key, "price": [0.0, 0.0]}]
 
     # Get the criteria for the target screening

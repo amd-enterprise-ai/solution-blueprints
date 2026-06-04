@@ -42,6 +42,8 @@ MCP_URL: Final[str] = cast(str, os.getenv("MCP_URL", "http://localhost:8000/sse"
 # Service endpoints for the three backend components
 INFINITY_EMBEDDING_URL = cast(str, os.getenv("EMBEDDING_URL", "http://embedding-e5-large:7997/embeddings"))
 VLLM_BASE_URL = cast(str, os.getenv("VLLM_URL", "http://llama-3-3-70b:8000/v1"))
+VLLM_API_KEY = os.getenv("VLLM_API_KEY", "dummy")  # Optional API key for LLM service (if required by the backend)
+VLLM_MODEL = os.getenv("VLLM_MODEL", "")  # Optional override for model name (auto-detected if not set)
 
 # ChromaDB connection: supports either a full URL or separate host/port
 CHROMADB_URL = cast(str, os.getenv("CHROMADB_URL", ""))  # Full URL takes priority if set
@@ -73,9 +75,14 @@ def init_model(url_suffix: str, base_url: str):
     for retry in range(INIT_RETRIES):
         try:
             url = urllib.parse.urljoin(base_url + ("/" if not base_url.endswith("/") else ""), url_suffix)
-            r = requests.get(url, timeout=2.0)
+            headers = {"Authorization": f"Bearer {VLLM_API_KEY}"} if VLLM_API_KEY else {}
+            r = requests.get(url, headers=headers, timeout=2.0)
             if r.status_code == 200:
-                return r.json()["data"][0]["id"]
+                if VLLM_MODEL:
+                    model_name = VLLM_MODEL
+                else:
+                    model_name = r.json()["data"][0]["id"]
+                return model_name
         except Exception:
             if retry != 0:
                 time.sleep(2**retry)

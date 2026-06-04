@@ -437,7 +437,7 @@ def create_llm() -> ChatOpenAI:
     return ChatOpenAI(
         base_url=config.VLLM_BASE_URL,
         model=config.GEN_MODEL,
-        api_key=SecretStr("na"),
+        api_key=SecretStr(config.VLLM_API_KEY or "dummy"),
         temperature=0,
         timeout=LLM_REQUEST_TIMEOUT,
         max_retries=2,

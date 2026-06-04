@@ -1,0 +1,60 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+existingService: null  # Use an existing service instead of deploying this chart
+
+nameOverride: null
+fullnameOverride: null
+metadata:
+  labels: {}
+  project_id: null
+  user_id: null
+  workload_id: null # defaults to the release name
+
+image: "rocm/vllm:v0.14.0_amd_dev"
+model: "Qwen/Qwen3-ASR-1.7B"
+imagePullPolicy: Always
+imagePullSecrets: []
+replicas: 1
+
+container:
+  name: qwen-asr
+  port: 8000
+
+gpus: 1
+memory:
+  requests: 32Gi
+  limits: 64Gi
+cpu:
+  requests: "4"
+  limits: "8"
+
+dshm:
+  sizeLimit: 16Gi
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  failureThreshold: 120
+  periodSeconds: 10
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 15
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 60
+  periodSeconds: 5

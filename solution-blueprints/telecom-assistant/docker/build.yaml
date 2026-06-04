@@ -1,0 +1,23 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+
+services:
+  bssgateway:
+    build:
+      context: ..
+      dockerfile: docker/bssgateway.Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimsb-telecom-assistant-bssgateway:${TAG:?Must set TAG}"
+
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/agent.Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimsb-telecom-assistant-agent:${TAG:?Must set TAG}"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimsb-telecom-assistant-frontend:${TAG:?Must set TAG}"

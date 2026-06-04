@@ -32,6 +32,7 @@ class Config:
     # LLM Configuration
     llm_base_url: str
     llm_model: str
+    llm_api_key: str
     llm_temperature: float
     llm_max_retries: int
 
@@ -130,7 +131,9 @@ def _init_model(base_url: str) -> str:
             # Ensure base_url ends with / for proper path joining
             base = base_url if base_url.endswith("/") else base_url + "/"
             url = urllib.parse.urljoin(base, "models")
-            r = requests.get(url, timeout=5.0)
+            api_key = os.getenv("LLM_API_KEY")
+            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+            r = requests.get(url, headers=headers, timeout=5.0)
             if r.status_code == 200:
                 model_id = r.json()["data"][0]["id"]
                 logger.info("Auto-detected model: %s", model_id)
@@ -192,11 +195,13 @@ def load_config(prompts_file: Path = None, env_file: Path = None) -> Config:
     config.langchain_api_key = os.getenv("LANGCHAIN_API_KEY")
 
     # LLM Configuration
-    config.llm_base_url = os.getenv("OPENAI_API_BASE_URL", "")
+    config.llm_base_url = os.getenv("LLM_API_BASE_URL", "")
     if not config.llm_base_url:
-        logger.error("OPENAI_API_BASE_URL is required but not set")
+        logger.error("LLM_API_BASE_URL is required but not set")
         sys.exit(1)
-    config.llm_model = _init_model(config.llm_base_url)
+    config.llm_api_key = os.getenv("LLM_API_KEY", "")
+    override_model = os.getenv("LLM_MODEL", "")
+    config.llm_model = override_model if override_model else _init_model(config.llm_base_url)
     config.llm_temperature = _get_env_float("LLM_TEMPERATURE", 0.6)
     config.llm_max_retries = _get_env_int("LLM_MAX_RETRIES", 3)
 

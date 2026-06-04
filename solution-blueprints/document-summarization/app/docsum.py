@@ -138,10 +138,12 @@ def detect_model(
 ) -> str:
     url = urllib.parse.urljoin(endpoint, "v1/models")
     start = time.time()
+    api_key = _os.getenv("OPENAI_API_KEY")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     while True:
         try:
-            resp = requests.get(url, timeout=1.0)
+            resp = requests.get(url, headers=headers, timeout=1.0)
             resp.raise_for_status()
             model = resp.json()["data"][0]["id"]
             print(f"Detected model: {model}", file=_sys.stderr)
@@ -165,7 +167,8 @@ class DocSumService:
         self.asr_url = f"http://{ASR_HOST}:{ASR_PORT}/v1/asr"
 
         # Initialize summarizer
-        model_name = detect_model(LLM_BASE_URL)
+        override_model = _os.getenv("LLM_MODEL")
+        model_name = override_model if override_model else detect_model(LLM_BASE_URL)
         tokenizer = self._load_tokenizer(model_name)
         self.summarizer = DocumentSummarizer(llm_endpoint=LLM_BASE_URL, model_name=model_name, tokenizer=tokenizer)
 

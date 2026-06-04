@@ -31,6 +31,20 @@
         "Chart" (dict "Name" "llm")
   -}}
   value: {{ include "aimchart-llm.url" $sub }}
+{{- if .Values.llm.apiKeySecretRef }}
+- name: LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.llm.apiKeySecretRef.name }}
+      key: {{ .Values.llm.apiKeySecretRef.key }}
+{{- else if .Values.llm.apiKey }}
+- name: LLM_API_KEY
+  value: {{ .Values.llm.apiKey | quote }}
+{{- end }}
+{{- if .Values.llm.model }}
+- name: LLM_MODEL
+  value: {{ .Values.llm.model | quote }}
+{{- end }}
 {{- range $key, $value := .Values.envVars }}
 {{- if (typeIs "string" $value) }}
 - name: {{ $key }}
@@ -76,13 +90,16 @@ playwright install chromium
 echo "[run] silently launching autogen studio to initialize the app directory and database..."
 timeout 3 autogenstudio ui --appdir "{{ .Values.envVars.AUTOGENSTUDIO_APPDIR }}" || true
 
-echo "[patch] extracting model name from AIM service..."
-MODEL_NAME=$(python << 'EOF'
+if [ -z "${LLM_MODEL:-}" ]; then
+  echo "[patch] extracting model name from AIM service..."
+  MODEL_NAME=$(python << 'EOF'
 import os
 import sys
 import time
 import requests
 import urllib.parse
+api_key = os.environ.get("LLM_API_KEY")
+headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 for retry in range(120):
     if retry != 0:
         wait_time = 10
@@ -90,7 +107,7 @@ for retry in range(120):
         time.sleep(wait_time)
     print(f"Trying to retrieve model name (attempt {retry+1})", file=sys.stderr)
     try:
-        r = requests.get(urllib.parse.urljoin(os.environ["OPENAI_API_BASE_URL"], "v1/models"), timeout=0.5)
+        r = requests.get(urllib.parse.urljoin(os.environ["OPENAI_API_BASE_URL"], "v1/models"), headers=headers, timeout=0.5)
         if r.status_code == 200:
             try:
                 print(r.json()["data"][0]["id"], end="")
@@ -103,7 +120,13 @@ else:
     raise RuntimeError("Failed to retrieve model name")
 EOF
 )
-echo "Model name retrieved successfully, got: $MODEL_NAME"
+  echo "Model name retrieved successfully, got: $MODEL_NAME"
+else
+  echo "Using provided model name from environment variable: $LLM_MODEL"
+  MODEL_NAME="$LLM_MODEL"
+fi
+
+export LLM_API_KEY="${LLM_API_KEY:-none}"
 
 echo "[patch] setting MODEL_NAME environment variable for template substitution..."
 export MODEL_NAME

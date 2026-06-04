@@ -1,0 +1,227 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.wrapper {
+  display: flex;
+  max-width: 320px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3xl);
+  flex: 1 0 0;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content {
+  display: flex;
+  padding: var(--space-2xl);
+  padding-right: var(--space-sm);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2xl);
+  flex: 1 0 0;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2xl);
+  align-self: stretch;
+  flex-shrink: 0;
+  padding-right: calc(var(--space-2xl) - var(--space-sm));
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  align-self: stretch;
+  min-height: 40px;
+}
+
+.title {
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  line-height: 28px;
+  flex: 1 0 0;
+}
+
+.divider {
+  height: 1px;
+  align-self: stretch;
+  background: var(--border-secondary);
+  border: none;
+  flex-shrink: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xl);
+  align-self: stretch;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: calc(var(--space-2xl) - var(--space-sm));
+}
+
+/* ---- Tool cards ---- */
+.toolCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  align-self: stretch;
+}
+
+.toolContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  align-self: stretch;
+}
+
+.toolHeadingRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  align-self: stretch;
+}
+
+.toolNameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  flex: 1 0 0;
+}
+
+.toolName {
+  flex: 1 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.checkIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.toolResult {
+  align-self: stretch;
+  color: var(--text-tertiary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  line-height: 20px;
+}
+
+/* ---- Tool actions ---- */
+.toolFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xl);
+  align-self: stretch;
+}
+
+.toolActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-xl);
+  align-self: stretch;
+}
+
+.runBtn {
+  display: flex;
+  padding: var(--space-md) var(--space-lg);
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-xs);
+  flex: 1 0 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-blue-light-border);
+  background: var(--color-blue-light-bg);
+  box-shadow: var(--shadow-xs-skeuomorphic);
+  cursor: pointer;
+}
+
+.runBtn:hover {
+  background: var(--color-blue-light-bg-hover);
+}
+
+.runBtnIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.runBtnText {
+  display: flex;
+  padding: 0 var(--space-xxs);
+  justify-content: center;
+  align-items: center;
+  color: var(--color-blue-light-fg);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.infoBtn {
+  display: flex;
+  padding: var(--space-md);
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-blue-light-border);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs-skeuomorphic);
+  cursor: pointer;
+}
+
+.infoBtn:hover {
+  background: var(--color-blue-light-bg-hover);
+}
+
+.infoBtnIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ---- Empty state ---- */
+.emptyText {
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  line-height: 20px;
+}

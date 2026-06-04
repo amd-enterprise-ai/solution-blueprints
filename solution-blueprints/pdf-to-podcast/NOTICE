@@ -223,7 +223,6 @@ ruff	MIT
 ujson	BSD License
 
 # Service-specific dependencies
-elevenlabs	MIT License
 docling==2.2.0	MIT License
 celery[redis]	BSD
 dill	BSD License (BSD-3-Clause)

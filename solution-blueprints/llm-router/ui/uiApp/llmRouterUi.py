@@ -124,9 +124,46 @@ with gr.Blocks(
                 document.title = "AMD LLM Router";
             }
         }, 1000);
+
+    function fixChatbotHeight() {
+        const chatbot = document.querySelector('#chatbot');
+        if (!chatbot) return;
+
+        chatbot.querySelectorAll('div').forEach(el => {
+            if (el.style.height && el.style.height !== 'auto') {
+                el.style.height = 'auto';
+            }
+            if (el.style.minHeight) {
+                el.style.minHeight = '';
+            }
+            if (el.style.maxHeight) {
+                el.style.maxHeight = '';
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fixChatbotHeight();
+
+        const observer = new MutationObserver(fixChatbotHeight);
+        const target = document.querySelector('#chatbot') || document.body;
+        observer.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    });
     </script>
     """,
 ) as app:
+    gr.HTML(
+        """
+    <div style="padding: 20px 0 12px 0; border-bottom: 1px solid #e0e0e0; margin-bottom: 16px;">
+      <h1 margin:0 0 6px 0; font-size:1.8rem;">AMD LLM Router</h1>
+      <p style="margin:0; color:#555; font-size:0.95rem; max-width:800px;">
+        Automatically routes each prompt to the optimal LLM backend by classifying it
+        via a configurable policy — by task type (Code, Summarization…) or complexity (Easy, Hard…) —
+        then proxying it to the model best suited for accuracy, speed, or cost.
+      </p>
+    </div>
+    """
+    )
     with gr.Row():
         routing_approach = gr.Dropdown(
             choices=routing_choices(),
@@ -184,12 +221,11 @@ with gr.Blocks(
         fn=router_llm_client.predict,
         chatbot=working_bot_window,
         additional_inputs=[routing_approach, rule, llm],
-        title="AMD LLM Router",
+        title=None,
         stop_btn=None,
         retry_btn=None,
         undo_btn=None,
         clear_btn="Reset Chat",
-        fill_height=True,
     )
 
 if __name__ == "__main__":

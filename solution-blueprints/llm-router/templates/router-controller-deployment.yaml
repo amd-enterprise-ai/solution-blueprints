@@ -55,6 +55,17 @@ spec:
               value: {{ .Values.secrets.CLASSIFIER_CONTEXT_MODE | quote }}
             - name: CLASSIFIER_CONTEXT_TURNS
               value: {{ .Values.secrets.CLASSIFIER_CONTEXT_TURNS | quote }}
+            {{- range $model := .Values.models }}
+            {{- $secretName := include "llm.modelApiKeySecretName" (dict "model" $model "Values" $.Values) | trim }}
+            {{- $secretKey := include "llm.modelApiKeySecretKey" (dict "model" $model "Values" $.Values) | trim }}
+            {{- if and $secretName $secretKey }}
+            - name: {{ include "llm.modelApiKeyEnvVar" (dict "model" $model) }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName | quote }}
+                  key: {{ $secretKey | quote }}
+            {{- end }}
+            {{- end }}
           args:
             - |
               set -e

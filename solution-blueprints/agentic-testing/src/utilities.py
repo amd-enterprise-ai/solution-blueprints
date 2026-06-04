@@ -10,24 +10,26 @@ import urllib.parse
 import requests
 
 
-def check_service_ready(url: str, timeout: int = 5) -> bool:
+def check_service_ready(url: str, api_key=None, timeout: int = 5) -> bool:
     """Check if a service is ready by making a GET request."""
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     try:
-        response = requests.get(url, timeout=timeout)
+        response = requests.get(url, headers=headers, timeout=timeout)
         return response.status_code == 200
     except requests.exceptions.RequestException:
         return False
 
 
-def fetch_model_name(base_url: str, max_retries: int = 60, retry_delay: int = 5) -> str | None:
+def fetch_model_name(base_url: str, api_key=None, max_retries: int = 60, retry_delay: int = 5) -> str | None:
     """Fetch model name from AIM service /v1/models endpoint."""
     if not base_url.endswith("/"):
         base_url = base_url + "/"
     models_url = urllib.parse.urljoin(base_url, "models")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     for retry in range(max_retries):
         try:
-            r = requests.get(models_url, timeout=5)
+            r = requests.get(models_url, headers=headers, timeout=5)
             if r.status_code == 200:
                 try:
                     return r.json()["data"][0]["id"]

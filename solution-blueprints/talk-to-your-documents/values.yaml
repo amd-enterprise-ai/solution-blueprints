@@ -68,6 +68,13 @@ llm:
   image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0"
   env_vars:
     AIM_PRECISION: "fp8"
+  model: ""  # If connecting to an external LLM service, optionally specify model to use
+  apiKey: "" # If connecting to an external LLM service, optionally specify an API key
+  apiKeySecretRef: {}
+  # You may alternatively provide an API key that's stored in a Secret called `my-secretname` in the key `api-key` by adding:
+  # apiKeySecretRef:
+  #   name: my-secretname
+  #   key: api-key
   storage:
     ephemeral:
       storageClassName: mlstorage

@@ -55,49 +55,72 @@ When **Complexity-Based** routing is selected, the system evaluates the **comple
 
 ### Classifier Interpretation
 
-The classifiers are implemented using **an LLM with structured output** that:
-- Analyzes the text content and context of each query, including conversation history when available
-- Uses the LLM's understanding to determine the most appropriate category
-- Returns a structured response indicating the predicted class
-- Falls back to `Unknown` when the query doesn't clearly match any defined class
+The classifier supports two classification approaches, selected via `embedding.enabled`:
 
-For example, when a user asks "Write a function to sort an array", the classifier might determine this is `Code Generation`. When asked "Can you explain quantum computing?", it might classify as `Reasoning`. The classifier leverages the full language understanding capabilities of the underlying LLM to make these decisions.
+#### Embedding-based Classification
+(values: `embedding.enabled: true`, default)
 
-This flexible approach lets you optimize either for **task-specific expertise** or **computational efficiency** based on your needs.
+Uses the `intfloat/multilingual-e5-large-instruct` model via the Infinity embedding server. Each class has a `description` field — the classifier computes semantic similarity between the incoming prompt and class descriptions, routing to the closest match. This approach is **faster, deterministic, and recommended for production use**.
+
+#### LLM-based Classification
+(values: `embedding.enabled: false`)
+
+Uses a configured LLM backend to classify the prompt. The LLM receives the conversation and the list of class names, and returns a structured JSON response with the chosen class. This approach requires no additional embedding service but adds an extra LLM inference call to every request.
+
+Both approaches fall back to `Unknown` when the query doesn't clearly match any defined class.
 
 ### Approach A: Configure via values.yaml File
 
 Create or modify `values.yaml`:
 ```
 models:
-- name: primary
-  base_url: http://primary
-  api_key: ""    # optional
-  model_name: "" # optional
-- name: secondary
-  base_url: http://secondary
-  api_key: ""    # optional
-  model_name: "" # optional
+  - name: primary
+    base_url: http://primary
+    api_key: ""    # optional
+    api_key_secret_ref: {} # optional, e.g. { name: llm-api-keys, key: primary }
+    model_name: "" # optional
+  - name: secondary
+    base_url: http://secondary
+    api_key: ""    # optional
+    api_key_secret_ref: {} # optional, e.g. { name: llm-api-keys, key: secondary }
+    model_name: "" # optional
 
 routing:
   rules:
     task_router:
       classifier_path: /classify
       classes:
-        Code Generation: secondary
-        Summarization: primary
-        Unknown: primary
+        Code Generation:
+          backend: secondary
+          description: "Any request to create, write, generate, implement or provide code in any programming language, algorithm implementations, scripts, functions, or code examples."
+        Summarization:
+          backend: primary
+          description: "Tasks related to summarizing text, condensing articles, conversations, documents, providing key points or brief overviews."
+        Unknown:
+          backend: primary
+          description: "Requests that are completely unclear, off-topic, spam, or do not match ANY of the defined categories at all."
 
     complexity_router:
       classifier_path: /classify
       classes:
-        Hard: secondary
-        Middle: secondary
-        Easy: primary
-        Unknown: primary
+        Hard:
+          backend: secondary
+          description: "High-effort tasks: algorithms, complex math, deep multi-step reasoning, code writing, advanced technical topics."
+        Middle:
+          backend: secondary
+          description: "Medium effort tasks: short explanations, standard how-to questions, everyday problem solving, moderate knowledge recall."
+        Easy:
+          backend: primary
+          description: "Very low-effort interactions: greetings, simple yes/no questions, basic facts, casual chat."
+        Unknown:
+          backend: primary
+          description: "Requests that are completely unclear, off-topic, spam, or do not match ANY of the defined categories at all."
 
 classifier:
-  llmBackend: secondary
+  llmBackend: secondary  # used only when embedding.enabled: false
+
+embedding:
+  enabled: true  # true = embedding approach, false = LLM approach
 ```
 Then deploy with:
 ```
@@ -112,6 +135,7 @@ Set all parameters directly (example command):
 ```
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
 --namespace $namespace \
+--set embedding.enabled=false \
 --set models[0].name=primary \
 --set models[0].base_url=http://167.99.61.150:8000 \
 --set models[1].name=secondary \
@@ -140,6 +164,11 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router 
 --set routing.rules.complexity_router.classes.Unknown=primary \
 | kubectl apply -f - -n $namespace
 ```
+> By default `embedding.enabled=true` (embedding-based classification). Set `embedding.enabled=false` to use LLM-based classification instead. When using LLM-based classification, `classifier.llmBackend` must reference a valid model from the `models` list.
+
+For each model, you can provide either `api_key` directly or `api_key_secret_ref` to read the key from a Kubernetes Secret.
+If both are set, `api_key` is used.
+`apiKeySecretRef` is also accepted as an alias for `api_key_secret_ref`.
 
 **Important notes about parameter `base_url`:**
 
@@ -168,6 +197,7 @@ If your LLMs require authentication, or you need to specify specific models (exa
 ```
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
 --namespace $namespace \
+--set embedding.enabled=false \
 --set models[0].name=primary \
 --set models[0].base_url=https://router.huggingface.co \
 --set models[0].api_key=exampleapikey \
@@ -184,6 +214,7 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router 
 --set routing.rules.complexity_router.classes.Unknown=primary \
 | kubectl apply -f - -n $namespace
 ```
+> By default `embedding.enabled=true` (embedding-based classification). Set `embedding.enabled=false` to use LLM-based classification instead. When using LLM-based classification, `classifier.llmBackend` must reference a valid model from the `models` list.
 
 ## Default AIM images and GPU compatibility
 

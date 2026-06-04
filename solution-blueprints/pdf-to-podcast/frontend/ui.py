@@ -20,8 +20,62 @@ log = logging.getLogger(__name__)
 
 
 # Gradio Interface
-with gr.Blocks(analytics_enabled=False) as demo:
-    gr.Markdown("# Blueprint: PDF-to-Podcast")
+with gr.Blocks(
+    analytics_enabled=False,
+    head="""
+    <title>AMD PDF-to-Podcast</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/></svg>">
+
+    <style>
+        .toast-body.error, .toast-wrap:has(.error), div[class*="toast"][class*="error"] {
+            display: none !important;
+        }
+    </style>
+
+    <script>
+        document.title = "AMD PDF-to-Podcast";
+
+        setInterval(function() {
+            if (document.title !== "AMD PDF-to-Podcast") {
+                document.title = "AMD PDF-to-Podcast";
+            }
+        }, 1000);
+
+        (function() {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1) {
+                                if ((node.classList && node.classList.contains('toast-wrap')) ||
+                                    (node.querySelector && node.querySelector('.error'))) {
+                                    node.remove();
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+            window.addEventListener('DOMContentLoaded', function() {
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
+        })();
+    </script>
+    """,
+) as demo:
+    gr.Markdown("# **AMD Solution Blueprint PDF to Podcast**")
+
+    gr.Markdown(
+        """
+        This service automatically analyzes your PDF files, generates a well-structured podcast script,
+        and (optionally) converts it into high-quality audio using advanced text-to-speech technology.
+
+        **Key capabilities:**
+        - One main **Target** PDF + optional **Context** documents
+        - Monologue or full dialogue mode
+        - Generate transcript only or complete audio podcast
+        """
+    )
 
     with gr.Row():
 
@@ -137,7 +191,6 @@ with gr.Blocks(analytics_enabled=False) as demo:
         [audio_file, transcript_file, token_info],
     )
 
-# Launch Gradio app
 if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",

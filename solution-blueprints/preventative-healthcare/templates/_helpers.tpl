@@ -61,8 +61,23 @@ limits:
   value: {{ $baseUrl | quote }}
 - name: OPENAI_BASE_URL
   value: {{ $baseUrl | quote }}
+{{- if .Values.llm.apiKeySecretRef }}
+- name: OPENAI_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.llm.apiKeySecretRef.name }}
+      key: {{ .Values.llm.apiKeySecretRef.key }}
+{{- else if .Values.llm.apiKey }}
+- name: OPENAI_API_KEY
+  value: {{ .Values.llm.apiKey | quote }}
+{{- else }}
 - name: OPENAI_API_KEY
   value: {{ .Values.openaiApiKey | quote }}
+{{- end }}
+{{- if .Values.llm.model }}
+- name: OPENAI_MODEL
+  value: {{ .Values.llm.model | quote }}
+{{- end }}
 {{- range $key, $value := .Values.env_vars }}
 {{- if (typeIs "string" $value) }}
 - name: {{ $key }}

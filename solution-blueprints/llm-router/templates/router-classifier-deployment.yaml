@@ -51,18 +51,35 @@ spec:
           image: {{ .Values.images.pythonBase }}
           command: [ "sh", "-c" ]
           env:
+            - name: CLASSIFIER_APPROACH
+              value: {{ if .Values.embedding.enabled }}"embedding"{{ else }}"llm"{{ end }}
+            - name: CONTROLLER_URL
+              value: {{ include "controller.url" . }}
+            {{- if .Values.embedding.enabled }}
+            - name: INFINITY_URL
+              value: {{ include "embedding.url" . | quote }}
+            - name: CLASSIFIER_EMBEDDING_MODEL_NAME
+              value: {{ .Values.embedding.model | quote }}
+            {{- else }}
             - name: CLASSIFIER_BASE_URL
               value: {{ include "llm.backendBaseUrl" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) | quote }}
-          {{- $apiKey := include "llm.backendApiKey" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) }}
-          {{- if $apiKey }}
+            {{- $classifierApiKey := include "llm.backendApiKey" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) | trim }}
+            {{- $classifierApiKeySecretName := include "llm.backendApiKeySecretName" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) | trim }}
+            {{- $classifierApiKeySecretKey := include "llm.backendApiKeySecretKey" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) | trim }}
             - name: CLASSIFIER_API_KEY
-              value: {{ $apiKey | quote }}
-          {{- end }}
-          {{- $modelName := include "llm.backendModelName" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) }}
-          {{- if $modelName }}
+              {{- if and $classifierApiKeySecretName $classifierApiKeySecretKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $classifierApiKeySecretName | quote }}
+                  key: {{ $classifierApiKeySecretKey | quote }}
+              {{- else }}
+              value: {{ $classifierApiKey | quote }}
+              {{- end }}
             - name: CLASSIFIER_MODEL_NAME
-              value: {{ $modelName | quote }}
-          {{- end }}
+              value: {{ include "llm.backendModelName" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) | quote }}
+            {{- end }}
+            - name: LOG_LEVEL
+              value: {{ .Values.logLevel | default "DEBUG" | quote }}
           args:
             - |
               set -e

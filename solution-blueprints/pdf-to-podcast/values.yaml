@@ -70,10 +70,11 @@ pythonServices:
     port: 8000
     # Note: Code should be in Docker image, not ConfigMap
     # Build image with: docker build -t pdf-to-podcast-app:latest -f docker/application.Dockerfile .
-    # APP_LLM_URL is automatically set from LLM service URL in deployment template
+    # APP_LLM_URL and APP_TTS_BASE_URL are automatically set from subchart service URLs in deployment template
     env:
       APP_API_KEY: ""
-      APP_ELEVENLABS_API_KEY: ""
+      APP_TTS_API_KEY: ""
+      APP_TTS_BASE_URL: ""
       APP_CELERY_BROKER_URL: ""
       APP_CELERY_BACKEND_URL: ""
       APP_STORAGE_PATH: "/tmp/storage"
@@ -94,7 +95,8 @@ pythonServices:
         memory: "16Gi"
     env:
       APP_API_KEY: ""
-      APP_ELEVENLABS_API_KEY: ""
+      APP_TTS_API_KEY: ""
+      APP_TTS_BASE_URL: ""
       APP_CELERY_BROKER_URL: ""
       APP_CELERY_BACKEND_URL: ""
       APP_STORAGE_PATH: "/tmp/storage"
@@ -107,6 +109,10 @@ pythonServices:
     # Build image with: docker build -t pdf-to-podcast-ui:latest -f docker/ui.Dockerfile .
     env:
       API_SERVICE_URL: ""
+      DEFAULT_SPEAKER_1_NAME: "Ryan"
+      DEFAULT_SPEAKER_2_NAME: "Aiden"
+      DEFAULT_VOICE_SPEAKER_1: "Ryan"
+      DEFAULT_VOICE_SPEAKER_2: "Aiden"
 
 infraServices:
   redis:
@@ -122,6 +128,13 @@ llm:
   nameOverride: llama33-70b-instruct
   env_vars:
     AIM_PRECISION: "fp8"
+  model: ""  # If connecting to an external LLM service, optionally specify model to use
+  apiKey: "" # If connecting to an external LLM service, optionally specify an API key
+  apiKeySecretRef: {}
+  # You may alternatively provide an API key that's stored in a Secret called `my-secretname` in the key `api-key` by adding:
+  # apiKeySecretRef:
+  #   name: my-secretname
+  #   key: api-key
 
   storage:
     ephemeral:

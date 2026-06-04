@@ -5,8 +5,6 @@
 import json
 import os
 import sys
-import time
-import urllib.parse
 
 import requests
 from agentic_translation import select_translate_method
@@ -19,40 +17,38 @@ app = Flask(__name__)
 
 llm = None
 
+models_url = os.environ["LLM_API_BASE_URL"] + "/models"
+if "LLM_API_KEY" in os.environ:
+    headers = {"Authorization": f"Bearer {os.environ['LLM_API_KEY']}"}
+else:
+    headers = {}
+
 
 def init_llm():
     """Initialize the LLM
 
     Fetches the model information from the model listing endpoint"""
     global llm
-    for retry in range(INIT_RETRIES):
-        if retry != 0:
-            print(
-                "Couldn't retrieve model name - AIM probably not up yet. Waiting 2 seconds...",
-                file=sys.stderr,
-            )
-            time.sleep(2)
-        print(f"Trying to retrieve model name (attempt {retry+1})", file=sys.stderr)
+
+    r = requests.get(models_url, headers=headers, timeout=0.5)
+    if r.status_code == 200:
         try:
-            r = requests.get(urllib.parse.urljoin(os.environ["OPENAI_API_BASE_URL"], "v1/models"), timeout=0.5)
-            if r.status_code == 200:
-                try:
-                    model_name = r.json()["data"][0]["id"]
-                    llm = init_chat_model(
-                        model=model_name,
-                        model_provider="openai",
-                        base_url=os.environ["OPENAI_API_BASE_URL"],
-                        api_key="dummy",
-                    )
-                    break
-                except (requests.exceptions.JSONDecodeError, KeyError, IndexError):
-                    print(f"Invalid response format: {r.content}", file=sys.stderr)
-                    raise RuntimeError(f"Failed to retrieve model name, Invalid response format: {r.content}")
-        except requests.exceptions.ConnectionError:
-            # AIM not available yet
-            pass
+            if "LLM_MODEL" in os.environ:
+                model_name = os.environ["LLM_MODEL"]
+            else:
+                model_name = r.json()["data"][0]["id"]
+            llm = init_chat_model(
+                model=model_name,
+                model_provider="openai",
+                base_url=os.environ["LLM_API_BASE_URL"],
+                api_key=os.environ.get("LLM_API_KEY", "dummy"),
+            )
+        except (requests.exceptions.JSONDecodeError, KeyError, IndexError):
+            print(f"Invalid response format: {r.content}", file=sys.stderr)
+            raise RuntimeError(f"Failed to retrieve model name, Invalid response format: {r.content}")
     else:
-        raise RuntimeError("Failed to retrieve model name")
+        print(f"Failed to retrieve model name, status code: {r.status_code}, response: {r.content}", file=sys.stderr)
+        raise RuntimeError(f"Failed to retrieve model name, status code: {r.status_code}, response: {r.content}")
 
 
 @app.route("/health", methods=["GET"])
@@ -64,7 +60,7 @@ def health_check():
 def readiness_check():
     # check if LLM is available
     try:
-        r = requests.get(urllib.parse.urljoin(os.environ["OPENAI_API_BASE_URL"], "v1/models"), timeout=0.5)
+        r = requests.get(models_url, headers=headers, timeout=0.5)
         if r.status_code == 200:
             return Response("OK", status=r.status_code)
         return Response(r.content, status=r.status_code)

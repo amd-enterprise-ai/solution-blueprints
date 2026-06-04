@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import logging
+import os
 from pathlib import Path
 from typing import Final
 
@@ -29,14 +30,14 @@ WS_MAX_RECONNECT_DELAY: Final[float] = 30.0
 WS_TIMEOUT: Final[int] = 30
 
 # Voice mapping
-DEFAULT_VOICE_SPEAKER_1: Final[str] = "Xb7hH8MSUJpSbSDYk0k2"
-DEFAULT_VOICE_SPEAKER_2: Final[str] = "IKne3meq5aSn9XLyUdCD"
+DEFAULT_VOICE_SPEAKER_1: Final[str] = os.getenv("DEFAULT_VOICE_SPEAKER_1", "Ryan").strip("\"'").strip()
+DEFAULT_VOICE_SPEAKER_2: Final[str] = os.getenv("DEFAULT_VOICE_SPEAKER_2", "Aiden").strip("\"'").strip()
 
 # Podcast settings
 DEFAULT_PODCAST_NAME: Final[str] = "pdf-to-podcast-test"
 DEFAULT_DURATION: Final[int] = 2
-DEFAULT_SPEAKER_1_NAME: Final[str] = "Alice"
-DEFAULT_SPEAKER_2_NAME: Final[str] = "Mark"
+DEFAULT_SPEAKER_1_NAME: Final[str] = os.getenv("DEFAULT_SPEAKER_1_NAME", "Ryan").strip("\"'").strip()
+DEFAULT_SPEAKER_2_NAME: Final[str] = os.getenv("DEFAULT_SPEAKER_2_NAME", "Aiden").strip("\"'").strip()
 
 # Gradio
 GRADIO_CACHE_DIR: Final[str] = get_upload_folder()

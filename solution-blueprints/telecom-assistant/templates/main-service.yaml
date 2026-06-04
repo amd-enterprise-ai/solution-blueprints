@@ -1,0 +1,26 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- range $name, $svc := .Values.mainServices }}
+{{- if and $svc.enabled $svc.port }}
+{{- $root := $ }}
+{{- $fullname := include "release.componentName" (dict "root" $root "name" $name) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}
+  labels:
+    app: {{ $fullname }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+      protocol: TCP
+  selector:
+    app: {{ $fullname }}
+{{- end }}
+{{- end }}

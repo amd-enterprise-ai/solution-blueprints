@@ -12,6 +12,7 @@ import logging
 from typing import Any, Optional
 
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 from rge_config import Config
 from tavily import AsyncTavilyClient
 
@@ -30,7 +31,7 @@ def create_llm_client(config: Config) -> Any:
     return ChatOpenAI(
         model=config.llm_model,
         base_url=config.llm_base_url,
-        api_key="dummy",  # For local AMD AIM deployments
+        api_key=SecretStr(config.llm_api_key or "dummy"),
         temperature=config.llm_temperature,
     )
 

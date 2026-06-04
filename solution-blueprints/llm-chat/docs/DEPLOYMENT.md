@@ -34,6 +34,48 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-chat \
   | kubectl apply -f - -n $namespace
 ```
 
+### API Key Configuration for External LLM
+
+When using an external LLM service that requires authentication, you can configure the API key:
+
+- `llm.apiKey` (optional): Bearer token for API authentication
+
+Example command:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+api_url="https://llm-api.example.com"
+api_key="<YOUR_API_KEY>"
+
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-chat \
+  --set llm.existingService=$api_url \
+  --set llm.apiKey=$api_key \
+  | kubectl apply -f - -n $namespace
+```
+
+### Using Kubernetes Secrets for API Key
+
+For enhanced security, you can store the API key in a Kubernetes secret and reference it:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+secretname="my-secretname"
+api_url="https://llm-api.example.com"
+
+# Create the secret
+kubectl create secret generic $secretname -n $namespace \
+  --from-literal=api-key="<YOUR_API_KEY>"
+
+# Deploy with secret reference
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-chat \
+  --set llm.existingService=$api_url \
+  --set llm.apiKeySecretRef.name=$secretname \
+  --set llm.apiKeySecretRef.key=api-key \
+  | kubectl apply -f - -n $namespace
+```
+
 ## Default AIM image and GPU compatibility
 
 By default, the chart deploys Meta Llama 3.1 8B with this AIM: `amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.10.0`

@@ -1,0 +1,86 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  align-self: stretch;
+  padding-top: 20px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+  flex: 1 0 0;
+}
+
+.stepInner {
+  display: flex;
+  height: 30px;
+  align-items: center;
+  gap: var(--space-md);
+  align-self: stretch;
+}
+
+.stepIcon {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-full);
+  background: var(--bg-page);
+  flex-shrink: 0;
+}
+
+.stepIconActive {
+  border: 1px solid #0ba5ec;
+}
+
+.stepIconInactive {
+  border: 1px solid var(--border-secondary);
+}
+
+.stepNumber {
+  text-align: center;
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.stepNumberActive {
+  color: #0ba5ec;
+}
+
+.stepNumberInactive {
+  color: var(--text-disabled);
+}
+
+.stepLabel {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.stepLabelActive {
+  color: #0ba5ec;
+}
+
+.stepLabelInactive {
+  color: var(--text-disabled);
+}
+
+.connector {
+  flex: 1 0 0;
+  height: 2px;
+  border-bottom: 2px dotted #373a41;
+}

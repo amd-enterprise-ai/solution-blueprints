@@ -1,0 +1,43 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+existingService: null
+
+nameOverride: null
+fullnameOverride: null
+metadata:
+  labels: {}
+  project_id: null
+  user_id: null
+  workload_id: null
+
+image: "vllm/vllm-omni-rocm:0.14.0"
+imagePullPolicy: Always
+imagePullSecrets: []
+replicas: 1
+
+hostIPC: false
+
+model: "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+extraArgs:
+  - --stage-configs-path
+  - vllm-omni/vllm_omni/model_executor/stage_configs/qwen3_tts.yaml
+  - --omni
+  - --trust-remote-code
+  - --enforce-eager
+
+env: {}
+
+gpus: 1
+
+resources:
+  requests:
+    cpu: "2"
+    memory: "8Gi"
+  limits:
+    cpu: "4"
+    memory: "16Gi"
+
+securityContext: {}
+service: {}
