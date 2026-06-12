@@ -1,0 +1,48 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border-primary);
+  border-top-color: var(--accent-teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.text {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+}
+
+.logo {
+  font-size: var(--font-size-display-sm);
+  font-weight: 800;
+  margin-bottom: var(--space-xl);
+}
+
+.logoMed {
+  color: var(--text-primary);
+}
+
+.logoAssist {
+  color: var(--accent-teal);
+}

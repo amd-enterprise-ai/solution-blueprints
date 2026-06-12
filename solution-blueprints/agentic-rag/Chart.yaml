@@ -6,13 +6,13 @@ apiVersion: v2
 name: aimsb-agentic-rag
 description: Agentic RAG application using MCP Architecture
 type: application
-version: 0.6.0
+version: 0.6.1
 maintainers:
   - name: AMD
     url: https://www.amd.com/
 dependencies:
 - name: aimchart-llm
-  version: "0.2.5"
+  version: "0.2.6"
   repository: "oci://registry-1.docker.io/amdenterpriseai"
   alias: llm
 - name: aimchart-embedding
@@ -27,6 +27,7 @@ dependencies:
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.description.full: "Deploys a decoupled RAG application: an MCP Knowledge Server and an Agentic UI Client."
+  com.amd.aim.description.short: "Decoupled RAG blueprint with an MCP Knowledge Server and an agentic UI client."
   com.amd.aim.release.notes: "UI and Reasoning Loop improvements, security fixes, and dependency pinning"
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "Agentic RAG (MCP)"

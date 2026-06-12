@@ -93,7 +93,7 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-report-gene
 
 ## Default AIM image and GPU compatibility
 
-By default, the chart deploys Meta Llama 3.3 70B with this AIM: `amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0`
+By default, the chart deploys Meta Llama 3.3 70B with this AIM: `amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1`
 
 On newer GPUs, this default image may not be the best match and can fail to start or run sub-optimally.
 To choose a newer AIM or deploy a different LLM, override `llm.image` to a compatible image. See the [catalog of available AIMs](https://enterprise-ai.docs.amd.com/en/latest/aims/catalog/models.html) for options.
@@ -125,7 +125,7 @@ All configuration is passed via `--set` flags:
 | `config.search.tavilyMaxResults` | `5` | Max results per query |
 | `config.generation.maxSectionLength` | `1000` | Max words per section |
 | `config.generation.finalSectionLength` | `300` | Max words for intro/conclusion |
-| `llm.image` | `amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0` | AIM image to deploy (if not using existing service) |
+| `llm.image` | `amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1` | AIM image to deploy (if not using existing service) |
 | `llm.existingService` | `""` | Use existing LLM service (skips LLM deployment) |
 | `llm.cpu_per_gpu` | `1` | CPU cores per GPU for LLM |
 

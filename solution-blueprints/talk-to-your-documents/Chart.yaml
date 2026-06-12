@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-talk-to-your-documents
 description: A RAG application blueprint to talk to your documents
 type: application
-version: 0.5.0
+version: 0.5.1
 
 maintainers:
 - name: AMD
@@ -14,7 +14,7 @@ maintainers:
 
 dependencies:
 - name: aimchart-llm
-  version: 0.2.5
+  version: 0.2.6
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 - name: aimchart-embedding
@@ -29,5 +29,6 @@ dependencies:
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.description.full: "A Retrieval-Augmented Generation (RAG) application that lets you chat with your documents. It uses a vector database (ChromaDB) to store document embeddings and a large language model (LLM) to answer questions based on the retrieved context."
+  com.amd.aim.description.short: "RAG application for chatting with documents using ChromaDB retrieval and LLM-based answers."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "Talk to Your Documents"

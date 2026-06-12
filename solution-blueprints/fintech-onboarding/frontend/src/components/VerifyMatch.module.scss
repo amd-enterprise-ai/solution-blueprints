@@ -1,0 +1,345 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+@use '@/components/ui/mixins' as *;
+
+.root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .root {
+    padding: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .root {
+    padding: 2.5rem;
+  }
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  column-gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.badge {
+  padding-inline: 0.625rem;
+  padding-block: 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.badgeSuccess {
+  background-color: hsl(var(--success) / 0.15);
+  color: hsl(var(--success));
+}
+
+.badgeError {
+  background-color: hsl(var(--destructive) / 0.15);
+  color: hsl(var(--destructive));
+}
+
+.badgeProcessing {
+  background-color: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+}
+
+.description {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.resultCard {
+  height: 320px;
+  border-radius: 12px;
+  border: 1px solid var(--utility-blue-light-600);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.resultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 100px;
+  transition: background-color 200ms ease-in-out;
+}
+
+.resultHeaderSuccess {
+  background-color: hsl(var(--success) / 0.05);
+}
+
+.resultHeaderError {
+  background-color: hsl(var(--destructive) / 0.05);
+}
+
+.resultIconPrimary {
+  width: 4rem;
+  height: 4rem;
+}
+
+.resultInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.processingIcon {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--utility-blue-light-400);
+
+  &_success {
+    background-color: var(--bg-success-secondary);
+  }
+
+  &_failure {
+    background-color: var(--bg-error-secondary);
+  }
+}
+
+.rippleWrapper {
+  position: relative;
+}
+
+.processingText {
+  z-index: 1;
+  text-align: center;
+}
+
+.resultTitle {
+  @include md-semibold;
+  color: var(--text-primary-900)
+}
+
+.resultDesc {
+  @include sm-regular;
+  color: var(--text-tertiary-600)
+}
+
+.successText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: hsl(var(--success));
+}
+
+.successTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.successSubtitle {
+  font-size: 0.875rem;
+  color: hsl(var(--success) / 0.8);
+  margin-top: 0.125rem;
+}
+
+.failureText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: hsl(var(--destructive));
+}
+
+.failureTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.failureSubtitle {
+  font-size: 0.875rem;
+  color: hsl(var(--destructive) / 0.8);
+  margin-top: 0.125rem;
+}
+
+.scoreSection {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.scoreLabel {
+  color: hsl(var(--muted-foreground));
+}
+
+.scoreValue {
+  color: hsl(var(--success));
+  font-weight: 500;
+}
+
+.scoreBarOuter {
+  height: 0.5rem;
+  width: 100%;
+  border-radius: 9999px;
+  background-color: hsl(var(--muted));
+  overflow: hidden;
+}
+
+.scoreBarInner {
+  height: 100%;
+  border-radius: inherit;
+  background-color: hsl(var(--success));
+  transition: width 500ms ease-out;
+}
+
+.statusArea {
+  margin-top: 1rem;
+}
+
+.statusErrorBox {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  column-gap: 0.75rem;
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+}
+
+.statusErrorIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.actions_buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.finishRight {
+  margin-left: auto;
+}
+
+.detailsTrigger {
+  @include md-semibold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: color 150ms ease-in-out;
+  background: none;
+  border: none;
+  color: var(--text-brand-secondary-700)
+}
+
+.detailsIcon {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 200ms ease-in-out;
+}
+
+.detailsIconOpen {
+  transform: rotate(180deg);
+}
+
+.detailsContent {
+  margin-top: 0.75rem;
+}
+
+.detailsCard {
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--card));
+  padding: 1rem;
+}
+
+.detailsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.statusMessage {
+  display: flex;
+  align-items: flex-start;
+  column-gap: 0.625rem;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.statusInfo {
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+
+.statusSuccess {
+  background-color: hsl(var(--success) / 0.1);
+  color: hsl(var(--success));
+}
+
+.statusError {
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+}
+
+.statusIcon {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+
+.mutedIcon {
+  width: 4rem;
+  height: 4rem;
+  opacity: 0.4;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

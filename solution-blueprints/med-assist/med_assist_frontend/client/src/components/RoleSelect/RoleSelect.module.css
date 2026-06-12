@@ -1,0 +1,222 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.page {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- Left panel ---- */
+.left {
+  position: relative;
+  display: flex;
+  min-width: 480px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1 0 0;
+  align-self: stretch;
+  background: var(--bg-page);
+}
+
+.leftInner {
+  display: flex;
+  padding: 0 32px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1 0 0;
+  width: 100%;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* ---- Logo ---- */
+.logo {
+  font-family: "Inter Tight", sans-serif;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: normal;
+  text-transform: uppercase;
+}
+
+.logoMed {
+  color: #f7f7f7;
+}
+
+.logoAssist {
+  background: linear-gradient(90deg, #22b5ff 0%, #5ae3de 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ---- Microphone field ---- */
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: stretch;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #cecfd2;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.labelIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #61656c;
+}
+
+.select {
+  display: flex;
+  width: 100%;
+  padding: 8px 12px;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+  border-radius: 8px;
+  border: 1px solid #373a41;
+  background: #0c0e12;
+  box-shadow: 0 1px 2px 0 rgba(255, 255, 255, 0);
+  color: #85888e;
+  font-family: var(--font-family);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6L8 10L12 6' stroke='%2361656C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--accent-teal);
+}
+
+.select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* When a device is selected, use primary text color */
+.selectActive {
+  color: var(--text-primary);
+}
+
+.hint {
+  color: #94979c;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+/* ---- Connect button ---- */
+.connectBtn {
+  display: flex;
+  width: 100%;
+  padding: 10px 16px;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  align-self: stretch;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: #0086c9;
+  box-shadow:
+    0 0 0 1px rgba(12, 14, 18, 0.18) inset,
+    0 -2px 0 0 rgba(12, 14, 18, 0.05) inset,
+    0 1px 2px 0 rgba(255, 255, 255, 0);
+  color: #fff;
+  font-family: var(--font-family);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.connectBtn:hover:not(:disabled) {
+  background: #0098e1;
+}
+
+.connectBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Error ---- */
+.error {
+  color: var(--color-error-fg);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* ---- Footer ---- */
+.copyright {
+  position: absolute;
+  left: 32px;
+  bottom: 32px;
+  color: #94979c;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.email {
+  position: absolute;
+  right: 32px;
+  bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94979c;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.email:hover {
+  color: var(--text-primary);
+}
+/* ---- Right panel ---- */
+.right {
+  min-width: 640px;
+  flex: 1 0 0;
+  align-self: stretch;
+  background: url("/signin-bg.webp") lightgray 50% / cover no-repeat;
+}

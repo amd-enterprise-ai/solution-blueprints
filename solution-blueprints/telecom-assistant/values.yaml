@@ -237,7 +237,7 @@ stt:
 
 llm:
   nameOverride: "aim-openai-gpt-oss-120b"
-  image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.10.0"
+  image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.11.1"
 
   storage:
     ephemeral:

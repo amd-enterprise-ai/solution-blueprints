@@ -6,17 +6,18 @@ apiVersion: v2
 name: aimsb-report-generation-engine
 description: AI-powered report generation engine blueprint
 type: application
-version: 0.2.0
+version: 0.2.1
 maintainers:
 - name: AMD
   url: https://www.amd.com/
 dependencies:
 - name: aimchart-llm
-  version: 0.2.5
+  version: 0.2.6
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.description.full: "Automated technical report generation using a multi-stage LLM workflow with integrated web research. Produces comprehensive, evidence-based documents on any topic with structured outlines, citations, and professional formatting."
+  com.amd.aim.description.short: "Multi-stage LLM engine that performs web research and produces structured, citation-backed technical reports."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "Report Generation Engine"

@@ -9,14 +9,15 @@ type: application
 maintainers:
 - name: AMD
   url: https://www.amd.com/
-version: 0.6.7
+version: 0.7.1
 dependencies:
 - name: aimchart-llm
-  version: 0.2.3
+  version: 0.2.6
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.description.full: Get a feel for your LLM in a safe sandbox. Explore prompting techniques, validate outputs, and understand model behavior before embedding LLMs into critical enterprise workflows.
+  com.amd.aim.description.short: "Sandbox chat interface to test prompts, evaluate outputs, and understand LLM behavior before production use."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "LLM Chat Sandbox"

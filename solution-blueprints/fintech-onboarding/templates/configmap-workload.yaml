@@ -1,0 +1,24 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fintech.complexName" . }}-workload
+data:
+{{ $files := $.Files.Glob "backend/**" }}
+{{ range $path, $file := $files }}
+  {{ $relPath := $path | trimPrefix "backend/" }}
+  {{ $key := printf "backend_%s" (splitList "/" $relPath | join "_") }}
+  {{ $key }}: |
+{{ printf "%s" $file | indent 4 }}
+{{ end }}
+
+{{ $files := $.Files.Glob "bff/**" }}
+{{ range $path, $file := $files }}
+  {{ $relPath := $path | trimPrefix "bff/" }}
+  {{ $key := printf "bff/%s" $relPath | replace "/" "_" }}
+  {{ $key }}: |
+{{ printf "%s" $file | indent 4 }}
+{{ end }}

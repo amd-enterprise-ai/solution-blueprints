@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-telecom-assistant
 description: A Helm chart for deploying Telecom Assistant on Kubernetes
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "1.0.0"
 maintainers:
   - name: AMD
@@ -29,7 +29,7 @@ dependencies:
     repository: oci://registry-1.docker.io/amdenterpriseai
     alias: stt
   - name: aimchart-llm
-    version: 0.2.5
+    version: 0.2.6
     repository: oci://registry-1.docker.io/amdenterpriseai
     alias: llm
   - name: aimchart-qwen-tts
@@ -45,5 +45,6 @@ annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.release.notes: "Telecom Assistant service v0.1.0"
   com.amd.aim.description.full: "Intelligent telecom assistant that automatically provide required information and perform actions with customer's account."
+  com.amd.aim.description.short: "Real-time telecom voice assistant for customer support, account actions, and ticketing workflows."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "Telecom Assistant"

@@ -8,7 +8,7 @@ description: Document Summarization blueprint
 type: application
 
 # Semantic Versioning
-version: 2.1.0
+version: 2.1.1
 
 maintainers:
 - name: AMD
@@ -17,7 +17,7 @@ maintainers:
 # External chart dependencies
 dependencies:
 - name: aimchart-llm
-  version: 0.2.5
+  version: 0.2.6
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
   condition: llm.enabled
@@ -30,5 +30,6 @@ dependencies:
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.description.full: "AI-powered document summarization service with multimodal support. In addition to text, this application can process and summarize PDFs, DOCX files, and multimedia files (audio/video)."
+  com.amd.aim.description.short: "Multimodal summarization service for text, PDF, DOCX, audio, and video content."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "Document Summarization"

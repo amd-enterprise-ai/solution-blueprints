@@ -1,0 +1,150 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fintech.complexName" . }}-ui
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "fintech.complexName" . }}-ui
+  template:
+    metadata:
+      labels:
+        app: {{ include "fintech.complexName" . }}-ui
+    spec:
+      {{- if $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $.Values.imagePullSecrets }}
+        - name: {{ .name | quote }}
+        {{- end }}
+      {{- end }}
+      initContainers:
+        - name: prepare-workload
+          image: busybox:latest
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -eux
+              mkdir -p /workload/mount
+
+              for key in $(ls /workload/configmap); do
+                content=$(cat "/workload/configmap/$key")
+
+                if echo "$key" | grep -q "__init__.py$"; then
+                  filename="__init__.py"
+                  dirpart=$(echo "$key" | sed 's/__init__.py$//')
+                  dirpath=$(echo "$dirpart" | tr '_' '/')
+                else
+                  filename=$(echo "$key" | awk -F'_' '{print $NF}')
+                  dirpath=$(echo "$key" | sed 's/_'"$filename"'$//; s/_/\//g')
+                fi
+
+                mkdir -p "/workload/mount/$dirpath"
+                echo "$content" > "/workload/mount/$dirpath/$filename"
+              done
+
+              mkdir -p /workdir
+              cp -v /workload/mount/bff/* /workdir/
+
+              echo "=== Files in /workdir after copy ==="
+              ls -la /workdir/
+
+          volumeMounts:
+            - name: workload
+              mountPath: /workload/configmap
+            - name: workload-mount
+              mountPath: /workload/mount
+            - name: workdir
+              mountPath: /workdir
+
+      containers:
+        - name: react-frontend
+          image: "{{ $.Values.uiImage.repository }}:{{ tpl $.Values.uiImage.tag $ }}"
+          imagePullPolicy: {{ $.Values.imagePullPolicy | quote }}
+          ports:
+            - containerPort: 80
+              name: react
+          volumeMounts:
+            - name: react-static
+              mountPath: /static
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+
+        - name: bff-proxy
+          image: {{ .Values.images.pythonBase }}
+          ports:
+            - containerPort: 8080
+              name: bff
+          env:
+            - name: BACKEND_BASE_URL
+              value: {{ include "backend.url" . }}
+          volumeMounts:
+            - name: workdir
+              mountPath: /app
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -e
+              cd /app
+              echo "Current directory:"
+              pwd
+              echo "Files in /app:"
+              ls -la
+              echo "Installing dependencies..."
+              pip install --no-cache-dir -r requirements.txt
+              echo "Starting FastAPI BFF proxy..."
+              exec uvicorn main:app --host 0.0.0.0 --port 8080 --proxy-headers
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+      volumes:
+        - name: bff-files
+          configMap:
+            name: {{ include "fintech.complexName" . }}-workload
+        - name: react-static
+          emptyDir: { }
+        - name: workload
+          configMap:
+            name: {{ include "fintech.complexName" . }}-workload
+        - name: workload-mount
+          emptyDir: { }
+        - name: workdir
+          emptyDir: { }

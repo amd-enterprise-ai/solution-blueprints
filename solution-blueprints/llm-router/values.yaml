@@ -21,12 +21,12 @@ ports:
 deployDemonstrationLLMs: false
 
 primary:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.10.0"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.11.1"
   env_vars:
     AIM_PRECISION: "fp8"
 
 secondary:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
   env_vars:
     AIM_PRECISION: "fp8"
 

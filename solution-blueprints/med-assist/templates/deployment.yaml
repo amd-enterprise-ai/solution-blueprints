@@ -1,0 +1,267 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- range $name, $svc := .Values.pythonServices }}
+{{- if $svc.enabled }}
+{{- $root := $ -}}
+{{- $fullname := include "release.componentName" (dict "root" $root "name" $name) -}}
+{{- $livekitHost := printf "%s-livekit" $.Release.Name -}}
+{{- $livekitServicePort := 80 -}}
+{{- $livekitWsUrl := printf "ws://%s:%v" $livekitHost $livekitServicePort -}}
+{{- $livekitExposureMode := default "nodePort" $.Values.livekit.exposure.mode -}}
+{{- if and (ne $livekitExposureMode "nodePort") (ne $livekitExposureMode "httpRoute") -}}
+  {{- fail "livekit.exposure.mode must be either 'nodePort' or 'httpRoute'" -}}
+{{- end -}}
+{{- $nodePortEnabled := eq $livekitExposureMode "nodePort" -}}
+{{- $frontendWsNodeAddress := default "" $.Values.livekit.nodePortService.nodeAddress -}}
+{{- $frontendWsNodePort := int (default 0 $.Values.livekit.nodePortService.nodePort) -}}
+{{- $frontendLivekitWsNodePortAuto := printf "ws://%s:%v" $frontendWsNodeAddress $frontendWsNodePort -}}
+{{- $releaseFullname := include "release.fullname" $ -}}
+{{- $httpRoute := default (dict) (index $.Values.livekit "httpRoute") -}}
+{{- $httpHostSuffix := default "" (index $httpRoute "hostSuffix") | trimPrefix "." -}}
+{{- $frontendWssHttpRouteAuto := printf "wss://%s-livekit.%s" $releaseFullname $httpHostSuffix -}}
+{{- $stunnerEnabled := default false $.Values.stunner.enabled -}}
+{{- $env := merge (dict) (default (dict) $svc.env) -}}
+{{- if eq $name "agent" }}
+  {{- $sub := dict
+        "Values" (merge (dict) $.Values.llm)
+        "Release" $.Release
+        "Chart" (dict "Name" "llm")
+  -}}
+  {{- $qwenSub := dict
+        "Values" (merge (dict) (index $.Values "qwen-asr"))
+        "Release" $.Release
+        "Chart" (dict "Name" "qwen-asr")
+  -}}
+  {{- $llmUrl := include "aimchart-llm.url" $sub }}
+  {{- $qwenAsrUrl := include "aimchart-qwen-asr.url" $qwenSub }}
+  {{- if or (not (hasKey $env "LLM_URL")) (eq (get $env "LLM_URL") "") }}
+    {{- $_ := set $env "LLM_URL" $llmUrl }}
+  {{- end }}
+  {{- if or (not (hasKey $env "STT_BASE_URL")) (eq (get $env "STT_BASE_URL") "") }}
+    {{- $_ := set $env "STT_BASE_URL" $qwenAsrUrl }}
+  {{- end }}
+  {{- if or (not (hasKey $env "LIVEKIT_WS_URL")) (eq (get $env "LIVEKIT_WS_URL") "") }}
+    {{- $_ := set $env "LIVEKIT_WS_URL" $livekitWsUrl }}
+  {{- end }}
+{{- end }}
+{{- if eq $name "frontend" }}
+  {{- if or (not (hasKey $env "LIVEKIT_WS_URL")) (eq (get $env "LIVEKIT_WS_URL") "") }}
+    {{- if $stunnerEnabled }}
+      {{- if $nodePortEnabled }}
+        {{- if and (ne $frontendWsNodeAddress "") (gt $frontendWsNodePort 0) }}
+          {{- $_ := set $env "LIVEKIT_WS_URL" $frontendLivekitWsNodePortAuto }}
+        {{- else }}
+          {{- fail "pythonServices.frontend.env.LIVEKIT_WS_URL is empty; set livekit.nodePortService.nodeAddress and livekit.nodePortService.nodePort, or set LIVEKIT_WS_URL explicitly" }}
+        {{- end }}
+      {{- else if ne $httpHostSuffix "" }}
+        {{- $_ := set $env "LIVEKIT_WS_URL" $frontendWssHttpRouteAuto }}
+      {{- else }}
+        {{- fail "stunner.enabled=true requires livekit.httpRoute.hostSuffix or explicit pythonServices.frontend.env.LIVEKIT_WS_URL" }}
+      {{- end }}
+    {{- else if $nodePortEnabled }}
+      {{- if and (ne $frontendWsNodeAddress "") (gt $frontendWsNodePort 0) }}
+        {{- $_ := set $env "LIVEKIT_WS_URL" $frontendLivekitWsNodePortAuto }}
+      {{- else }}
+        {{- fail "pythonServices.frontend.env.LIVEKIT_WS_URL is empty; set livekit.nodePortService.nodeAddress and livekit.nodePortService.nodePort, or set LIVEKIT_WS_URL explicitly" }}
+      {{- end }}
+    {{- else if eq $livekitExposureMode "httpRoute" }}
+      {{- if ne $httpHostSuffix "" }}
+        {{- $_ := set $env "LIVEKIT_WS_URL" $frontendWssHttpRouteAuto }}
+      {{- else }}
+        {{- fail "pythonServices.frontend.env.LIVEKIT_WS_URL is empty; set livekit.httpRoute.hostSuffix (DNS zone after *-livekit.), or set LIVEKIT_WS_URL explicitly" }}
+      {{- end }}
+    {{- else }}
+      {{- fail "pythonServices.frontend.env.LIVEKIT_WS_URL must be set when livekit.exposure.mode is not nodePort" }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}
+  labels:
+    app: {{ $fullname }}
+    component: {{ $name }}
+    chart: {{ $.Chart.Name }}
+    {{- range $key, $value := $.Values.metadata.labels }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  replicas: {{ default 1 $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $fullname }}
+  template:
+    metadata:
+      labels:
+        app: {{ $fullname }}
+        component: {{ $name }}
+    spec:
+      {{- if $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $.Values.imagePullSecrets }}
+        - name: {{ .name | quote }}
+        {{- end }}
+      {{- end }}
+      {{- if eq $name "agent" }}
+      {{- $sub := dict
+            "Values" (merge (dict) $.Values.llm)
+            "Release" $.Release
+            "Chart" (dict "Name" "llm")
+      -}}
+      {{- $qwenSub := dict
+            "Values" (merge (dict) (index $.Values "qwen-asr"))
+            "Release" $.Release
+            "Chart" (dict "Name" "qwen-asr")
+      -}}
+      {{- $llmUrl := include "aimchart-llm.url" $sub }}
+      {{- $qwenAsrUrl := include "aimchart-qwen-asr.url" $qwenSub }}
+      initContainers:
+        - name: wait-for-llm
+          image: curlimages/curl:8.18.0
+          command: ["sh", "-c"]
+          args:
+            - |
+              VLLM_URL="{{ $llmUrl }}/models"
+              echo "Waiting for LLM service ($$VLLM_URL)..."
+              until curl -s -f -o /dev/null $$VLLM_URL; do sleep 5; done
+              echo "LLM service is up"
+        - name: wait-for-qwen-asr
+          image: curlimages/curl:8.18.0
+          command: ["sh", "-c"]
+          args:
+            - |
+              ASR_URL="{{ $qwenAsrUrl }}/models"
+              echo "Waiting for qwen-asr service ($$ASR_URL)..."
+              until curl -s -f -o /dev/null $$ASR_URL; do sleep 5; done
+              echo "qwen-asr service is up"
+        - name: wait-for-livekit
+          image: busybox:1.36
+          command: ["sh", "-c"]
+          args:
+            - |
+              LIVEKIT_HOST="{{ $livekitHost }}"
+              LIVEKIT_PORT="{{ $livekitServicePort }}"
+              echo "Waiting for LiveKit tcp://$$LIVEKIT_HOST:$$LIVEKIT_PORT..."
+              until nc -z $$LIVEKIT_HOST $$LIVEKIT_PORT; do sleep 2; done
+              echo "LiveKit is up"
+      {{- end }}
+      {{- if eq $name "frontend" }}
+      initContainers:
+        - name: wait-for-livekit
+          image: busybox:1.36
+          command: ["sh", "-c"]
+          args:
+            - |
+              LIVEKIT_HOST="{{ $livekitHost }}"
+              LIVEKIT_PORT="{{ $livekitServicePort }}"
+              echo "Waiting for LiveKit tcp://$$LIVEKIT_HOST:$$LIVEKIT_PORT..."
+              until nc -z $$LIVEKIT_HOST $$LIVEKIT_PORT; do sleep 2; done
+              echo "LiveKit is up"
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          {{- if $svc.image }}
+          image: {{ $svc.image | quote }}
+          {{- else if eq $name "frontend" }}
+          image: "{{ $.Values.uiImage.repository }}:{{ tpl $.Values.uiImage.tag $ }}"
+          {{- else }}
+          image: "{{ $.Values.image.repository }}:{{ tpl $.Values.image.tag $ }}"
+          {{- end }}
+          imagePullPolicy: {{ default $.Values.imagePullPolicy $svc.imagePullPolicy | quote }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              cd /app
+              {{ $svc.run }}
+          env:
+            {{- include "container.env" (dict "env" $env "root" $root) | nindent 12 }}
+            {{- include "container.env" (dict "env" $.Values.env_vars "root" $root) | nindent 12 }}
+          {{- if $svc.port }}
+          ports:
+            - name: http
+              containerPort: {{ $svc.port }}
+          {{- end }}
+          {{- if $svc.livenessProbe }}
+          livenessProbe:
+            {{- $svc.livenessProbe | toYaml | nindent 12 -}}
+          {{- end }}
+          {{- if $svc.startupProbe }}
+          startupProbe:
+            {{- $svc.startupProbe | toYaml | nindent 12 -}}
+          {{- end }}
+          resources:
+            {{- toYaml (default $.Values.resources $svc.resources) | nindent 12 }}
+          volumeMounts:
+            {{- include "container.volumeMounts" (dict "name" $name) | nindent 12 }}
+      volumes:
+        {{- include "container.volumes" (dict "root" $root "name" $name) | nindent 8 }}
+{{ end }}
+{{ end }}
+
+{{- range $name, $svc := .Values.infraServices }}
+{{- if $svc.enabled }}
+{{- $root := $ -}}
+{{- $fullname := include "release.componentName" (dict "root" $root "name" $name) -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}
+  labels:
+    app: {{ $fullname }}
+    component: {{ $name }}
+spec:
+  replicas: {{ default 1 $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $fullname }}
+  template:
+    metadata:
+      labels:
+        app: {{ $fullname }}
+        component: {{ $name }}
+    spec:
+      {{- if $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $.Values.imagePullSecrets }}
+        - name: {{ .name | quote }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ $svc.image }}
+          imagePullPolicy: {{ default "IfNotPresent" $svc.imagePullPolicy }}
+          {{- if $svc.command }}
+          command: {{ toYaml $svc.command | nindent 10 }}
+          {{- end }}
+          {{- if $svc.args }}
+          args: {{ toYaml $svc.args | nindent 10 }}
+          {{- end }}
+          {{- if $svc.env }}
+          env:
+            {{- include "container.env" (dict "env" $svc.env "root" $root) | nindent 12 }}
+          {{- end }}
+          {{- if $svc.ports }}
+          ports:
+            {{- range $svc.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+              protocol: {{ default "TCP" .protocol }}
+            {{- end }}
+          {{- end }}
+          {{- if $svc.volumeMounts }}
+          volumeMounts:
+            {{- tpl (toYaml $svc.volumeMounts) $root | nindent 12 }}
+          {{- end }}
+      {{- if $svc.volumes }}
+      volumes:
+        {{- tpl (toYaml $svc.volumes) $root | nindent 8 }}
+      {{- end }}
+{{ end }}
+{{ end }}

@@ -1,0 +1,32 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- $livekitExposureMode := default "nodePort" .Values.livekit.exposure.mode -}}
+{{- if and .Values.livekit.enabled (eq $livekitExposureMode "httpRoute") }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "release.fullname" . }}-livekit
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: https
+      namespace: kgateway-system
+  rules:
+    - matches:
+        - headers:
+            - name: Host
+              type: RegularExpression
+              value: {{ printf "%s-livekit\\..*" (include "release.fullname" .) | quote }}
+          path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ printf "%s-livekit" .Release.Name | quote }}
+          port: 80
+          weight: 1
+{{- end }}

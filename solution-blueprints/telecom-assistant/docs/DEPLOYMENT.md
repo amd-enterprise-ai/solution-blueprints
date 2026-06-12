@@ -25,7 +25,7 @@ To uninstall:
 ./install-prerequisites.sh --uninstall
 ```
 
-> Note: STUNner routes media traffic from the browser to LiveKit. In most setups, you no longer need to open UDP ports 50000-60000 on worker nodes.
+> **Note:** STUNner routes media traffic from the browser to LiveKit. UDP ports `50000-60000` on worker nodes do **not** need to be opened. However, TCP access to the LiveKit signaling port (NodePort or Gateway port 80/443) is still required.
 
 # Helm deployment
 Solution Blueprints are provided as Helm Charts.
@@ -62,13 +62,16 @@ frontend_livekit_ws_url="wss://livekit-aimsb-telecom-assistant-${name}$(kubectl 
 
 Use this value when deploying, e.g. `--set "mainServices.frontend.env.LIVEKIT_URL=$frontend_livekit_ws_url"`.
 
-## LiveKit UDP firewall requirement (with STUNner)
+## LiveKit firewall requirements (with STUNner)
 
-With **STUNner** integration, direct exposure of LiveKit UDP media ports (`50000-60000`) on worker nodes is usually **not required**. STUNner acts as the external WebRTC media gateway and handles media routing.
+STUNner acts as the external WebRTC media gateway and handles all media routing between the browser and LiveKit.
 
-What you still need:
-- For `nodePort` mode (if used): allow inbound **TCP** to the configured NodePort for LiveKit signaling.
-- Ensure your Gateway listener (usually ports 80/443) is reachable from clients.
+| Traffic type    | Ports                                               | Required?                   |
+|-----------------|-----------------------------------------------------|-----------------------------|
+| Media (RTP/UDP) | `50000-60000` on worker nodes                       | **No** — handled by STUNner |
+| Signaling (TCP) | NodePort (if `nodePort` mode) or Gateway `80`/`443` | **Yes**                     |
+
+In short: you do **not** need to open the wide UDP range. You **do** need TCP access to the LiveKit signaling endpoint — either the configured NodePort or the Gateway listener, depending on your exposure mode.
 
 See the STUNner documentation for Gateway-specific firewall details.
 
@@ -83,24 +86,24 @@ To use an existing deployment, set the `existingService` value for the respectiv
 
 By default, the following models are used:
 
-| Role | Default Model |
-|------|--------------|
-| STT  | Qwen3 ASR 1.7B |
-| LLM  | GPT OSS 120B |
-| TTS  | Qwen3 TTS 12Hz 1.7B CustomVoice |
+| Role   | Default Model                   |
+|--------|---------------------------------|
+| STT    | Qwen3 ASR 1.7B                  |
+| LLM    | GPT OSS 120B                    |
+| TTS    | Qwen3 TTS 12Hz 1.7B CustomVoice |
 
 > **Note:** Compatibility with other models for the same purposes is not guaranteed.
 
 To override the default values, set the following environment variables:
 
-| Variable                              | Description |
-|---------------------------------------|-------------|
-| `mainServices.agent.env.STT_MODEL`   | STT model name |
-| `mainServices.agent.env.STT_API_KEY` | API key for the STT service (if required) |
-| `mainServices.agent.env.LLM_MODEL`   | LLM model name |
-| `mainServices.agent.env.LLM_API_KEY` | API key for the LLM service (if required) |
-| `mainServices.agent.env.TTS_MODEL`   | TTS model name |
-| `mainServices.agent.env.TTS_API_KEY` | API key for the TTS service (if required) |
+| Variable                               | Description                               |
+|----------------------------------------|-------------------------------------------|
+| `mainServices.agent.env.STT_MODEL`     | STT model name                            |
+| `mainServices.agent.env.STT_API_KEY`   | API key for the STT service (if required) |
+| `mainServices.agent.env.LLM_MODEL`     | LLM model name                            |
+| `mainServices.agent.env.LLM_API_KEY`   | API key for the LLM service (if required) |
+| `mainServices.agent.env.TTS_MODEL`     | TTS model name                            |
+| `mainServices.agent.env.TTS_API_KEY`   | API key for the TTS service (if required) |
 
 >If you are using external models, follow the instructions in the sections below
 
@@ -190,12 +193,12 @@ helm template $name . \
   | kubectl apply -f - -n $namespace
 ```
 
-After applying node pinning, ensure the NodePort for signaling is reachable. Thanks to STUNner, you typically do not need to open UDP `50000-60000` on that node.
+After applying node pinning, ensure the NodePort for signaling (TCP) is reachable from clients. UDP ports `50000-60000` do not need to be opened on that node — STUNner handles media routing.
 
 
 ## Default AIM image and GPU compatibility
 
-By default, the chart deploys OpenAI GPT OSS 120B model with this AIM: `amdenterpriseai/aim-openai-gpt-oss-120b:0.10.0`
+By default, the chart deploys OpenAI GPT OSS 120B model with this AIM: `amdenterpriseai/aim-openai-gpt-oss-120b:0.11.1`
 
 On newer GPUs, this default image may not be the best match and can fail to start or run sub-optimally.
 To choose a newer AIM or deploy a different LLM, override `llm.image` to a compatible image. See the [catalog of available AIMs](https://enterprise-ai.docs.amd.com/en/latest/aims/catalog/models.html) for options.

@@ -128,7 +128,7 @@ llm:
     user_id: user
     workload_id: # defaults to the release name
 
-  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.10.0"
+  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.11.1"
   replicas: 1
 
   gpus: 1

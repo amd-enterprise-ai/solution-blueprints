@@ -1,0 +1,19 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.container {
+  flex: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  border: 1px solid var(--border-secondary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+  background: rgba(19, 22, 27, 0.5);
+}

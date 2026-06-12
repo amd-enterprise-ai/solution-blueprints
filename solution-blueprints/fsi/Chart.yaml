@@ -6,17 +6,18 @@ apiVersion: v2
 name: aimsb-fsi
 description: Financial Stock Intelligence blueprint
 type: application
-version: 0.4.7
+version: 0.5.1
 maintainers:
 - name: AMD
   url: https://www.amd.com/
 dependencies:
 - name: aimchart-llm
-  version: 0.2.3
+  version: 0.2.6
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.description.full: "A financial analysis tool that combines real-time stock data, technical indicators, and Large Language Model (LLM) analysis to provide comprehensive stock insights."
+  com.amd.aim.description.short: "Financial analysis assistant combining stock data, technical indicators, and LLM reasoning for market insights."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "Financial Stock Intelligence"

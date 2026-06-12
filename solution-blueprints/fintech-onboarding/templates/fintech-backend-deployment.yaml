@@ -1,0 +1,183 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fintech.complexName" . }}-backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "fintech.complexName" . }}-backend
+  template:
+    metadata:
+      labels:
+        app: {{ include "fintech.complexName" . }}-backend
+    spec:
+      initContainers:
+        - name: unpack-workload
+          image: busybox:latest
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -eux
+              mkdir -p /workload/mount
+
+              for key in $(ls /workload/configmap); do
+                content=$(cat "/workload/configmap/$key")
+
+                if echo "$key" | grep -q "__init__.py$"; then
+                  filename="__init__.py"
+                  dirpart=$(echo "$key" | sed 's/__init__.py$//')
+                  dirpath=$(echo "$dirpart" | tr '_' '/')
+                else
+                  filename=$(echo "$key" | awk -F'_' '{print $NF}')
+                  dirpath=$(echo "$key" | sed 's/_'"$filename"'$//; s/_/\//g')
+                fi
+
+                mkdir -p "/workload/mount/$dirpath"
+                echo "$content" > "/workload/mount/$dirpath/$filename"
+              done
+          volumeMounts:
+            - name: workload
+              mountPath: /workload/configmap
+            - name: workload-mount
+              mountPath: /workload/mount
+
+        - name: download-face-models
+          image: busybox:latest
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -eux
+              MODELS_DIR="/facemodels"
+              mkdir -p "$MODELS_DIR"
+
+              if [ -f "$MODELS_DIR/face_detection_yunet_2023mar.onnx" ] && \
+                 [ -f "$MODELS_DIR/face_recognition_sface_2021dec.onnx" ]; then
+                echo "Models already present, skipping."
+                exit 0
+              fi
+
+              wget -q -O "$MODELS_DIR/face_detection_yunet_2023mar.onnx" \
+                "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+
+              wget -q -O "$MODELS_DIR/face_recognition_sface_2021dec.onnx" \
+                "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
+
+              echo "Done."
+          volumeMounts:
+            - name: face-models
+              mountPath: /facemodels
+
+      containers:
+        - name: fintech-backend
+          image: {{ .Values.images.rocmPythonBase }}
+          command: [ "sh", "-c" ]
+          env:
+            - name: VLM_TOKEN
+              value: {{ include "llm.vlmApiKey" . | quote }}
+            - name: VLM_BASE_URL
+              value: {{ include "aimchart-llm.url" (dict
+                        "Values" (merge (dict) .Values.vlm)
+                        "Release" .Release
+                        "Chart" (dict "Name" "vlm")
+                      ) }}
+            - name: VLM_MODEL_NAME
+              value: {{ include "llm.vlmModelName" . | quote }}
+            - name: ROCR_VISIBLE_DEVICES
+              value: "0"
+          args:
+            - |
+              set -e
+              apt-get update && apt-get install -y \
+              build-essential \
+              libglib2.0-0 \
+              libgl1 \
+              libstdc++6 \
+              && rm -rf /var/lib/apt/lists/*
+
+              GFX_VERSION=$(rocminfo 2>/dev/null | grep -o 'gfx[0-9a-z]*' | head -1 | sed 's/gfx//')
+              if [ -z "$GFX_VERSION" ]; then
+                echo "ERROR: could not detect GFX version via rocminfo" >&2
+                exit 1
+              fi
+              export HSA_OVERRIDE_GFX_VERSION="$GFX_VERSION"
+
+              ROCM_VER=$(cat /opt/rocm/.info/version 2>/dev/null | cut -d. -f1,2)
+              if [ -z "$ROCM_VER" ]; then
+                echo "ERROR: could not detect ROCm version from /opt/rocm/.info/version" >&2
+                exit 1
+              fi
+
+              case "$ROCM_VER" in
+                6.3) ONNXRUNTIME_ROCM_VERSION="1.18.0" ;;
+                6.2) ONNXRUNTIME_ROCM_VERSION="1.18.0" ;;
+                6.1) ONNXRUNTIME_ROCM_VERSION="1.17.0" ;;
+                6.0) ONNXRUNTIME_ROCM_VERSION="1.16.0" ;;
+                *)
+                  echo "ERROR: unsupported ROCm version: $ROCM_VER" >&2
+                  exit 1
+                  ;;
+              esac
+
+              ROCM_REL_URL="https://repo.radeon.com/rocm/manylinux/rocm-rel-${ROCM_VER}/"
+
+              pip install -v --no-cache-dir -r /workload/mount/backend/requirements.txt
+
+              pip install --no-deps \
+                --find-links "$ROCM_REL_URL" \
+                onnxruntime-rocm=="$ONNXRUNTIME_ROCM_VERSION"
+
+              export PYTHONPATH=/workload/mount/backend
+              python3 -m fintech.main
+          ports:
+            - containerPort: {{ .Values.ports.fintech }}
+          resources:
+            limits:
+              amd.com/gpu: {{ .Values.amdGpu.count | default 1 }}
+            requests:
+              amd.com/gpu: {{ .Values.amdGpu.count | default 1 }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.ports.fintech }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.ports.fintech }}
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+            - name: workload-mount
+              mountPath: /workload/mount
+            - name: face-models
+              mountPath: /facemodels
+            - name: dev-kfd
+              mountPath: /dev/kfd
+            - name: dev-dri
+              mountPath: /dev/dri
+
+      volumes:
+        - name: workload
+          configMap:
+            name: {{ include "fintech.complexName" . }}-workload
+        - name: workload-mount
+          emptyDir: {}
+        - name: face-models
+          emptyDir: {}
+        - name: dev-kfd
+          hostPath:
+            path: /dev/kfd
+        - name: dev-dri
+          hostPath:
+            path: /dev/dri

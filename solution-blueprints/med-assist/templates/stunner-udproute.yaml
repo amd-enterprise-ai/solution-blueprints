@@ -1,0 +1,22 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{- if .Values.stunner.enabled }}
+{{- $livekitSvcName := printf "%s-livekit" .Release.Name }}
+---
+apiVersion: stunner.l7mp.io/v1
+kind: UDPRoute
+metadata:
+  name: {{ include "release.fullname" . }}-stunner-udproute
+  namespace: {{ .Release.Namespace }}
+spec:
+  parentRefs:
+    - name: {{ include "release.fullname" . }}-stunner-gw
+      namespace: {{ .Release.Namespace }}
+  rules:
+    - backendRefs:
+        - name: {{ $livekitSvcName }}
+          namespace: {{ .Release.Namespace }}
+          port: {{ .Values.livekit.livekit.port | default 7880 }}
+{{- end }}

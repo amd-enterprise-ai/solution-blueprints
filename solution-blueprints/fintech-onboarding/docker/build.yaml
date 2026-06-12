@@ -1,0 +1,10 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+services:
+  ui:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: "${REGISTRY:?Must set REGISTRY}/${ORG:?Must set ORG}/image-aimsb-fintech-onboarding-ui:${TAG:?Must set TAG}"

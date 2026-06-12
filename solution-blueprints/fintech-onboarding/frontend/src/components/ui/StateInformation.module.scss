@@ -1,0 +1,43 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+@use '@/components/ui/mixins' as *;
+
+.stateInformation {
+  @include md-regular;
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-tertiary-600);
+  margin-bottom: 20px;
+
+  b {
+    color: var(--text-secondary-700);
+  }
+
+  &_success {
+    background: var(--utility-success-50);
+    border: 1px solid var(--utility-success-200);
+    color: var(--text-success-primary-600);
+
+    b {
+      color: var(--text-success-primary-600);
+    }
+  }
+
+  &_failed {
+    background: var(--utility-error-50);
+    border: 1px solid var(--utility-error-200);
+    color: var(--text-error-primary-hover);
+
+    b {
+      color: var(--text-error-primary-hover);
+    }
+  }
+}

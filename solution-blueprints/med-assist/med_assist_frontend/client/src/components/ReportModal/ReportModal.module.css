@@ -1,0 +1,171 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer {
+  width: 60%;
+  max-width: 800px;
+  height: 100%;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3xl) var(--space-4xl);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.title {
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.saveStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.saveStatusText {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  line-height: 20px;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.actionBtn {
+  display: flex;
+  padding: var(--space-md) var(--space-xl);
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.actionBtn:hover:not(:disabled) {
+  background: var(--bg-card);
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.closeBtn {
+  display: flex;
+  padding: var(--space-md) var(--space-xl);
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background: var(--bg-input);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3xl) var(--space-4xl);
+  display: flex;
+  flex-direction: column;
+}
+
+.reportTextarea {
+  width: 100%;
+  flex: 1;
+  min-height: 200px;
+  padding: var(--space-xl);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  resize: none;
+}
+
+.reportTextarea:focus {
+  outline: none;
+  border-color: var(--accent-teal);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--space-md);
+  text-align: center;
+}
+
+.emptyTitle {
+  font-family: var(--font-family);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.emptyDescription {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--text-muted);
+}

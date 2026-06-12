@@ -6,17 +6,18 @@ apiVersion: v2
 name: aimsb-mri-doc
 description: MRI analysis tool blueprint
 type: application
-version: 0.2.0
+version: 0.2.1
 maintainers:
 - name: AMD
   url: https://www.amd.com/
 dependencies:
 - name: aimchart-llm
-  version: 0.2.5
+  version: 0.2.6
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.description.full: "AI-powered MRI analysis tool with Gradio UI and LLM reporting."
+  com.amd.aim.description.short: "MRI analysis tool with a Gradio interface and LLM-generated reports."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "MRI Analysis Tool"

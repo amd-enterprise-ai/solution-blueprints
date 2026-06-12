@@ -6,17 +6,18 @@ apiVersion: v2
 name: aimsb-preventative-healthcare
 description: Preventative Healthcare blueprint
 type: application
-version: 0.2.0
+version: 0.2.1
 maintainers:
 - name: AMD
   url: https://www.amd.com/
 dependencies:
 - name: aimchart-llm
-  version: 0.2.5
+  version: 0.2.6
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.description.full: "This is a multi-agent system built on top of AutoGen agents designed to automate and optimize preventative healthcare outreach. It uses multiple agents, large language models (LLMs) and asynchronous programming to streamline the process of identifying patients who meet specific screening criteria and generating personalized outreach emails."
+  com.amd.aim.description.short: "Multi-agent preventive healthcare outreach system that identifies screening candidates and drafts personalized emails."
   com.amd.aim.hfToken.required: "not-applicable"
   com.amd.aim.title: "Preventative Healthcare Application"

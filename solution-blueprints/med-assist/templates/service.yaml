@@ -1,0 +1,73 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+{{ range $name, $svc := .Values.pythonServices }}
+{{- if and $svc.enabled $svc.port }}
+{{- $root := $ -}}
+{{- $fullname := include "release.componentName" (dict "root" $root "name" $name) -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}
+  labels:
+    app: {{ $fullname }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+  selector:
+    app: {{ $fullname }}
+{{ end }}
+{{ end }}
+
+{{- $livekitExposureMode := default "nodePort" .Values.livekit.exposure.mode -}}
+{{- if and .Values.livekit.enabled (eq $livekitExposureMode "nodePort") }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-livekit-nodeport" .Release.Name }}
+  labels:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: NodePort
+  ports:
+    - name: ws
+      port: {{ .Values.livekit.nodePortService.port }}
+      targetPort: {{ .Values.livekit.nodePortService.targetPort }}
+      protocol: TCP
+      nodePort: {{ .Values.livekit.nodePortService.nodePort }}
+  selector:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{ range $name, $svc := .Values.infraServices }}
+{{- if and $svc.enabled $svc.ports }}
+{{- $root := $ -}}
+{{- $fullname := include "release.componentName" (dict "root" $root "name" $name) -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}
+  labels:
+    app: {{ $fullname }}
+spec:
+  type: ClusterIP
+  ports:
+    {{- range $svc.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .port }}
+      protocol: {{ default "TCP" .protocol }}
+    {{- end }}
+  selector:
+    app: {{ $fullname }}
+{{ end }}
+{{ end }}

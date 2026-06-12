@@ -1,0 +1,116 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+.body {
+  display: flex;
+  padding: 0 var(--space-4xl) var(--space-3xl) var(--space-4xl);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3xl);
+  flex: 1 0 0;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3xl);
+  flex: 1 0 0;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.panelAlerts {
+  display: flex;
+  max-width: 320px;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panelTranscript {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panelReport {
+  display: flex;
+  max-width: 400px;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bottomBar {
+  flex-shrink: 0;
+}
+
+/* Waiting for agent overlay */
+.waitingOverlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: var(--space-xl);
+}
+
+.waitingSpinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border-secondary);
+  border-top-color: var(--accent-teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.waitingText {
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  line-height: 28px;
+}

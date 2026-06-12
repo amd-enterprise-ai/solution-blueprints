@@ -47,7 +47,7 @@ This blueprint provides an end-to-end solution for converting PDF documents into
   - **Total memory limits**: 24Gi (app: 4Gi, celery-worker: 16Gi, frontend: 4Gi)
   - Note: celery-worker resources are increased to handle OOM issues during heavy PDF processing and LLM tasks. The specified memory requests for celery-worker are suitable for processing PDF files up to 20 MB in size. For larger files, significantly more memory may be required (proportionally to file size).
 - Model serving GPU requirements (default in this Blueprint):
-  - **LLM model** (`amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0` via `aimchart-llm`): **1 GPU** (`amd.com/gpu: 1`)
+  - **LLM model** (`amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct` via `aimchart-llm`): **1 GPU** (`amd.com/gpu: 1`)
   - **Speech model** (`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` via `aimchart-qwen-tts`): **1 GPU** (`amd.com/gpu: 1`)
   - **Total when both internal services are enabled**: **2 GPUs** (1 for LLM + 1 for TTS)
   - If you use `llm.existingService` and/or `qwen-tts.existingService`, GPU requirements for those external services are defined by their own deployments.

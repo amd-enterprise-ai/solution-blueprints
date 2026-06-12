@@ -1,0 +1,100 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3xl);
+  width: 100%;
+  max-width: 420px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.title {
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  line-height: 28px;
+  margin-bottom: var(--space-sm);
+}
+
+.message {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  line-height: 24px;
+  margin-bottom: var(--space-3xl);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-lg);
+}
+
+.cancelBtn {
+  display: flex;
+  padding: 10px var(--space-2xl);
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  background: var(--bg-card);
+}
+
+.confirmBtn {
+  display: flex;
+  padding: 10px var(--space-2xl);
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-orange-border);
+  background: var(--color-orange-bg);
+  color: var(--color-orange-fg);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 20px;
+  box-shadow: var(--shadow-xs-skeuomorphic);
+  cursor: pointer;
+}
+
+.confirmBtn:hover {
+  background: var(--color-orange-bg-hover);
+}

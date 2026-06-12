@@ -1,0 +1,30 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+@use '@/components/ui/mixins' as *;
+
+.header {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.title {
+  @include xs-semibold;
+  color: var(--text-primary-900);
+  margin: 0;
+}
+
+.description {
+  @include md-regular;
+  color: var(--text-tertiary-600);
+  margin: 0;
+}

@@ -1,0 +1,184 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.header {
+  display: flex;
+  align-items: center;
+  align-content: center;
+  gap: 20px 24px;
+  align-self: stretch;
+  flex-wrap: wrap;
+  padding: var(--space-2xl) var(--space-4xl);
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: 1;
+}
+
+.logo {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-display-md);
+  font-weight: 700;
+  line-height: normal;
+  text-transform: uppercase;
+}
+
+.logoMed {
+  color: var(--text-primary);
+}
+
+.logoAssist {
+  background: linear-gradient(90deg, #22b5ff 0%, #5ae3de 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sessionInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3xl);
+  align-self: stretch;
+}
+
+.sessionId {
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.sessionDate {
+  color: var(--text-tertiary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.personGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.personName {
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.personDetail {
+  color: var(--text-disabled);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.dot {
+  color: var(--text-tertiary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.recordingStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.recordingDot {
+  flex-shrink: 0;
+}
+
+.recordingLabel {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.statusRecording {
+  color: var(--color-recording);
+}
+
+.statusPaused {
+  color: var(--color-recording-paused);
+}
+
+.statusStopped {
+  color: var(--color-recording-stopped);
+}
+
+.timer {
+  color: var(--text-white);
+  font-family: var(--font-family);
+  font-size: var(--font-size-display-xs);
+  font-weight: 700;
+  line-height: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.controls {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.pauseBtn {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs-skeuomorphic);
+  cursor: pointer;
+}
+
+.pauseBtn:hover {
+  background: var(--bg-card);
+}
+
+.stopBtn {
+  display: flex;
+  padding: 10px;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-orange-border);
+  background: var(--color-orange-bg);
+  box-shadow: var(--shadow-xs-skeuomorphic);
+  cursor: pointer;
+}
+
+.stopBtn:hover {
+  background: var(--color-orange-bg-hover);
+}
+
+.pauseBtn:disabled,
+.stopBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}

@@ -1,0 +1,141 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+:root {
+  /* Dark KYC theme — always dark */
+  --background: 220 20% 10%;
+  --foreground: 210 20% 90%;
+
+  --card: 220 18% 13%;
+  --card-foreground: 210 20% 90%;
+
+  --popover: 220 18% 13%;
+  --popover-foreground: 210 20% 90%;
+
+  --primary: 187 70% 50%;
+  --primary-foreground: 220 20% 8%;
+
+  --secondary: 220 16% 18%;
+  --secondary-foreground: 210 20% 85%;
+
+  --muted: 220 14% 16%;
+  --muted-foreground: 215 15% 55%;
+
+  --accent: 187 70% 50%;
+  --accent-foreground: 220 20% 8%;
+
+  --destructive: 0 65% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success: 145 60% 45%;
+  --success-foreground: 0 0% 100%;
+
+  --warning: 38 90% 55%;
+  --warning-foreground: 0 0% 10%;
+
+  --border: 220 14% 20%;
+  --input: 220 14% 20%;
+  --ring: 187 70% 50%;
+
+  --radius: 0.5rem;
+
+  --sidebar-background: 220 22% 8%;
+  --sidebar-foreground: 210 15% 75%;
+  --sidebar-primary: 187 70% 50%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 16% 14%;
+  --sidebar-accent-foreground: 210 20% 90%;
+  --sidebar-border: 220 14% 18%;
+  --sidebar-ring: 187 70% 50%;
+
+  /* DM variables */
+  --utility-gray-50: #13161b;
+  --utility-gray-200: #373A41;
+  --utility-gray-700: #CECFD2;
+
+  --utility-blue-light-50: #062C41;
+  --utility-blue-light-200: #065986;
+  --utility-blue-light-400: #0086C9;
+  --utility-blue-light-600: #36BFFA;
+  --utility-blue-light-700: #7CD4FD;
+
+  --utility-success-50: #053321;
+  --utility-success-200: #085D3A;
+  --utility-success-700: #75E0A7;
+
+  --utility-error-50: #55160C;
+  --utility-error-200: #912018;
+  --utility-error-700: #FDA29B;
+
+  --border-primary: var(--utility-gray-200);
+  --border-secondary: #22262F;
+
+  --text-primary-900: #f7f7f7;
+  --text-tertiary-600: #94979C;
+  --text-secondary-700: var(--utility-gray-700);
+  --text-success-primary-600: #47cd89;
+  --text-error-primary-hover: #fda29b;
+  --text-brand-secondary-700: var(--utility-gray-700);
+  --text-placeholder-subtle: var(--utility-gray-200);
+  --text-disabled: #85888e;
+
+  --alpha-white-30: rgba(12, 14, 18, 0.3);
+  --alpha-white-40: rgba(12, 14, 18, 0.4);
+  --alpha-black-10: rgba(255, 255, 255, 0.1);
+  --alpha-black-30: rgba(255, 255, 255, 0.3);
+
+  --bg-primary: #0C0E12;
+  --bg-primary-alt: var(--utility-gray-50);
+  --bg-success-solid: #079455;
+  --bg-success-secondary: #079455;
+  --bg-error-secondary: #D92D20;
+  --fg-primary: #FFFFFF;
+
+  --shadow-xs: 0 1px 2px 0 rgba(255, 255, 255, 0);
+  --shadow-xs-skeuomorphic: 0 1px 2px 0 rgba(255, 255, 255, 0), inset 0 -2px 0 0 rgba(12, 14, 18, 0.05), inset 0 0 0 1px rgba(12, 14, 18, 0.18);;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-color: hsl(var(--border));
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+}
+
+.spinner-line {
+  transform-origin: 10.5px 11px;
+  animation: spinnerStretch 1s linear infinite;
+}
+
+@keyframes spinnerStretch {
+  0% {
+    transform: scaleY(0.35);
+  }
+  40% {
+    transform: scaleY(1);
+  }
+  80% {
+    transform: scaleY(0.35);
+  }
+  100% {
+    transform: scaleY(0.35);
+  }
+}

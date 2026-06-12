@@ -1,0 +1,37 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: aimsb-med-assist
+description: Med Assist voice consultation blueprint
+type: application
+version: 0.1.0
+maintainers:
+- name: AMD
+  url: https://www.amd.com/
+dependencies:
+- name: aimchart-llm
+  version: 0.2.6
+  repository: oci://registry-1.docker.io/amdenterpriseai
+  alias: llm
+- name: aimchart-qwen-asr
+  version: 0.1.1
+  repository: oci://registry-1.docker.io/amdenterpriseai
+  alias: qwen-asr
+- name: livekit-server
+  version: 1.9.0
+  repository: https://helm.livekit.io
+  alias: livekit
+  condition: livekit.enabled
+- name: stunner
+  version: 1.1.0
+  repository: https://l7mp.io/stunner
+  alias: stunner
+  condition: stunner.enabled
+annotations:
+  org.opencontainers.image.vendor: AMD
+  com.amd.aim.description.full: "This blueprint provides a LiveKit-based med-assist voice consultation app with an agent backend, web UI, and an LLM backend."
+  com.amd.aim.description.short: "LiveKit-based voice consultation app with agent backend, web UI, and LLM support for medical assistance."
+  com.amd.aim.hfToken.required: "not-applicable"
+  com.amd.aim.title: "Med Assist Voice Consultation"

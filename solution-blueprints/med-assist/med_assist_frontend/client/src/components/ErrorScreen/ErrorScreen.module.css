@@ -1,0 +1,91 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+}
+
+.logo {
+  font-size: var(--font-size-display-sm);
+  font-weight: 800;
+  margin-bottom: var(--space-xl);
+}
+
+.logoMed {
+  color: var(--text-primary);
+}
+
+.logoAssist {
+  color: var(--accent-teal);
+}
+
+.icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-error-bg);
+  border: 2px solid var(--color-error-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-error-fg);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.message {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.retryBtn {
+  padding: 12px 28px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--accent-blue);
+  color: white;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.retryBtn:hover {
+  background: var(--accent-blue-hover);
+}
+
+.backBtn {
+  padding: 12px 28px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+}
+
+.backBtn:hover {
+  background: var(--bg-card);
+}

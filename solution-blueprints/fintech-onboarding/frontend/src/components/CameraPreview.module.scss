@@ -1,0 +1,150 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+@use '@/components/ui/mixins' as *;
+
+.root {
+  position: relative;
+  width: 100%;
+  height: 513px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #7CD4FD;
+  background-color: var(--bg-primary-alt);
+  margin-bottom: 20px;
+}
+
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.centerOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+}
+
+.faceOval {
+  width: 10rem;
+  height: 13rem;
+  border-radius: 50%;
+  border-width: 2px;
+  border-style: solid;
+  border-color: hsl(var(--primary));
+  transition: border-color 200ms ease-in-out;
+}
+
+.faceOvalActive > path:first-child {
+  animation: pulse-ring 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.corner {
+  position: absolute;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-color: hsl(var(--primary));
+}
+
+.cornerTopLeft {
+  top: 0.75rem;
+  left: 0.75rem;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.cornerTopRight {
+  top: 0.75rem;
+  right: 0.75rem;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+
+.cornerBottomLeft {
+  bottom: 3rem;
+  left: 0.75rem;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
+.cornerBottomRight {
+  bottom: 3rem;
+  right: 0.75rem;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+.bottomBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  width: 640px;
+  margin: 0 auto;
+  padding: 8px 12px;
+  background-color: var(--alpha-white-30);
+  backdrop-filter: blur(16px);
+  border-radius: 8px;
+  display: flex;
+}
+
+.instruction {
+  @include md-semibold;
+  color: var(--text-primary-900);
+  flex: 1 1 100%;
+}
+
+.progress {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressLabel {
+  @include md-semibold;
+  color: var(--text-primary-900);
+  width: 36px;
+}
+
+.progressTrack {
+  height: 8px;
+  width: 259px;
+  border-radius: 9999px;
+  background-color: var(--alpha-black-30);
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  border-radius: inherit;
+  background-color: #7cd4fd;
+  transition: width 300ms ease-out;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.5;
+  }
+}

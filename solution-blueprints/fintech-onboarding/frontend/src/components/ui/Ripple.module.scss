@@ -1,0 +1,42 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+.ripple {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.circle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  border: 1px solid #22262F;
+  border-radius: 50%;
+
+  transform: translate(-50%, -50%);
+  animation: ripple 4s linear infinite;
+}
+
+@keyframes ripple {
+
+  0% {
+    width: 24px;
+    height: 24px;
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    width: 480px;
+    height: 480px;
+    opacity: 0;
+  }
+}

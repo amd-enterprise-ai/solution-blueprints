@@ -9,14 +9,15 @@ type: application
 maintainers:
 - name: AMD
   url: https://www.amd.com/
-version: 0.4.0
+version: 0.4.1
 dependencies:
 - name: aimchart-llm
-  version: 0.2.5
+  version: 0.2.6
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:
   org.opencontainers.image.vendor: AMD
   com.amd.aim.title: "Agentic Testing"
   com.amd.aim.description.full: "AI-powered UI testing framework that uses an LLM agent for browser automation. The agent interprets test specifications, executes them automatically and generates test code that can be integrated into CI/CD pipelines for continuous testing."
+  com.amd.aim.description.short: "AI-powered UI testing with an LLM agent that interprets specs, automates browser tests, and generates CI-ready test code."
   com.amd.aim.hfToken.required: "not-applicable"

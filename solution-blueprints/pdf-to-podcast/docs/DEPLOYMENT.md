@@ -96,7 +96,7 @@ If the TTS service requires an API key, pass it via:
 
 ## Default AIM image and GPU compatibility
 
-By default, the chart deploys Meta Llama 3.3 70B with this AIM: `amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.10.0`
+By default, the chart deploys Meta Llama 3.3 70B with this AIM: `amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1`
 
 On newer GPUs, this default image may not be the best match and can fail to start or run sub-optimally.
 To choose a newer AIM or deploy a different LLM, override `llm.image` to a compatible image. See the [catalog of available AIMs](https://enterprise-ai.docs.amd.com/en/latest/aims/catalog/models.html) for options.

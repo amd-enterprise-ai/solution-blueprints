@@ -1,0 +1,157 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Default values for med-assist.
+metadata:
+  labels: {}
+
+http_route:
+  enabled: false
+
+image:
+  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-med-assist-backend"
+  tag: "{{ .Chart.Version }}"
+
+imagePullPolicy: Always
+imagePullSecrets: []
+
+uiImage:
+  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-med-assist-ui"
+  tag: "{{ .Chart.Version }}"
+
+storage:
+  ephemeral:
+    quantity: 20Gi
+    storageClassName: mlstorage
+    accessModes:
+      - ReadWriteOnce
+  dshm:
+    sizeLimit: 4Gi
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "2"
+    memory: "2Gi"
+
+env_vars: {}
+
+pythonServices:
+  agent:
+    enabled: true
+    run: python agent.py start
+    port: null
+    env:
+      LIVEKIT_API_KEY: "APIhSHdhCSBtLXU"
+      LIVEKIT_API_SECRET: "hueQUixySH0Yu6Vo6EYnLZYeIaQvhQfMLZTezKNNqgLA"
+      LIVEKIT_WS_URL: ""
+      LLM_API_KEY: "test-key"
+      LLM_URL: ""
+      STT_MODEL: "Qwen/Qwen3-ASR-1.7B"
+      STT_BASE_URL: ""
+      STT_API_KEY: "test-key"
+
+  frontend:
+    enabled: true
+    run: uvicorn --host 0.0.0.0 --port 7860 ui:app
+    port: 7860
+    env:
+      LIVEKIT_API_KEY: "APIhSHdhCSBtLXU"
+      LIVEKIT_API_SECRET: "hueQUixySH0Yu6Vo6EYnLZYeIaQvhQfMLZTezKNNqgLA"
+      LIVEKIT_WS_URL: ""
+    startupProbe:
+      httpGet:
+        path: /
+        port: 7860
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      failureThreshold: 180
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 7860
+      periodSeconds: 10
+      failureThreshold: 3
+
+infraServices: {}
+
+# livekit-server subchart values (alias: livekit).
+livekit:
+  enabled: true
+  exposure:
+    # LiveKit exposure mode:
+    # - nodePort: create parent-chart NodePort Service, do not create livekit HTTPRoute
+    # - httpRoute: create livekit HTTPRoute, do not create parent-chart NodePort Service
+    mode: nodePort
+  # When exposure.mode=httpRoute and LIVEKIT_WS_URL empty: build
+  # wss://<release.fullname>-livekit.<hostSuffix> (matches HTTPRoute Host regex).
+  httpRoute:
+    hostSuffix: ""
+  nodePortService:
+    port: 7880
+    targetPort: 7880
+    nodePort: 32080
+    # Routable node IP or DNS used to auto-generate frontend LIVEKIT_WS_URL as:
+    # ws://<nodeAddress>:<nodePort>
+    nodeAddress: ""
+  nameOverride: livekit
+  nodeSelector: {}
+  image:
+    tag: v1.9.12
+  livekit:
+    port: 7880
+    rtc:
+      tcp_port: 7881
+      # When stunner.enabled=true, LiveKit does NOT need to expose UDP range directly —
+      # media comes in via STUNner TURN. use_external_ip is false so LiveKit doesn't
+      # try to self-detect and advertise a node IP; STUNner's LoadBalancer IP is used instead.
+      use_external_ip: false
+      port_range_start: 50000
+      port_range_end: 60000
+    keys:
+      APIhSHdhCSBtLXU: hueQUixySH0Yu6Vo6EYnLZYeIaQvhQfMLZTezKNNqgLA
+
+# =============================================================================
+# STUNner — Kubernetes-native WebRTC media gateway.
+#
+# Acts as a TURN server ingress proxy: browsers connect to STUNner via UDP:3478
+# (single LoadBalancer port), STUNner routes media internally to LiveKit pods.
+# This replaces the wide UDP 50000-60000 node-level exposure entirely.
+#
+# PREREQUISITE: stunner-gateway-operator must be installed cluster-wide.
+# Run ./install-prerequisites.sh once per cluster before deploying this chart.
+# =============================================================================
+stunner:
+  enabled: true
+
+  # STUNner subchart values (alias: stunner).
+  # The subchart installs only the CRDs/controller — actual gateway pods are
+  # provisioned automatically by the operator per Gateway resource below.
+  stunner: {}  # override stunner subchart values here if needed
+
+  # TURN credentials used by browsers to authenticate with STUNner.
+  # Must match what LiveKit advertises to clients in its TURN config.
+  auth:
+    username: "stunner-user"
+    password: "stunner-pass"
+
+  # UDP port exposed via LoadBalancer for TURN signaling.
+  gateway:
+    port: 3478
+
+llm:
+  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+  env_vars:
+    AIM_PRECISION: "fp8"
+
+  nameOverride: "llama33-70b-instruct"
+  storage:
+    ephemeral:
+      storageClassName: mlstorage
+      quantity: 512Gi
+
+qwen-asr:
+  nameOverride: "qwen-asr"

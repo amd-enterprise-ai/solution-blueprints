@@ -1,0 +1,15 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "fintech.complexName" . }}-backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.ports.fintech }}
+      targetPort: {{ .Values.ports.fintech }}
+  selector:
+    app: {{ include "fintech.complexName" . }}-backend
