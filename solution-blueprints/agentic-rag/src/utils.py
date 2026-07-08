@@ -51,7 +51,7 @@ def get_service_health(mcp_url: str) -> bool:
 # TEXT PROCESSING:
 
 # Common English stop words filtered out during keyword extraction to improve retrieval quality.
-# Not exhaustive — the `len(w) > 2` check in extract_key_terms() also filters short words
+# Not exhaustive - the `len(w) > 2` check in extract_key_terms() also filters short words
 # like "a", "an", "as", "at", "be", "by", "do", "go", "if", "in", "is", "it", "no", "of",
 # "on", "or", "so", "to", "up", "we".
 STOP_WORDS = frozenset(
@@ -134,7 +134,7 @@ def extract_key_terms(text: str) -> List[str]:
 
 
 def content_hash(text: str) -> str:
-    """MD5 hash of text content — used for chunk deduplication in the DB."""
+    """MD5 hash of text content - used for chunk deduplication in the DB."""
     return hashlib.md5(text.encode()).hexdigest()
 
 
@@ -160,7 +160,7 @@ def load_docs(file_paths: List[str]) -> List[str]:
 
 class RemoteEmbeddingFunction:
     """
-    Calls an OpenAI-compatible embedding endpoint (e.g. Infinity).
+    Calls an OpenAI-compatible embedding endpoint (e.g. vLLM).
     Implements both the ChromaDB EmbeddingFunction protocol and
     the LangChain Embeddings interface.
     """
@@ -169,19 +169,41 @@ class RemoteEmbeddingFunction:
         self.url = url  # OpenAI-compatible /embeddings endpoint
         self.model = model  # Model name served by the endpoint (e.g. "intfloat/multilingual-e5-large-instruct")
 
-    # ChromaDB protocol — called when Chroma needs to embed documents internally
+    # ChromaDB protocol - called when Chroma needs to embed documents internally
     def __call__(self, input: List[str]) -> List[List[float]]:
         return self._embed(input)
 
-    # LangChain protocol — called by LangChain's Chroma wrapper during add/search
+    # LangChain protocol - called by LangChain's Chroma wrapper during add/search
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         return self._embed(texts)
 
     def embed_query(self, text: str) -> List[float]:
+        # E5-instruct queries require a task instruction; passages stay raw.
+        # See https://huggingface.co/intfloat/multilingual-e5-large-instruct
+        if "e5" in self.model.lower() and "instruct" in self.model.lower():
+            text = (
+                "Instruct: Given a question, retrieve passages from the "
+                "knowledge base that answer it\nQuery: " + text
+            )
         return self._embed([text])[0]
 
     def _embed(self, texts: List[str]) -> List[List[float]]:
-        from config import BACKOFF_FACTOR, INITIAL_DELAY, MAX_RETRIES
+        from config import BACKOFF_FACTOR, INITIAL_DELAY, MAX_RETRIES, get_embed_tokenizer
+
+        # Defensive truncation: caps each input under the embedding model's max
+        # tokens so a single oversize string can't crash the whole batch.
+        tok = get_embed_tokenizer()
+        if tok is not None:
+            from config import EMBED_MAX_TOKENS
+
+            budget = EMBED_MAX_TOKENS - 16  # margin for special / instruction tokens
+            truncated: List[str] = []
+            for t in texts:
+                ids = tok.encode(t, add_special_tokens=False)
+                if len(ids) > budget:
+                    t = tok.decode(ids[:budget], skip_special_tokens=True)
+                truncated.append(t)
+            texts = truncated
 
         payload = {"model": self.model, "input": texts}
         delay = INITIAL_DELAY
@@ -277,7 +299,7 @@ def format_trace_event(event_type: str, data: Dict[str, Any]) -> str:
         is_full = verdict == "FULLY"
         color = "rgba(76,175,80,0.15)" if is_full else "rgba(255,152,0,0.15)"
         border = "#4caf50" if is_full else "#ff9800"
-        label = "Context is complete" if is_full else "Context is partial — searching for more"
+        label = "Context is complete" if is_full else "Context is partial - searching for more"
         return (
             f'\n<div style="margin:4px 0;padding:8px;background:{color};'
             f'border-left:3px solid {border};border-radius:4px;">'

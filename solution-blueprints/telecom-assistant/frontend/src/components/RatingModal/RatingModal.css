@@ -1,0 +1,116 @@
+/*
+Copyright © Advanced Micro Devices, Inc., or its affiliates.
+
+SPDX-License-Identifier: MIT
+*/
+
+/* RatingModal.css */
+
+.rating-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    /* No pointer-events manipulation — backdrop is intentionally non-dismissible */
+}
+
+.rating-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 40px 48px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+    animation: rating-modal-in 0.25s ease;
+}
+
+@keyframes rating-modal-in {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.rating-modal__title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px;
+}
+
+.rating-modal__subtitle {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin: 0 0 28px;
+}
+
+.rating-modal__stars {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.rating-modal__star {
+    background: none;
+    border: none;
+    font-size: 2.4rem;
+    color: #d1d5db;
+    cursor: pointer;
+    transition: color 0.15s, transform 0.1s;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.rating-modal__star:hover:not(:disabled),
+.rating-modal__star--filled {
+    color: #f59e0b;
+}
+
+.rating-modal__star--active {
+    transform: scale(1.2);
+    color: #f59e0b;
+}
+
+.rating-modal__star:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.rating-modal__label {
+    font-size: 0.9rem;
+    color: #374151;
+    font-weight: 500;
+    margin: 0 0 24px;
+    min-height: 1.2em;
+}
+
+.rating-modal__error {
+    font-size: 0.85rem;
+    color: #ef4444;
+    margin: -12px 0 16px;
+}
+
+.rating-modal__submit {
+    width: 100%;
+    padding: 14px 0;
+    background: #2563eb;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+
+.rating-modal__submit:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.rating-modal__submit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}

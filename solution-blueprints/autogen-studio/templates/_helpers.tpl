@@ -87,8 +87,27 @@ pip install --no-cache-dir playwright
 playwright install-deps
 playwright install chromium
 
-echo "[run] silently launching autogen studio to initialize the app directory and database..."
-timeout 3 autogenstudio ui --appdir "{{ .Values.envVars.AUTOGENSTUDIO_APPDIR }}" || true
+echo "[run] launching autogen studio in background to initialize the app directory and database..."
+autogenstudio ui --appdir "{{ .Values.envVars.AUTOGENSTUDIO_APPDIR }}" > /dev/null 2>&1 &
+AUTOGEN_PID=$!
+echo "[run] autogenstudio started with PID $AUTOGEN_PID, waiting for database to be created..."
+
+DB_PATH="{{ .Values.envVars.AUTOGENSTUDIO_APPDIR }}/autogen04202.db"
+for retry in $(seq 1 60); do
+  if [ -f "$DB_PATH" ]; then
+    echo "[run] database file created, terminating autogenstudio..."
+    kill $AUTOGEN_PID 2>/dev/null || true
+    wait $AUTOGEN_PID 2>/dev/null || true
+    break
+  fi
+  sleep 1
+done
+
+if [ ! -f "$DB_PATH" ]; then
+  echo "[run] database file was not created within 60 seconds, terminating autogenstudio..." >&2
+  kill $AUTOGEN_PID 2>/dev/null || true
+  exit 1
+fi
 
 if [ -z "${LLM_MODEL:-}" ]; then
   echo "[patch] extracting model name from AIM service..."

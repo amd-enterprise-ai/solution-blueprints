@@ -218,6 +218,22 @@ def get_readiness_status():
         return f"### ⚠️ System Status: NOT READY\n**LLM Service status:** {status} (Code: {code})  \n**Last Check:** {timestamp}"
 
 
+def get_platform_banner():
+    """Return the 'Powered by ...' tagline for the deployed platform.
+
+    The blueprint chart sets PLATFORM (epyc/instinct/radeon) on this container
+    from global.platform. EPYC (CPU) inference runs on the ZenDNN runtime;
+    Instinct and Radeon run on ROCm. Defaults to the ROCm/Instinct tagline when
+    PLATFORM is unset so GPU deployments keep their existing branding.
+    """
+    platform = os.environ.get("PLATFORM", "").strip().lower()
+    if platform == "epyc":
+        return "Powered by ZenDNN running on AMD EPYC hardware"
+    if platform == "radeon":
+        return "Powered by ROCm Platform running on AMD Radeon hardware"
+    return "Powered by ROCm Platform running on AMD Instinct hardware"
+
+
 def init_llm():
     """Initialize the LLM
 
@@ -694,15 +710,17 @@ def create_interface():
     .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
     """
 
+    platform_banner = get_platform_banner()
+
     with gr.Blocks(title="AI-Driven Financial Stock Intelligence", theme=gr.themes.Soft(), css=custom_css) as interface:
         # Header with AMD logo in top right corner
         gr.HTML(
-            """
+            f"""
             <div style="position: relative; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 10px; margin-bottom: 20px;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/AMD_Logo.svg" alt="AMD Logo" style="position: absolute; top: 15px; right: 20px; height: 35px; width: auto;" />
                 <div style="padding-right: 120px;">
                     <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700; font-family: Arial, sans-serif;"> AI-Driven Financial Stock Intelligence</h1>
-                    <h3 style="margin: 5px 0 0 0; color: #00C2DE; font-size: 1.2em; font-weight: 600; font-family: Arial, sans-serif;">Powered by ROCm Platform running on AMD Instinct hardware</h3>
+                    <h3 style="margin: 5px 0 0 0; color: #00C2DE; font-size: 1.2em; font-weight: 600; font-family: Arial, sans-serif;">{platform_banner}</h3>
                 </div>
             </div>
         """

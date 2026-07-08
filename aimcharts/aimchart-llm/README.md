@@ -172,10 +172,10 @@ dependencies:
 and then have values.yaml sections for each:
 ```yaml
 agent-llm:
-  image: "registry-1.docker.io/amdenterpriseai/aim:a.b.c-example-model-3-70b-instruct"
+  image: "docker.io/amdenterpriseai/aim:a.b.c-example-model-3-70b-instruct"
 
 autocomplete-llm:
-  image: "registry-1.docker.io/amdenterpriseai/aim:x.y.z-example-model-3-8b"
+  image: "docker.io/amdenterpriseai/aim:x.y.z-example-model-3-8b"
 ```
 
 ### URL template function
@@ -195,3 +195,50 @@ You need to call it with a context constructed as follows:
 url: {{ include "aimchart-llm.url" $sub }}
 ```
 If you use multiple dependencies, make sure to use the correct keys, e.g. `"Values" (merge (dict) .Values.autocomplete-llm)` and `"Chart" (dict "Name" "autocomplete-llm")`.
+
+### Platforms
+
+The chart provides defaults for running on Instinct (default), Epyc, and Radeon.
+To select a platform use
+
+```bash
+name=my-llm-deployment
+namespace=my-namespace
+helm template $name . \
+  --set platform=<platform> \
+    | kubectl apply -f - -n $namespace
+```
+
+where `<platform>` can be either `instinct`, `epyc` or `radeon`.
+
+The platform can also be selected via the global value `global.platform`
+
+```bash
+--set global.platform=<platform>
+```
+
+which can be useful when using this chart as a dependency of another graph.
+Note that `platform` takes precedence over `global.platform`.
+If neither `platform` nor `global.platform` are set, the chart defaults to the `instinct`
+platform.
+
+To override a default value, just pass the overriding value explicitly, e.g. to use `meta-llama/Llama-3.2-1B-Instruct` as the chat LLM on Epyc
+
+```bash
+--set platform=epyc --set image=docker.io/amdenterpriseai/aim-epyc-meta-llama-llama-3-2-1b-instruct:0.11.0-preview
+```
+
+You can inspect the default platform value with
+
+```bash
+helm show values . --jsonpath '{.platformDefaults}'
+```
+
+#### Epyc resources
+
+When using `gpus=0` (the default for the `epyc` platform), the values `cpu_per_gpu` and `memory_per_gpu` are ignored.
+The values `cpus` and `memory` are used instead as a shortcut to set the (requested and limit) `cpu` and `memory` resources, e.g.
+
+```bash
+--set cpus=188 --set memory=192
+```

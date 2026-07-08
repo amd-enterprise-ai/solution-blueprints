@@ -50,7 +50,6 @@ from utils import (  # type: ignore[attr-defined]
 MAX_SEARCHES = 3
 
 
-# 1. DEFINE STATE
 # LangGraph state is the shared memory across all graph nodes.
 # Annotated fields with lambda x, y: x + y are ADDITIVE (each node appends, never overwrites).
 class AgentState(TypedDict):
@@ -63,10 +62,7 @@ class AgentState(TypedDict):
     completeness_verdict: str  # Latest completeness check: "FULLY", "PARTIALLY", or ""
 
 
-# 2. THE AGENT
-# Graph flow: START -> reasoner -> [tool_executor -> grader -> reasoner] (loop) -> END
-# The reasoner decides to search or answer. tool_executor dispatches any MCP tool.
-# The grader checks relevance. Loop continues until answer-ready or MAX_SEARCHES hit.
+# Graph flow: START -> reasoner -> [tool_executor -> grader -> reasoner] (loop) -> END.
 class RAGAgent:
     """Encapsulates the RAG agent graph nodes with injected dependencies.
 
@@ -84,7 +80,7 @@ class RAGAgent:
     async def discover_tools(session: ClientSession) -> List[Dict[str, Any]]:
         """Fetch available tools from MCP and convert to OpenAI function-call format.
 
-        This replaces hardcoded TOOLS_SPEC — adding a new tool to the MCP server
+        This replaces hardcoded TOOLS_SPEC - adding a new tool to the MCP server
         automatically makes it available to the agent.
         """
         result = await session.list_tools()
@@ -278,7 +274,7 @@ class RAGAgent:
         }
 
     async def tool_executor(self, state: AgentState) -> Dict[str, Any]:
-        """Generic MCP tool dispatcher — executes whatever tool the LLM chose.
+        """Generic MCP tool dispatcher - executes whatever tool the LLM chose.
 
         Adding a new tool to the MCP server is all you need; this node
         routes any tool_call to session.call_tool(name, args) automatically.
@@ -322,7 +318,7 @@ class RAGAgent:
         current_sig = content_hash(last_retrieval[:500])
         prev_sigs = {content_hash(r[:500]) for r in prev_retrievals}
         if current_sig in prev_sigs:
-            logger.warning("Grader: Duplicate retrieval detected — skipping LLM call, forcing new strategy")
+            logger.warning("Grader: Duplicate retrieval detected - skipping LLM call, forcing new strategy")
             return {
                 "relevance": "no",
                 "messages": [SystemMessage(content=GRADER_DUPLICATE_HINT)],
@@ -330,7 +326,7 @@ class RAGAgent:
 
         # Split the retrieval blob into individual chunks for per-chunk grading.
         # This prevents a single off-topic chunk from causing the entire batch to be
-        # rejected — each chunk is scored independently and only relevant ones are kept.
+        # rejected - each chunk is scored independently and only relevant ones are kept.
         CHUNK_SEP = "\n\n---\n\n"
         chunks = [c.strip() for c in last_retrieval.split(CHUNK_SEP) if c.strip()]
 
@@ -425,9 +421,6 @@ class RAGAgent:
         return workflow.compile()
 
 
-# 3. LLM FACTORY
-
-
 def create_llm() -> ChatOpenAI:
     """Build the ChatOpenAI client from environment config.
 
@@ -435,16 +428,13 @@ def create_llm() -> ChatOpenAI:
     override model, temperature, or provider without touching the agent.
     """
     return ChatOpenAI(
-        base_url=config.VLLM_BASE_URL,
-        model=config.GEN_MODEL,
+        base_url=config.get_vllm_base_url(),
+        model=config.get_gen_model(),
         api_key=SecretStr(config.VLLM_API_KEY or "dummy"),
         temperature=0,
         timeout=LLM_REQUEST_TIMEOUT,
         max_retries=2,
     )
-
-
-# 4. PUBLIC ENTRY POINT
 
 
 async def run_rag_agent(query: str, file_paths: Optional[List[str]] = None) -> AsyncGenerator[str, None]:
@@ -493,7 +483,7 @@ async def run_rag_agent(query: str, file_paths: Optional[List[str]] = None) -> A
 
                     async for event in stream_agent_events(agent_app, initial_input, recursion_limit):
                         yield event
-                    return  # Completed successfully — exit retry loop
+                    return  # Completed successfully - exit retry loop
 
         except (KeyboardInterrupt, SystemExit):
             raise

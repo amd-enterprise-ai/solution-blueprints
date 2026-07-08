@@ -111,6 +111,14 @@ if [ "$UNINSTALL" = true ]; then
     echo "SKIPPED (not found)"
   fi
 
+  echo -n "    - removing shared STUNner GatewayClass... "
+  if kubectl get gatewayclass stunner &>/dev/null; then
+    kubectl delete gatewayclass stunner &>/dev/null
+    echo "OK"
+  else
+    echo "SKIPPED (not found)"
+  fi
+
   echo -n "    - removing STUNner CRDs... "
   STUNNER_CRDS=$(kubectl get crd -o name 2>/dev/null | grep "stunner.l7mp.io" || true)
   if [ -n "$STUNNER_CRDS" ]; then
@@ -256,4 +264,33 @@ if kubectl wait --for=condition=available deployment \
 else
   echo "FAILED"
   echo "    WARNING: operator pod did not become ready in time — check: kubectl get pods -n $STUNNER_NAMESPACE"
+fi
+
+# -----------------------------------------------------------------------------
+# GatewayClass
+#
+# A single shared GatewayClass named "stunner" is created cluster-wide.
+# All blueprint deployments reference this class in their Gateway resources,
+# so it must exist before any blueprint is deployed. Unlike the operator itself,
+# the GatewayClass is a lightweight cluster-scoped object with no running pods.
+# -----------------------------------------------------------------------------
+echo ""
+echo -n "==> Ensuring shared STUNner GatewayClass 'stunner' exists... "
+if kubectl get gatewayclass stunner &>/dev/null; then
+  echo "PRESENT (skipping)"
+else
+  kubectl apply -f - &>/tmp/stunner-gwclass-err <<'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: stunner
+spec:
+  controllerName: "stunner.l7mp.io/gateway-operator"
+EOF
+  if [ $? -ne 0 ]; then
+    echo "FAILED"
+    cat /tmp/stunner-gwclass-err
+    exit 1
+  fi
+  echo "OK"
 fi

@@ -8,7 +8,7 @@ description: Document Summarization blueprint
 type: application
 
 # Semantic Versioning
-version: 2.1.1
+version: 2.1.2
 
 maintainers:
 - name: AMD
@@ -17,12 +17,11 @@ maintainers:
 # External chart dependencies
 dependencies:
 - name: aimchart-llm
-  version: 0.2.6
+  version: 0.3.0
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
-  condition: llm.enabled
 - name: aimchart-whisper
-  version: 1.3.1
+  version: 1.3.2
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: whisper
 

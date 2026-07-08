@@ -4,60 +4,94 @@ Copyright © Advanced Micro Devices, Inc., or its affiliates.
 SPDX-License-Identifier: MIT
 -->
 
----
+# FinTech Onboarding Deployment Guide
 
-## GPU Support (AMD ROCm)
+Solution Blueprints are provided as Helm Charts. The recommended approach to deploy them is to pipe the output of `helm template` to `kubectl apply -f -`.
+We don't recommend `helm install`, which by default uses a Secret to keep track of the related resources.
+This does not work well with Enterprise clusters that often have limitations on the kinds of resources that regular users are allowed to create.
 
-The service requires **at least 1 AMD GPU** to run. If you don't already have a VLM deployed,
-you'll need an additional GPU - making a total of **at least 2 GPUs** for this deployment.
-All necessary parameters for using GPU will be configured automatically.
----
+This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms. Unless otherwise specified, the commands below cover the default **Instinct** deployment. For deployment with Radeon, see:
 
-## Quick Start
+- [Deploy on AMD Radeon](#amd-radeon-gpu)
 
-Start with k8s. You should have two ways:
+## Multi-platform Support
 
-### 1) If you don't have existing deployed VLM service:
+The chart ships defaults for two platforms, selected with `--set global.platform=<platform>`: `instinct` (GPU, the default) and `radeon` (GPU). Each sets a matching AIM image and resource profile; inspect them with `helm show values . --jsonpath '{.vlm.platformDefaults}'`.
 
-Example a command to start service:
+> **Helm note**: Built and tested on Helm 3.17 or higher. On Helm v4, if the piped `kubectl apply` is rejected, run `helm pull oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding --untar` first and template the local `./aimsb-fintech-onboarding` directory instead.
 
-```
-export name="fintech"
-export namespace="fintech-onboarding"
+### AMD Instinct (GPU, default)
 
+To deploy the blueprint, run the following command:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
   | kubectl apply -f - -n $namespace
 ```
 
-Please wait for all pods Ready status, and after that you can make port forwarding for UI using
-command:
+### AMD Radeon (GPU)
 
+To deploy the blueprint, run the following command:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
+  --set global.platform=radeon \
+  | kubectl apply -f - -n $namespace
 ```
+
+## GPU Support (AMD ROCm)
+
+The service requires **at least 1 AMD GPU** to run. If you don't already have a VLM deployed,
+you'll need an additional GPU, for a total of **at least 2 GPUs** for this deployment.
+All necessary GPU parameters are configured automatically.
+
+## Quick Start
+
+The sections below cover fintech-specific deployment options (with or without an existing VLM). For platform selection, see Multi-platform Support above.
+
+There are two deployment options:
+
+### If you don't have an existing VLM deployment
+
+Example command to start the service:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
+  | kubectl apply -f - -n $namespace
+```
+
+Wait until all pods are `Ready`, then port-forward to the UI with the following command:
+
+```bash
 kubectl port-forward svc/$name-aimsb-fintech-onboarding-ui 8080:8080 -n $namespace
 ```
 
-The end of using:
+To clean up:
 
-```
+```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
   | kubectl delete -f - -n $namespace
 ```
 
-### 2) If you already have existing deployed VLM service:
+### If you already have a deployed VLM service
 
-Example a command to start service:
+Example command to start the service:
 
-```
-export name="fintech"
-export namespace="fintech-onboarding"
-
+```bash
+name="my-deployment"
+namespace="my-namespace"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
   --set vlm.existingService="129.212.190.161:8000" \
   | kubectl apply -f - -n $namespace
 ```
 
----
-**Important notes about parameter `vlm.existingService`:**
+**Important notes about the `vlm.existingService` parameter:**
 
 - `vlm.existingService` is **only the base address of the model service**, without API path suffix
   `/v1` and without `http://` prefix.
@@ -67,53 +101,58 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onb
     - `my-model.default.svc.cluster.local`
     - `vlm-fintech-onboarding.svc.cluster.local:8000`
 
-- **Do NOT add** `/v1/chat/completions`, `/api`, `/openai` etc. at the end.
+- **Do NOT add** `/v1/chat/completions`, `/api`, `/openai`, etc. at the end.
 
-**About the port**
+**About the port:**
 
-- If the model service listens on the **default http port 80** → you can omit the port entirely
+- If the model service listens on the **default HTTP port 80**, you can omit the port entirely.
   Example: `my-model-service`
-- If it uses a **non-standard port** (most often 8000 for vLLM, llama.cpp, Ollama with custom
-  port, etc.) → you **must** specify the port
+- If it uses a **non-standard port** (most often 8000 for vLLM, llama.cpp, Ollama with a custom
+  port, etc.), you **must** specify the port.
   Example: `my-model-service:8000`
-- The most common case inside Kubernetes: when models are running in the same cluster → use the
-  **Kubernetes service name** (without external IP)
+- The most common case inside Kubernetes: when models are running in the same cluster, use the
+  **Kubernetes service name** (without external IP).
 
----
 You can also set:
 
-```
+```bash
   --set secrets.VLM_MODEL_NAME="mistralai/Mistral-Small-3.2-24B-Instruct-2506" \
   --set secrets.VLM_TOKEN="your_access_token" \
 ```
 
-this params is optional, but if need you can use it. `VLM_MODEL_NAME` - use in case when your
-deployment include several LLMs.
-`VLM_TOKEN` - use in case when for access to your VLM need a token.
+These parameters are optional. Use them when needed:
 
-Please wait for all pods Ready status, and after that you can make port forwarding for UI using
-command:
+- `VLM_MODEL_NAME`: Use when your deployment includes several LLMs.
+- `VLM_TOKEN`: Use when your VLM requires an access token.
 
-```
+Wait until all pods are `Ready`, then port-forward to the UI with the following command:
+
+```bash
 kubectl port-forward svc/$name-aimsb-fintech-onboarding-ui 8080:8080 -n $namespace
 ```
 
-The end of using:
+To clean up:
 
-```
+```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
   --set vlm.existingService="129.212.190.161:8000" \
   | kubectl delete -f - -n $namespace
 ```
 
-### About HTTPRoute (Gateway Access)
+## Connecting
 
-If your cluster has a Gateway API compatible gateway (e.g., Kubernetes Gateway, Istio, etc.),
+### Option 1: Port Forwarding
+
+See the port-forward commands in the Quick Start sections above.
+
+### Option 2: HTTPRoute (Gateway Access)
+
+If your cluster has a Gateway API compatible gateway (for example, Kubernetes Gateway or Istio),
 you can enable HTTPRoute creation to route traffic through the gateway.
 
 **Prerequisites:**
 
-- A Gateway named `https` must exist in the `kgateway-system` namespace
+- A Gateway named `https` must exist in the `envoy-gateway-system` namespace
   (or configure a different gateway).
 - The Gateway must be properly configured with listeners.
 
@@ -122,6 +161,8 @@ you can enable HTTPRoute creation to route traffic through the gateway.
 Use `--set http_route.enabled=true` in the `helm template` command to enable HTTPRoute creation:
 
 ```bash
+name="my-deployment"
+namespace="my-namespace"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
   --set http_route.enabled=true \
   # ... (other parameters as needed) ...
@@ -134,6 +175,6 @@ The URL to access the blueprint via HTTPRoute is formed by the chart name, relea
 the gateway's hostname. Use this command to produce the URL by querying the hostname from
 the cluster:
 
-   ```bash
-   echo "https://aimsb-fintech-onboarding-$name$(kubectl get gtw -A -o jsonpath='{.items[*].spec.listeners[?(@.name=="https")].hostname}' | tr -d \*)/"
-   ```
+```bash
+echo "https://aimsb-fintech-onboarding-$name$(kubectl get gtw -A -o jsonpath='{.items[*].spec.listeners[?(@.name=="https")].hostname}' | tr -d \*)/"
+```

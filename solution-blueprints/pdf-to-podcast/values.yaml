@@ -8,9 +8,12 @@ metadata:
 
 http_route:
   enabled: false
+  gateway:
+    name: https
+    namespace: envoy-gateway-system
 
 image:
-  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-pdf-to-podcast-application"
+  repository: "docker.io/amdenterpriseai/image-aimsb-pdf-to-podcast-application"
   tag: "{{ .Chart.Version }}"
 imagePullPolicy: Always
 imagePullSecrets: []
@@ -18,7 +21,7 @@ imagePullSecrets: []
 # - name: my-registry-secret
 
 uiImage:
-  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-pdf-to-podcast-ui"
+  repository: "docker.io/amdenterpriseai/image-aimsb-pdf-to-podcast-ui"
   tag: "{{ .Chart.Version }}"
 
 storage:
@@ -124,10 +127,7 @@ infraServices:
     command: ["redis-server", "--appendonly", "no"]
 
 llm:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  nameOverride: llama33-70b-instruct
-  env_vars:
-    AIM_PRECISION: "fp8"
+  nameOverride: "aimsb-pdf-to-podcast-llm"
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
   apiKeySecretRef: {}
@@ -140,3 +140,8 @@ llm:
     ephemeral:
       storageClassName: mlstorage
       quantity: 512Gi
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"

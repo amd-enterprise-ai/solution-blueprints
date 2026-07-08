@@ -74,6 +74,10 @@ spec:
     {{- include "aimchart-llm.deployment.bare" . | nindent 4 }}
 {{- end }}
 
+{{- $pv := include "aimchart-llm.platformValues" . | fromYaml -}}
+{{- $ctx := merge (dict "Values" $pv) (omit . "Values") -}}
+{{- with $ctx -}}
+
 {{ if not .Values.existingService -}}
 {{- if .Values.kaiwo.enabled -}}
 {{- include "aimchart-llm.deployment.kaiwoservice" . }}
@@ -81,3 +85,5 @@ spec:
 {{- include "aimchart-llm.deployment.bare" . }}
 {{- end }}
 {{- end }}
+
+{{- end -}}

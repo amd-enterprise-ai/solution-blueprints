@@ -6,13 +6,13 @@ apiVersion: v2
 name: aimsb-report-generation-engine
 description: AI-powered report generation engine blueprint
 type: application
-version: 0.2.1
+version: 0.2.2
 maintainers:
 - name: AMD
   url: https://www.amd.com/
 dependencies:
 - name: aimchart-llm
-  version: 0.2.6
+  version: 0.3.0
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: llm
 annotations:

@@ -178,6 +178,97 @@ SPDX-License-Identifier: MIT
   background: var(--bg-surface);
 }
 
+/* ---- Markdown rendering inside agent bubble ---- */
+.bubbleMarkdown {
+  /* Override flex column to allow block markdown elements to flow naturally */
+  display: block;
+}
+
+/* Paragraphs */
+.bubbleMarkdown :global(.mdP) {
+  margin: 0;
+  padding: 0;
+  line-height: 24px;
+  color: var(--text-primary);
+}
+
+/* Vertical spacer between paragraphs */
+.bubbleMarkdown :global(.mdSpacer) {
+  height: 8px;
+}
+
+/* Headings */
+.bubbleMarkdown :global(.mdH2) {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  line-height: 22px;
+  color: var(--text-primary);
+  margin: 6px 0 2px;
+  padding: 0;
+}
+
+.bubbleMarkdown :global(.mdH3) {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--text-secondary);
+  margin: 4px 0 2px;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Lists */
+.bubbleMarkdown :global(.mdUl),
+.bubbleMarkdown :global(.mdOl) {
+  margin: 4px 0;
+  padding-left: 20px;
+  color: var(--text-primary);
+}
+
+.bubbleMarkdown :global(.mdUl) {
+  list-style-type: disc;
+}
+
+.bubbleMarkdown :global(.mdOl) {
+  list-style-type: decimal;
+}
+
+.bubbleMarkdown :global(.mdLi) {
+  margin: 2px 0;
+  line-height: 22px;
+  font-size: var(--font-size-md);
+}
+
+/* Inline code */
+.bubbleMarkdown :global(.mdInlineCode) {
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  font-size: 0.875em;
+  background: var(--bg-card, rgba(0, 0, 0, 0.06));
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--color-blue-light-fg, #36bffa);
+}
+
+/* Bold / Italic — these are native HTML so no global class needed */
+.bubbleMarkdown strong {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bubbleMarkdown em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* Horizontal rule */
+.bubbleMarkdown :global(.mdHr) {
+  border: none;
+  border-top: 1px solid var(--border-secondary);
+  margin: 8px 0;
+}
+
 /* ---- System alert (tool executed) ---- */
 .systemAlert {
   display: flex;
@@ -233,6 +324,8 @@ SPDX-License-Identifier: MIT
   align-items: flex-start;
   gap: var(--space-lg);
   flex: 1 0 0;
+  /* Allow content to shrink and not overflow the card */
+  min-width: 0;
 }
 
 .alertTextGroup {
@@ -241,6 +334,7 @@ SPDX-License-Identifier: MIT
   align-items: flex-start;
   gap: var(--space-xs);
   align-self: stretch;
+  min-width: 0;
 }
 
 .alertTitle {
@@ -258,4 +352,32 @@ SPDX-License-Identifier: MIT
   font-size: var(--font-size-sm);
   font-weight: 400;
   line-height: 20px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  width: 100%;
+  max-height: 180px;
+  overflow-y: auto;
+  /* ensure the div child doesn't escape the scroll container */
+  display: block;
+}
+
+/* Pretty-printed JSON / multi-line tool output */
+.alertOutputPre {
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  font-size: var(--font-size-xs);
+  line-height: 18px;
+  color: var(--text-secondary);
+  background: var(--bg-card, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100%;
+  box-sizing: border-box;
 }

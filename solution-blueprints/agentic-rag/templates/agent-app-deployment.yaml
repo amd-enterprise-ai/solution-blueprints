@@ -21,6 +21,30 @@ spec:
         app.kubernetes.io/instance: {{ include "release.fullname" . }}
         app.kubernetes.io/component: agent-app
     spec:
+      {{- $llmSub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") }}
+      initContainers:
+        - name: wait-for-dependencies
+          image: alpine:latest
+          command: ['sh', '-c']
+          args:
+            - |
+              set -e
+              apk add --no-cache curl >/dev/null
+              VLLM_BASE="${VLLM_URL%/}"
+              VLLM_BASE="${VLLM_BASE%/v1}"
+              echo "Waiting for VLLM service ($VLLM_BASE/health)..."
+              until curl -s -f -o /dev/null "$VLLM_BASE/health"; do sleep 5; done
+              echo "VLLM service is up"
+
+              MCP_BASE="${MCP_URL%/sse}"
+              echo "Waiting for MCP server ($MCP_BASE/)..."
+              until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$MCP_BASE/")" != "000" ]; do sleep 5; done
+              echo "MCP server is up"
+          env:
+            - name: VLLM_URL
+              value: {{ include "aimchart-llm.url" $llmSub | quote }}
+            - name: MCP_URL
+              value: {{ include "mcp-server.url" . | quote }}
       containers:
         - name: agent-ui
           image: "{{ .Values.agentApp.image.repository }}:{{ .Values.agentApp.image.tag }}"
@@ -35,8 +59,9 @@ spec:
             - name: MCP_URL
               value: {{ include "mcp-server.url" . | quote }}
             - name: VLLM_URL
-              {{- $sub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") }}
-              value: {{ include "aimchart-llm.url" $sub | quote }}
+              value: {{ include "aimchart-llm.url" $llmSub | quote }}
+            - name: EMBEDDING_URL
+              value: {{ printf "%s/v1/embeddings" (include "embedding.baseUrl" .) | quote }}
               {{- if .Values.llm.apiKeySecretRef }}
             - name: VLLM_API_KEY
               valueFrom:

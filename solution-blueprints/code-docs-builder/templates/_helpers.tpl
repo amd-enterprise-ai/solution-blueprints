@@ -8,7 +8,7 @@
 
 {{- define "codedocs.llm.url" -}}
 {{- if not .Values.llm.existingService -}}
-{{- printf "http://%s-%s" .Values.llm.nameOverride .Release.Name -}}
+{{- printf "http://%s-%s" (default "llm" .Values.llm.nameOverride) .Release.Name -}}
 {{- else -}}
 {{- if hasPrefix "http" .Values.llm.existingService -}}
 {{ .Values.llm.existingService }}

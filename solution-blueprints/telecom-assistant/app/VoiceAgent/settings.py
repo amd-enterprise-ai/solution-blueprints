@@ -9,10 +9,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(case_sensitive=False, extra="ignore")
 
-    redis_url: str | None = Field(default=None, description="The redis url to connect to Redis")
-
     chroma_url: str | None = Field(default=None, description="The base url to use for ChromaDB")
-    collection_name: str = Field(default="billing_docs", description="The ChromaDB collection name")
+    collection_name: str = Field(default="billing_docs", description="The ChromaDB collection name for billing FAQ")
+    collection_troubleshooting: str = Field(
+        default="troubleshooting_docs", description="The ChromaDB collection name for troubleshooting PDFs"
+    )
 
     embeddings_url: str | None = Field(default=None, description="The base url to use for embeddings")
     embeddings_api_key: str = Field(default="no-key-required", description="The key to use for embeddings")
@@ -38,6 +39,15 @@ class Settings(BaseSettings):
     tts_base_url: str | None = Field(default=None, description="The base url to use for TTS")
     tts_api_key: str = Field(default="no-key-required", description="The key to use for TTS")
     tts_voice: str = Field(default="Aiden", description="The voice to use for TTS")
+
+    vlm_base_url: str | None = Field(default=None, alias="VLM_BASE_URL", description="The base url for VLM model")
+    vlm_api_key: str = Field(default="no-key-required", alias="VLM_API_KEY", description="The API key for VLM")
+    vlm_model_name: str = Field(default="", alias="VLM_MODEL_NAME", description="The VLM model name")
+
+    redis_host: str = Field(default="localhost", description="Redis host")
+    redis_port: int = Field(default=6379, description="Redis port")
+    redis_db: int = Field(default=0, description="Redis database number")
+    redis_password: str = Field(default="", description="Redis password")
 
 
 settings = Settings()

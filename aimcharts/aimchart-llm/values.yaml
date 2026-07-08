@@ -2,6 +2,32 @@
 #
 # SPDX-License-Identifier: MIT
 
+# platform defaults are filled in when the key is missing at the top level.
+platformDefaults:
+  instinct:
+    platform: instinct
+    image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.11.1"
+    gpus: 1
+    memory_per_gpu: 64
+    cpu_per_gpu: 4
+    env_vars: {}
+  epyc:
+    platform: epyc
+    image: "docker.io/amdenterpriseai/aim-epyc-meta-llama-llama-3-1-8b-instruct:0.11.0-preview"
+    gpus: 0
+    cpus: 188
+    memory: 128
+    env_vars:
+      AIM_PRECISION: "bf16"
+      AIM_ALLOW_UNOPTIMIZED: "true"
+  radeon:
+    platform: radeon
+    image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
+    gpus: 1
+    memory_per_gpu: 32
+    cpu_per_gpu: 4
+    env_vars: {}
+
 existingService: null  # Specify this to override the whole implementation, and use an existing service instead
 
 nameOverride: null
@@ -12,15 +38,10 @@ metadata:
   user_id: null
   workload_id: null # defaults to the release name
 
-image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.11.1"
 replicas: 1
 imagePullSecrets: []
   # Example:
   # - name: ghcr-regcred
-
-gpus: 1
-memory_per_gpu: 64 # Gi
-cpu_per_gpu: 4
 
 env_vars: {}
   # Available AIM Environment Variables:

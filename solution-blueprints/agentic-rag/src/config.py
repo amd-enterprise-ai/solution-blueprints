@@ -3,96 +3,166 @@
 # SPDX-License-Identifier: MIT
 
 import os
+import sys
 import time
 import urllib.parse
+from functools import lru_cache
 from typing import Final, cast
 
 import requests
 
-# This module reads all configuration from environment variables.
-# Defaults are suitable for in-cluster Kubernetes deployment.
-# Override via Helm values.yaml -> ConfigMap -> env vars.
+# All configuration is read from environment variables set by the Helm template.
+# Service URLs and model names have NO hardcoded defaults: a missing value
+# surfaces as an explicit error rather than masking a misconfiguration.
 
 __all__ = [
     "TITLE",
     "GRADIO_PORT",
     "MCP_URL",
-    "INFINITY_EMBEDDING_URL",
-    "VLLM_BASE_URL",
+    "EMBEDDING_URL",
+    "VLLM_API_KEY",
+    "VLLM_MODEL",
     "CHROMADB_URL",
     "CHROMADB_HOST",
     "CHROMADB_PORT",
     "CHUNK_SIZE",
     "CHUNK_OVERLAP",
+    "EMBED_MAX_TOKENS",
+    "get_embed_tokenizer",
+    "get_embed_model",
+    "get_gen_model",
+    "get_vllm_base_url",
     "TOP_K_DOCS",
-    "EMBED_MODEL",
-    "GEN_MODEL",
     "MAX_RETRIES",
     "INITIAL_DELAY",
     "BACKOFF_FACTOR",
+    "EMBEDDING_TIMEOUT",
 ]
 
 TITLE = "Agentic RAG (MCP Architecture)"
 GRADIO_PORT = int(os.getenv("GRADIO_PORT", "7860"))
 
 # MCP_URL: The SSE endpoint the agent connects to for tool discovery and invocation.
-# In K8s, this uses the internal Service DNS name to reach the MCP server.
 MCP_URL: Final[str] = cast(str, os.getenv("MCP_URL", "http://localhost:8000/sse"))
 
-# Service endpoints for the three backend components
-INFINITY_EMBEDDING_URL = cast(str, os.getenv("EMBEDDING_URL", "http://embedding-e5-large:7997/embeddings"))
-VLLM_BASE_URL = cast(str, os.getenv("VLLM_URL", "http://llama-3-3-70b:8000/v1"))
-VLLM_API_KEY = os.getenv("VLLM_API_KEY", "dummy")  # Optional API key for LLM service (if required by the backend)
-VLLM_MODEL = os.getenv("VLLM_MODEL", "")  # Optional override for model name (auto-detected if not set)
+# Required by components that talk to the embedding service (knowledge-mcp).
+# Empty when not set; consumers fail loudly via get_embed_model().
+EMBEDDING_URL: Final[str] = os.getenv("EMBEDDING_URL", "")
+
+VLLM_API_KEY = os.getenv("VLLM_API_KEY", "")
+VLLM_MODEL = os.getenv("VLLM_MODEL", "")  # Optional override; bypasses /models auto-detection.
 
 # ChromaDB connection: supports either a full URL or separate host/port
-CHROMADB_URL = cast(str, os.getenv("CHROMADB_URL", ""))  # Full URL takes priority if set
-CHROMADB_HOST = cast(str, os.getenv("CHROMADB_HOST", "chromadb-store"))  # Fallback: host
-CHROMADB_PORT = int(os.getenv("CHROMADB_PORT", "8000"))  # Fallback: port
+CHROMADB_URL = cast(str, os.getenv("CHROMADB_URL", ""))
+CHROMADB_HOST = cast(str, os.getenv("CHROMADB_HOST", ""))
+CHROMADB_PORT = int(os.getenv("CHROMADB_PORT", "8000"))
 
-# Chunking parameters for document splitting
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))  # Max characters per chunk
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))  # Overlap between chunks for context continuity
-TOP_K_DOCS = int(os.getenv("TOP_K_DOCS", "8"))  # Number of chunks to retrieve per query
+# Chunking parameters for document splitting.
+# CHUNK_SIZE/CHUNK_OVERLAP are interpreted as TOKENS when the embedding-model
+# tokenizer is available (default), otherwise as a conservative char-count.
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "300"))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "60"))
+TOP_K_DOCS = int(os.getenv("TOP_K_DOCS", "6"))  # Number of chunks to retrieve per query
+
+# Hard upper bound enforced by the embedding model (e.g. 512 for e5-large).
+# Inputs are truncated below this to leave margin for special / instruction tokens.
+EMBED_MAX_TOKENS = int(os.getenv("EMBED_MAX_TOKENS", "512"))
 
 # Retry parameters for transient service failures (e.g. embedding calls)
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
 INITIAL_DELAY = float(os.getenv("INITIAL_DELAY", "1.0"))
 BACKOFF_FACTOR = float(os.getenv("BACKOFF_FACTOR", "2.0"))
+EMBEDDING_TIMEOUT: int = int(os.getenv("EMBEDDING_TIMEOUT", "120"))
 
-# Number of retries when auto-detecting model names at startup
-INIT_RETRIES = int(os.getenv("INIT_RETRIES", "5"))
+# Number of retries when auto-detecting model names at startup.
+# The init container already gates the main pod on /health, so this is a
+# safety net for transient blips rather than a long startup wait.
+INIT_RETRIES = int(os.getenv("INIT_RETRIES", "3"))
 
 
-def init_model(url_suffix: str, base_url: str):
-    """Auto-detect the model name served by a backend.
+def _detect_model(base_url: str, with_auth: bool = False) -> str:
+    """Query an OpenAI-compatible /models endpoint and return the first model id.
 
-    Queries the /models endpoint (OpenAI-compatible API) to discover
-    what model is actually loaded. Falls back to a hardcoded default
-    if the service is unreachable after INIT_RETRIES attempts.
-    Uses exponential backoff (2^retry seconds) between retries.
+    Raises RuntimeError after INIT_RETRIES failed attempts. The Helm init
+    container guarantees the service is reachable before the app starts, so
+    failures here indicate a real misconfiguration rather than a startup race.
     """
+    base = base_url if base_url.endswith("/") else f"{base_url}/"
+    url = urllib.parse.urljoin(base, "models")
+    headers = {"Authorization": f"Bearer {VLLM_API_KEY}"} if with_auth and VLLM_API_KEY else {}
+    last_err = ""
     for retry in range(INIT_RETRIES):
+        if retry != 0:
+            time.sleep(2**retry)
         try:
-            url = urllib.parse.urljoin(base_url + ("/" if not base_url.endswith("/") else ""), url_suffix)
-            headers = {"Authorization": f"Bearer {VLLM_API_KEY}"} if VLLM_API_KEY else {}
-            r = requests.get(url, headers=headers, timeout=2.0)
+            r = requests.get(url, headers=headers, timeout=5.0)
             if r.status_code == 200:
-                if VLLM_MODEL:
-                    model_name = VLLM_MODEL
-                else:
-                    model_name = r.json()["data"][0]["id"]
-                return model_name
-        except Exception:
-            if retry != 0:
-                time.sleep(2**retry)
-    return None
+                data = r.json().get("data", [])
+                if data:
+                    return data[0]["id"]
+                last_err = f"{url} returned no models"
+            else:
+                last_err = f"{url} returned HTTP {r.status_code}"
+        except Exception as e:
+            last_err = f"{url}: {e}"
+            print(f"Model auto-detection failed for {base_url}: {e}", file=sys.stderr)
+    raise RuntimeError(f"Failed to auto-detect model after {INIT_RETRIES} attempts: {last_err}")
 
 
-# Auto-detect model names from the running services.
-# If detection fails (service not ready), use sensible defaults.
-EMBED_MODEL = (
-    init_model("models", INFINITY_EMBEDDING_URL.replace("/embeddings", "/"))
-    or "intfloat/multilingual-e5-large-instruct"  # Default embedding model
-)
-GEN_MODEL = init_model("models", VLLM_BASE_URL) or "openai/gpt-oss-20b"  # Default generation model
+@lru_cache(maxsize=1)
+def get_vllm_base_url() -> str:
+    url = os.getenv("VLLM_URL", "")
+    if not url:
+        raise RuntimeError("VLLM_URL env var must be set")
+    url = url.rstrip("/")
+    if not url.endswith("/v1"):
+        url = f"{url}/v1"
+    return url
+
+
+@lru_cache(maxsize=1)
+def get_embed_model() -> str:
+    """Return the embedding model name auto-detected from EMBEDDING_URL."""
+    if not EMBEDDING_URL:
+        raise RuntimeError("EMBEDDING_URL env var must be set")
+    base = EMBEDDING_URL.rstrip("/")
+    if base.endswith("/embeddings"):
+        base = base[: -len("/embeddings")]
+    return _detect_model(base)
+
+
+@lru_cache(maxsize=1)
+def get_gen_model() -> str:
+    """Return the generation model name; respects VLLM_MODEL override."""
+    if VLLM_MODEL:
+        return VLLM_MODEL
+    return _detect_model(get_vllm_base_url(), with_auth=True)
+
+
+# Lazy tokenizer loader for token-aware chunking + input truncation.
+_TOKENIZER_CACHE: dict = {}
+
+
+def get_embed_tokenizer():
+    """Return a HuggingFace tokenizer for EMBED_MODEL, or None if unavailable.
+
+    Loaded once and cached. A None result is also cached so we don't retry
+    repeatedly when transformers/sentencepiece aren't installed or the model
+    can't be downloaded.
+    """
+    if "tokenizer" in _TOKENIZER_CACHE:
+        return _TOKENIZER_CACHE["tokenizer"]
+    model = get_embed_model()
+    try:
+        from transformers import AutoTokenizer
+
+        tok = AutoTokenizer.from_pretrained(model)
+    except Exception as e:
+        print(
+            f"Could not load tokenizer for {model}: {e}. "
+            "Falling back to char-based chunking (less accurate for non-English text).",
+            file=sys.stderr,
+        )
+        tok = None
+    _TOKENIZER_CACHE["tokenizer"] = tok
+    return tok

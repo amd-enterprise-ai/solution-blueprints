@@ -6,17 +6,17 @@ apiVersion: v2
 name: aimsb-continuedev-assistant
 description: A local LLM assistant for your IDE
 type: application
-version: 0.8.1
+version: 0.8.2
 maintainers:
 - name: AMD
   url: https://www.amd.com/
 dependencies:
 - name: aimchart-llm
-  version: 0.2.6
+  version: 0.3.0
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: chatLLM
 - name: aimchart-llm
-  version: 0.2.6
+  version: 0.3.0
   repository: oci://registry-1.docker.io/amdenterpriseai
   alias: autocompleteLLM
   condition: autocomplete.enabled

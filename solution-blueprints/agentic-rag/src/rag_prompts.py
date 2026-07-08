@@ -6,13 +6,9 @@
 
 Every string the LLM sees (system prompts, grading rubrics, search instructions,
 fallback messages) lives here.  Keeping them in one file makes it easy to tune
-agent behaviour, A/B-test prompt variants, or swap prompt sets per agent — all
+agent behaviour, A/B-test prompt variants, or swap prompt sets per agent - all
 without touching the orchestration logic in rag_agent.py.
 """
-
-# ---------------------------------------------------------------------------
-# 1. ANSWER GENERATION
-# ---------------------------------------------------------------------------
 
 # Anti-hallucination prompt: forces the LLM to answer ONLY from retrieved context.
 # Key rules: no outside knowledge, include all matching items, no source citations.
@@ -21,7 +17,7 @@ ANSWER_SYSTEM_PROMPT = (
     "'Retrieved Context' section below. You have NO prior knowledge whatsoever.\n\n"
     "RULES:\n"
     "1. Answer using ONLY facts that are EXPLICITLY AND DIRECTLY STATED in the Retrieved Context.\n"
-    "2. Be thorough — include ALL relevant information from the context: direct answers, "
+    "2. Be thorough - include ALL relevant information from the context: direct answers, "
     "   surrounding background, supporting details, and related facts that help fully "
     "   understand the answer. Do not omit context that enriches the response even if "
     "   it was not explicitly asked for.\n"
@@ -34,7 +30,7 @@ ANSWER_SYSTEM_PROMPT = (
     "5. NEVER fill in gaps with outside knowledge, even if you know the answer.\n"
     "6. If the context does not explicitly state the specific answer, "
     "   report what the context DOES explicitly say that is related, then note what is missing.\n"
-    "7. Do NOT say the documents lack information — the context has already been verified "
+    "7. Do NOT say the documents lack information - the context has already been verified "
     "   as relevant. Always extract and report whatever relevant content is present.\n"
     "8. Do NOT add source citations or references."
 )
@@ -46,10 +42,6 @@ NOT_FOUND_MESSAGE = (
     "your question. The documents may not contain information about this topic. "
     "Please try uploading documents that cover this subject, or rephrase your question."
 )
-
-# ---------------------------------------------------------------------------
-# 2. COMPLETENESS CHECK
-# ---------------------------------------------------------------------------
 
 # Used after the first YES verdict to decide if we need another search.
 # FULLY → stop and answer.  PARTIALLY → search again for missing parts.
@@ -65,17 +57,13 @@ COMPLETENESS_PROMPT_TEMPLATE = (
     "Reply with EXACTLY one word: FULLY or PARTIALLY."
 )
 
-# ---------------------------------------------------------------------------
-# 3. RELEVANCE GRADING
-# ---------------------------------------------------------------------------
-
 # Intentionally lenient to avoid rejecting topically-related content.
 # Grading happens after each retrieval; YES promotes content to relevant_contexts.
 GRADER_PROMPT_TEMPLATE = (
     "Question: {question}\n\n"
     "Retrieved Text:\n{text}\n\n"
     "Does this text mention ANY of the topics, people, events, or concepts in the question?\n"
-    "Answer YES if the text is about the same subject, characters, or setting — "
+    "Answer YES if the text is about the same subject, characters, or setting - "
     "even if it only partially addresses the question or provides background context.\n"
     "Answer NO only if the text is completely unrelated to the question topic.\n"
     "When in doubt, answer YES.\n"
@@ -88,7 +76,7 @@ MULTI_CHUNK_GRADER_PROMPT = (
     "Question: {question}\n\n"
     "Below are {n} retrieved text passages, numbered [1] to [{n}].\n"
     "Mark a passage as relevant if it mentions ANY of the same topics, characters, "
-    "events, or concepts as the question — even if it only partially addresses it "
+    "events, or concepts as the question - even if it only partially addresses it "
     "or provides background context. Err on the side of including passages.\n"
     "Mark a passage as NOT relevant ONLY if it is completely unrelated to the question topic.\n\n"
     "{passages}\n\n"
@@ -101,10 +89,6 @@ MULTI_CHUNK_GRADER_PROMPT = (
 # so the reasoner knows to try a different search strategy.
 GRADER_REJECT_HINT = "Previous search was not relevant. Try different keywords."
 
-# ---------------------------------------------------------------------------
-# 4. SEARCH / TOOL-USE INSTRUCTIONS
-# ---------------------------------------------------------------------------
-
 # Base instruction given to the LLM when it should search instead of answer.
 SEARCH_SYSTEM_PROMPT = (
     "You are a RAG Analyst. You MUST use the 'retrieve_documents' tool to search for information. "
@@ -112,7 +96,7 @@ SEARCH_SYSTEM_PROMPT = (
 )
 
 # Appended when we already have PARTIAL info and need more.
-# Placeholders: {past_queries} — comma-separated quoted list, {found_preview} — snippet.
+# Placeholders: {past_queries} - comma-separated quoted list, {found_preview} - snippet.
 SEARCH_PARTIAL_ADDENDUM = (
     "\n\nYou already searched with: {past_queries} and found PARTIAL information. "
     'Here is a summary of what was already found: "{found_preview}..." '
@@ -123,7 +107,7 @@ SEARCH_PARTIAL_ADDENDUM = (
 )
 
 # Appended when all previous searches returned zero relevant results.
-# Placeholder: {past_queries} — comma-separated quoted list.
+# Placeholder: {past_queries} - comma-separated quoted list.
 SEARCH_FAILED_ADDENDUM = (
     "\n\nIMPORTANT: The following searches FAILED to find relevant info: {past_queries}. "
     "You MUST use COMPLETELY DIFFERENT keywords and phrasing. "
@@ -134,7 +118,7 @@ SEARCH_FAILED_ADDENDUM = (
 # Forces the reasoner to pivot to fundamentally different keywords.
 GRADER_DUPLICATE_HINT = (
     "DUPLICATE: The last search returned IDENTICAL content to a previous search. "
-    "You MUST try a completely different approach — use only the character name, "
+    "You MUST try a completely different approach - use only the character name, "
     "or a single key noun from the question, or a synonym. "
     "Do NOT rephrase the same query."
 )

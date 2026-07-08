@@ -10,7 +10,7 @@ To use this function, build a context with .Values, .Release, and .Chart metadat
 {{ if not .Values.existingService -}}
 http://{{ include "aimchart-qwen-tts.release.fullname" . }}/v1
 {{- else -}}
-{{ if hasPrefix .Values.existingService "http" }}
+{{- if hasPrefix "http" .Values.existingService -}}
 {{ .Values.existingService }}/v1
 {{- else -}}
 http://{{ .Values.existingService }}/v1

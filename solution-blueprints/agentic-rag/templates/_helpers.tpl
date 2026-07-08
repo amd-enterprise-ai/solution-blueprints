@@ -21,7 +21,7 @@ http://{{ include "release.fullname" . }}-knowledge-mcp:{{ .Values.knowledgeMcp.
 {{- end -}}
 
 {{/*
-URL for ChromaDB — honours chromadb.existingService when set (mirrors aim-chromadb.url logic).
+URL for ChromaDB - honours chromadb.existingService when set (mirrors aim-chromadb.url logic).
 Use CHROMADB_URL env var so backend.py prefers the full URL over CHROMADB_HOST/PORT.
 */}}
 {{- define "chromadb.url" -}}
@@ -37,8 +37,8 @@ http://{{ .Release.Name }}-chromadb:{{ .Values.chromadb.deployment.ports.http }}
 {{- end -}}
 
 {{/*
-Base URL for the Embedding service — honours embedding.existingService when set (mirrors aim-embedding.url logic).
-Append /embeddings in the Deployment template for the Infinity API path.
+Base URL for the Embedding service - honours embedding.existingService when set (mirrors aim-embedding.url logic).
+Append /v1/embeddings in the Deployment template for the vLLM OpenAI-compatible API path.
 */}}
 {{- define "embedding.baseUrl" -}}
 {{- if .Values.embedding.existingService -}}
@@ -48,6 +48,6 @@ Append /embeddings in the Deployment template for the Infinity API path.
 http://{{ .Values.embedding.existingService }}
 {{- end -}}
 {{- else -}}
-http://{{ .Release.Name }}-embedding:{{ .Values.embedding.deployment.ports.http }}
+http://{{ .Release.Name }}-aimchart-embedding:{{ dig "deployment" "ports" "http" 7997 .Values.embedding }}
 {{- end -}}
 {{- end -}}

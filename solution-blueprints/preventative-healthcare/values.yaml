@@ -67,14 +67,11 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
 
 llm:
   existingService: ""
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  nameOverride: llama33-70b-instruct
-  env_vars:
-    AIM_PRECISION: "fp8"
+  nameOverride: "aimsb-preventative-healthcare-llm"
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
   apiKeySecretRef: {}
@@ -87,3 +84,8 @@ llm:
     ephemeral:
       storageClassName: mlstorage
       quantity: 512Gi
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"

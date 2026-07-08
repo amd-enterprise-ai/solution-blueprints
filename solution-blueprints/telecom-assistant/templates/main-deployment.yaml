@@ -15,67 +15,29 @@
 {{- $httpHostSuffix := default "" (index $httpRoute "hostSuffix") | trimPrefix "." -}}
 {{- $frontendWssHttpRouteAuto := printf "wss://livekit-%s.%s" $releaseFullname $httpHostSuffix -}}
 {{- $env := merge (dict) (default (dict) $svc.env) -}}
-{{- if eq $name "agent" }}
-  {{- $qwenSttSub := dict
-        "Values" (merge (dict) (index $.Values "stt"))
-        "Release" $.Release
-        "Chart" (dict "Name" "stt")
-  -}}
-  {{- $llmSub := dict
-        "Values" (merge (dict) $.Values.llm)
-        "Release" $.Release
-        "Chart" (dict "Name" "llm")
-  -}}
-  {{- $qwenTtsSub := dict
-        "Values" (merge (dict) (index $.Values "tts"))
-        "Release" $.Release
-        "Chart" (dict "Name" "tts")
-  -}}
-  {{- $chromadbSub := dict
-        "Values" (merge (dict) (index $.Values "chromadb"))
-        "Release" $.Release
-        "Chart" (dict "Name" "chromadb")
-  -}}
-  {{- $embeddingsSub := dict
-        "Values" (merge (dict) (index $.Values "embedding"))
-        "Release" $.Release
-        "Chart" (dict "Name" "embedding")
-  -}}
-  {{- $qwenSttUrl := include "aimchart-qwen-asr.url" $qwenSttSub }}
-  {{- $llmUrl := include "aimchart-llm.url" $llmSub }}
-  {{- $qwenTtsUrl := include "aimchart-qwen-tts.url" $qwenTtsSub }}
-  {{- $chromadbUrl := include "aim-chromadb.url" $chromadbSub }}
-  {{- $embeddingsUrl := include "aim-embedding.url" $embeddingsSub }}
-  {{- $libredeskHost := include "release.componentName" (dict "root" $ "name" "libredesk") }}
-  {{- $libredeskPort := (index ($.Values.infraServices.libredesk.ports | first) "port") | default 9000 }}
-  {{- $libredeskUrl := printf "http://%s:%v" $libredeskHost $libredeskPort }}
 
-  {{- if or (not (hasKey $env "LLM_BASE_URL")) (eq (get $env "LLM_BASE_URL") "") }}
-    {{- $_ := set $env "LLM_BASE_URL" $llmUrl }}
-  {{- end }}
-  {{- if or (not (hasKey $env "STT_BASE_URL")) (eq (get $env "STT_BASE_URL") "") }}
-    {{- $_ := set $env "STT_BASE_URL" $qwenSttUrl }}
-  {{- end }}
-  {{- if or (not (hasKey $env "TTS_BASE_URL")) (eq (get $env "TTS_BASE_URL") "") }}
-    {{- $_ := set $env "TTS_BASE_URL" (printf "%s" $qwenTtsUrl) }}
-  {{- end }}
-  {{- if or (not (hasKey $env "CHROMA_URL")) (eq (get $env "CHROMA_URL") "") }}
-    {{- $_ := set $env "CHROMA_URL" $chromadbUrl }}
-  {{- end }}
-  {{- if or (not (hasKey $env "EMBEDDINGS_URL")) (eq (get $env "EMBEDDINGS_URL") "") }}
-    {{- $_ := set $env "EMBEDDINGS_URL" (printf "%s" $embeddingsUrl) }}
-  {{- end }}
-  {{- if or (not (hasKey $env "BSSGATEWAY_URL")) (eq (get $env "BSSGATEWAY_URL") "") }}
-    {{- $bssGatewayHost := include "release.componentName" (dict "root" $ "name" "bssgateway") }}
-    {{- $bssGatewayPort := $.Values.mainServices.bssgateway.port | toString }}
-    {{- $_ := set $env "BSSGATEWAY_URL" (printf "http://%s:%s" $bssGatewayHost $bssGatewayPort) }}
-  {{- end }}
-  {{- if or (not (hasKey $env "LIVEKIT_URL")) (eq (get $env "LIVEKIT_URL") "") }}
-    {{- $_ := set $env "LIVEKIT_URL" $livekitWsUrl }}
-  {{- end }}
-  {{- if or (not (hasKey $env "LIBREDESK_URL")) (eq (get $env "LIBREDESK_URL") "") }}
-    {{- $_ := set $env "LIBREDESK_URL" $libredeskUrl }}
-  {{- end }}
+{{- if eq $name "agent" }}
+  {{- $urls := include "telecom.serviceUrls" (dict "root" $) | fromYaml -}}
+  {{- $libredeskHost := include "release.componentName" (dict "root" $ "name" "libredesk") -}}
+  {{- $libredeskPort := (index ($.Values.infraServices.libredesk.ports | first) "port") | default 9000 -}}
+  {{- $libredeskUrl := printf "http://%s:%v" $libredeskHost $libredeskPort -}}
+  {{- $bssGatewayUrl := printf "http://%s:%s"
+        (include "release.componentName" (dict "root" $ "name" "bssgateway"))
+        ($.Values.mainServices.bssgateway.port | toString) -}}
+  {{- $redisHost := include "release.componentName" (dict "root" $ "name" "redis") -}}
+  {{- $computed := dict
+        "LLM_BASE_URL"   $urls.llm
+        "STT_BASE_URL"   $urls.stt
+        "TTS_BASE_URL"   $urls.tts
+        "CHROMA_URL"     $urls.chromadb
+        "EMBEDDINGS_URL" (printf "%s/v1" $urls.embedding)
+        "VLM_BASE_URL"   $urls.vlm
+        "BSSGATEWAY_URL" $bssGatewayUrl
+        "LIVEKIT_URL"    $livekitWsUrl
+        "LIBREDESK_URL"  $libredeskUrl
+        "REDIS_HOST"     $redisHost
+  -}}
+  {{- $env = merge $env $computed -}}
 {{- end }}
 
 {{- if eq $name "frontend" }}
@@ -92,6 +54,13 @@
     {{- end }}
 
   {{- end }}
+
+  {{- if or (not (hasKey $env "AGENT_URL")) (eq (get $env "AGENT_URL") "") }}
+    {{- $agentHost := include "release.componentName" (dict "root" $ "name" "agent") }}
+    {{- $agentPort := $.Values.mainServices.agent.port | toString }}
+    {{- $_ := set $env "AGENT_URL" (printf "http://%s:%s" $agentHost $agentPort) }}
+  {{- end }}
+
 {{- end }}
 
 ---
@@ -124,117 +93,25 @@ spec:
         {{- end }}
       {{- end }}
       {{- if eq $name "agent" }}
-      {{- $qwenSttSub := dict
-            "Values" (merge (dict) (index $.Values "stt"))
-            "Release" $.Release
-            "Chart" (dict "Name" "stt")
-      -}}
-      {{- $llmSub := dict
-            "Values" (merge (dict) $.Values.llm)
-            "Release" $.Release
-            "Chart" (dict "Name" "llm")
-      -}}
-      {{- $qwenTtsSub := dict
-            "Values" (merge (dict) (index $.Values "tts"))
-            "Release" $.Release
-            "Chart" (dict "Name" "tts")
-      -}}
-      {{- $chromadbSub := dict
-            "Values" (merge (dict) (index $.Values "chromadb"))
-            "Release" $.Release
-            "Chart" (dict "Name" "chromadb")
-      -}}
-      {{- $embeddingsSub := dict
-            "Values" (merge (dict) (index $.Values "embedding"))
-            "Release" $.Release
-            "Chart" (dict "Name" "embedding")
-      -}}
-      {{- $qwenSttUrl := include "aimchart-qwen-asr.url" $qwenSttSub }}
-      {{- $llmUrl := include "aimchart-llm.url" $llmSub }}
-      {{- $qwenTtsUrl := include "aimchart-qwen-tts.url" $qwenTtsSub }}
-      {{- $chromadbUrl := include "aim-chromadb.url" $chromadbSub }}
-      {{- $embeddingsUrl := include "aim-embedding.url" $embeddingsSub }}
-      {{- $libredeskHost := include "release.componentName" (dict "root" $ "name" "libredesk") }}
-      {{- $libredeskPort := (index ($.Values.infraServices.libredesk.ports | first) "port") | default 9000}}
+      {{- $urls := include "telecom.serviceUrls" (dict "root" $) | fromYaml -}}
+      {{- $libredeskHost := include "release.componentName" (dict "root" $ "name" "libredesk") -}}
+      {{- $libredeskPort := (index ($.Values.infraServices.libredesk.ports | first) "port") | default 9000 }}
       initContainers:
-        - name: wait-for-qwen-stt
-          image: curlimages/curl:8.18.0
-          command: [ "sh", "-c" ]
-          args:
-            - |
-              STT_URL="{{ $qwenSttUrl }}/models"
-              echo "Waiting for qwen-stt service ($STT_URL)..."
-              until curl -s -f -o /dev/null $STT_URL; do sleep 5; done
-              echo "qwen-stt service is up"
-        - name: wait-for-llm
-          image: curlimages/curl:8.18.0
-          command: ["sh", "-c"]
-          args:
-            - |
-              VLLM_URL="{{ $llmUrl }}/models"
-              echo "Waiting for LLM service ($VLLM_URL)..."
-              until curl -s -f -o /dev/null $VLLM_URL; do sleep 5; done
-              echo "LLM service is up"
-        - name: wait-for-qwen-tts
-          image: curlimages/curl:8.18.0
-          command: [ "sh", "-c" ]
-          args:
-            - |
-              TTS_URL="{{ $qwenTtsUrl }}/models"
-              echo "Waiting for qwen-tts service ($TTS_URL)..."
-              until curl -s -f -o /dev/null $TTS_URL; do sleep 5; done
-              echo "qwen-tts service is up"
-        - name: wait-for-livekit
-          image: busybox:1.36
-          command: ["sh", "-c"]
-          args:
-            - |
-              LIVEKIT_HOST="{{ $livekitHost }}"
-              LIVEKIT_PORT="{{ $livekitServicePort }}"
-              echo "Waiting for LiveKit tcp://$LIVEKIT_HOST:$LIVEKIT_PORT..."
-              until nc -z $LIVEKIT_HOST $LIVEKIT_PORT; do sleep 2; done
-              echo "LiveKit is up"
-        - name: wait-for-chromadb
-          image: curlimages/curl:8.18.0
-          command: ["sh", "-c"]
-          args:
-            - |
-              CHROMA_PING_URL="{{ $chromadbUrl }}/api/v2/heartbeat"
-              echo "Waiting for ChromaDB ($CHROMA_PING_URL)..."
-              until curl -s -f -o /dev/null $CHROMA_PING_URL; do sleep 5; done
-              echo "ChromaDB is up"
-        - name: wait-for-embedding
-          image: curlimages/curl:8.18.0
-          command: ["sh", "-c"]
-          args:
-            - |
-              EMBEDDING_URL="{{ $embeddingsUrl }}/models"
-              echo "Waiting for Embedding service ($EMBEDDING_URL)..."
-              until curl -s -f -o /dev/null $EMBEDDING_URL; do sleep 5; done
-              echo "Embedding service is up"
-        - name: wait-for-libredesk
-          image: busybox:1.36
-          command: [ "sh", "-c" ]
-          args:
-            - |
-              LIBREDESK_HOST="{{ $libredeskHost }}"
-              LIBREDESK_PORT="{{ $libredeskPort }}"
-              echo "Waiting for Libredesk ($LIBREDESK_HOST:$LIBREDESK_PORT)..."
-              until nc -z $LIBREDESK_HOST $LIBREDESK_PORT; do sleep 5; done
-              echo "Libredesk is up!"
+        {{- range $w := list
+              (dict "name" "qwen-stt"  "url" (printf "%s/models" $urls.stt))
+              (dict "name" "llm"       "url" (printf "%s/models" $urls.llm))
+              (dict "name" "qwen-tts"  "url" (printf "%s/models" $urls.tts))
+              (dict "name" "chromadb"  "url" (printf "%s/api/v2/heartbeat" $urls.chromadb))
+              (dict "name" "embedding" "url" (printf "%s/v1/models" $urls.embedding))
+              (dict "name" "vlm"       "url" (printf "%s/models" $urls.vlm)) }}
+        {{- include "telecom.waitHttp" $w | nindent 8 }}
+        {{- end }}
+        {{- include "telecom.waitTcp" (dict "name" "livekit"   "host" $livekitHost   "port" $livekitServicePort "interval" 2) | nindent 8 }}
+        {{- include "telecom.waitTcp" (dict "name" "libredesk" "host" $libredeskHost "port" $libredeskPort) | nindent 8 }}
       {{- end }}
       {{- if eq $name "frontend" }}
       initContainers:
-        - name: wait-for-livekit
-          image: busybox:1.36
-          command: [ "sh", "-c" ]
-          args:
-            - |
-              LIVEKIT_HOST="{{ $livekitHost }}"
-              LIVEKIT_PORT="{{ $livekitServicePort }}"
-              echo "Waiting for LiveKit tcp://$LIVEKIT_HOST:$LIVEKIT_PORT..."
-              until nc -z $LIVEKIT_HOST $LIVEKIT_PORT; do sleep 2; done
-              echo "LiveKit is up"
+        {{- include "telecom.waitTcp" (dict "name" "livekit" "host" $livekitHost "port" $livekitServicePort "interval" 2) | nindent 8 }}
       {{- end }}
       containers:
         - name: {{ $name }}

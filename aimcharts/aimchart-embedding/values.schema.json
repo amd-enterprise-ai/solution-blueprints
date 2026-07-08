@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "aimchart-embedding values",
+  "type": "object",
+  "properties": {
+    "platform": {
+      "type": "string",
+      "enum": ["instinct", "radeon", "epyc"],
+      "description": "Hardware platform profile; selects defaults from .Values.platformDefaults.<platform>."
+    },
+    "global": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": ["instinct", "radeon", "epyc"],
+          "description": "Optional. When set (typically by a parent chart), used as a fallback when .Values.platform is not set."
+        }
+      }
+    }
+  }
+}

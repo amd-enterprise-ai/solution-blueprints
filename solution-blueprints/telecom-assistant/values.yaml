@@ -8,6 +8,9 @@ metadata:
 
 http_route:
   enabled: false
+  gateway:
+    name: https
+    namespace: envoy-gateway-system
 
 imagePullPolicy: Always
 imagePullSecrets: []
@@ -24,10 +27,10 @@ storage:
 resources:
   requests:
     cpu: "500m"
-    memory: "1Gi"
+    memory: "2Gi"
   limits:
     cpu: "2"
-    memory: "2Gi"
+    memory: "4Gi"
 
 env_vars: {}
 
@@ -36,7 +39,7 @@ mainServices:
     enabled: true
     replicas: 1
     image:
-      repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-telecom-assistant-bssgateway"
+      repository: "docker.io/amdenterpriseai/image-aimsb-telecom-assistant-bssgateway"
       tag: "{{ .Chart.Version }}"
     port: 8001
     run: "uvicorn main:app --host 0.0.0.0 --port 8001"
@@ -45,45 +48,47 @@ mainServices:
     enabled: true
     replicas: 1
     image:
-      repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-telecom-assistant-agent"
+      repository: "docker.io/amdenterpriseai/image-aimsb-telecom-assistant-agent"
       tag: "{{ .Chart.Version }}"
-    port: null
+    port: 8002
     run: "uv run python agent.py start"
+    # The following env keys are auto-derived when absent:
+    #   LLM_BASE_URL, STT_BASE_URL, TTS_BASE_URL, TTS_BASE_URL, BSSGATEWAY_URL,
+    #   CHROMA_URL, EMBEDDINGS_URL, VLM_BASE_URL, LIVEKIT_URL, LIBREDESK_URL, REDIS_HOST
+    # Override any of them here to use a custom value instead.
     env:
       LOG_LEVEL: "INFO"
-      LIVEKIT_URL: ""
       LIVEKIT_API_KEY: "APIhSHdhCSBtLXU"
       LIVEKIT_API_SECRET: "hueQUixySH0Yu6Vo6EYnLZYeIaQvhQfMLZTezKNNqgLA"
       STT_MODEL: "Qwen/Qwen3-ASR-1.7B"
-      STT_BASE_URL: ""
       STT_API_KEY: "no-key-required"
       LLM_MODEL: "openai/gpt-oss-120b"
-      LLM_BASE_URL: ""
       LLM_API_KEY: "no-key-required"
       TTS_MODEL: "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
-      TTS_BASE_URL: ""
       TTS_API_KEY: "no-key-required"
       TTS_VOICE: "Aiden"
-      BSSGATEWAY_URL: ""
       COLLECTION_NAME: "billing_docs"
-      CHROMA_URL: ""
-      EMBEDDINGS_URL: ""
       EMBEDDINGS_API_KEY: "no-key-required"
       EMBEDDINGS_MODEL: "intfloat/multilingual-e5-large-instruct"
-      LIBREDESK_URL: ""
       LIBREDESK_TOKEN: "UWDxRuedjlKH7LNfZ6jKzrfmGR4wF77I:KvduSjwCOF4AVsslYJ76rC6JTAcm1KgOadyioChy38HAPTMApGN1GJIZNVokoc7d"
       LIBREDESK_INBOX_ID: 1
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      REDIS_PASSWORD: ""
+      VLM_API_KEY: ""
+      VLM_MODEL_NAME: ""
 
   frontend:
     enabled: true
     replicas: 1
     image:
-      repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-telecom-assistant-frontend"
+      repository: "docker.io/amdenterpriseai/image-aimsb-telecom-assistant-frontend"
       tag: "{{ .Chart.Version }}"
     run: "node server/index.cjs"
     port: 3000
     env:
       NODE_ENV: production
+      AGENT_URL: ""
       LIVEKIT_URL: ""
       LIVEKIT_API_KEY: "APIhSHdhCSBtLXU"
       LIVEKIT_API_SECRET: "hueQUixySH0Yu6Vo6EYnLZYeIaQvhQfMLZTezKNNqgLA"
@@ -189,27 +194,7 @@ chromadb:
 
 # Embedding
 embedding:
-  metadata:
-    labels: { }
-  image: "michaelf34/infinity:0.0.70-amd-gfx942"
-  model: "intfloat/multilingual-e5-large-instruct"
-  gpus: 1
-  resources:
-    requests: { cpu: "2", memory: "32Gi" }
-    limits: { cpu: "4", memory: "192Gi" }
-  storage:
-    ephemeral:
-      quantity: 20Gi
-    dshm:
-      sizeLimit: 16Gi
-  deployment:
-    ports:
-      http: 7997
-    command:
-      - infinity_emb
-    args:
-      - v1
-      - server
+  nameOverride: "aimchart-embedding"
 
 # LiveKit
 livekit:
@@ -236,16 +221,22 @@ stt:
   nameOverride: "qwen-asr"
 
 llm:
-  nameOverride: "aim-openai-gpt-oss-120b"
-  image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.11.1"
+  nameOverride: "aimsb-telecom-assistant-llm"
+  image: "docker.io/amdenterpriseai/aim-openai-gpt-oss-120b:0.11.1"
 
   storage:
     ephemeral:
       quantity: 512Gi
       storageClassName: mlstorage
 
+  env_vars:
+    AIM_ENGINE_ARGS: '{"enable-prefix-caching": null}'
+
 tts:
   nameOverride: "qwen-tts"
+
+vlm:
+  image: "amdenterpriseai/aim-mistralai-mistral-small-3-2-24b-instruct-2506:0.11.1"
 
 # =============================================================================
 # STUNner — Kubernetes-native WebRTC media gateway.
@@ -254,16 +245,16 @@ tts:
 # (single LoadBalancer port), STUNner routes media internally to LiveKit pods.
 # This replaces the wide UDP 50000-60000 node-level exposure entirely.
 #
-# PREREQUISITE: stunner-gateway-operator must be installed cluster-wide.
-# Run ./install-prerequisites.sh once per cluster before deploying this chart.
+# PREREQUISITE: The STUNner operator and the shared "stunner" GatewayClass must
+# be installed cluster-wide by a cluster-admin before deploying this chart.
+# Run ./install-prerequisites.sh once per cluster.
+#
+# Each blueprint deployment creates its own Gateway, GatewayConfig, and UDPRoute.
+# The shared cluster-level operator reconciles them independently, so multiple
+# blueprint deployments can coexist on the same cluster without conflicts.
 # =============================================================================
 stunner:
   enabled: true
-
-  # STUNner subchart values (alias: stunner).
-  # The subchart installs only the CRDs/controller — actual gateway pods are
-  # provisioned automatically by the operator per Gateway resource below.
-  stunner: {}  # override stunner subchart values here if needed
 
   # TURN credentials used by browsers to authenticate with STUNner.
   # Must match what LiveKit advertises to clients in its TURN config.

@@ -37,11 +37,7 @@ async def health():
 
 
 # API LOGIC
-def process_rag_logic(files, question: str) -> str:
-    if files:
-        file_paths = [f.name if hasattr(f, "name") else f for f in files]
-        kb.build(file_paths)
-
+def process_rag_logic(question: str) -> str:
     final_answer = ""
     full_log = ""
     for chunk in run_rag(question, kb):
@@ -54,13 +50,17 @@ def process_rag_logic(files, question: str) -> str:
 
 @app.post("/process")
 async def api_process(request: Request):
+    """Run a RAG query against the already-indexed knowledge base.
+    Use the Gradio UI to upload documents; this endpoint only answers questions against the current KB.
+    """
     try:
         data = await request.json()
         question = data.get("question", "")
-        files = data.get("files", [])
-        result = await asyncio.to_thread(process_rag_logic, files, question)
+        if not isinstance(question, str) or not question.strip():
+            return JSONResponse(status_code=400, content={"error": "Field 'question' is required."})
+        result = await asyncio.to_thread(process_rag_logic, question)
         return {"result": result}
-    except Exception as exc:
+    except Exception:
         logger.exception("API Error")
         return JSONResponse(status_code=500, content={"error": "An internal error has occurred."})
 

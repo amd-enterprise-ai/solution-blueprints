@@ -2,7 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-{{ if not .Values.existingService -}}
+{{- $pv := include "aimchart-embedding.platformValues" . | fromYaml -}}
+{{- $ctx := merge (dict "Values" $pv) (omit . "Values") -}}
+{{- with $ctx -}}
+
+{{- if not .Values.existingService }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -17,4 +21,6 @@ spec:
     targetPort: http
   selector:
     app: {{ include "aim-embedding.release.fullname" . }}
+{{- end -}}
+
 {{- end -}}

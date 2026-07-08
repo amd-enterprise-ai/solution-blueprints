@@ -149,5 +149,13 @@ http://{{ include "router.complexName" . }}-router-classifier:{{ .Values.ports.r
 {{- end -}}
 
 {{- define "embedding.url" -}}
- http://{{ .Release.Name }}-embedding:{{ .Values.embedding.deployment.ports.http }}
+{{- if .Values.embedding.existingService -}}
+{{- if hasPrefix "http" .Values.embedding.existingService -}}
+{{- .Values.embedding.existingService -}}
+{{- else -}}
+http://{{ .Values.embedding.existingService }}
+{{- end -}}
+{{- else -}}
+http://{{ .Release.Name }}-aimchart-embedding:{{ dig "deployment" "ports" "http" 7997 .Values.embedding }}
+{{- end -}}
 {{- end -}}

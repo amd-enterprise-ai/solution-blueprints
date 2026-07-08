@@ -7,12 +7,12 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
 
 metadata:
   labels: {}
 
-image: "python:3.12"
+image: "docker.io/library/python:3.12"
 imagePullPolicy: Always
 
 # Environment variables for the talk-to-your-documents application.
@@ -21,9 +21,9 @@ env_vars:
   MAX_RETRIES: "3"
   INITIAL_DELAY: "1.0"
   BACKOFF_FACTOR: "2.0"
-  CHUNK_SIZE: "1000"
-  CHUNK_OVERLAP: "200"
-  TOP_K_DOCS: "5"
+  CHUNK_SIZE: "300"
+  CHUNK_OVERLAP: "60"
+  TOP_K_DOCS: "6"
 
 deployment:
   ports:
@@ -59,15 +59,16 @@ readinessProbe:
 kaiwo:
   enabled: false
 
+global:
+  platform: instinct
+
 # -- Values passed to the `llm` Subchart (aimchart-llm) --
 
 llm:
+  nameOverride: "aimchart-llm"
   service:
     enabled: true
     type: ClusterIP
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  env_vars:
-    AIM_PRECISION: "fp8"
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
   apiKeySecretRef: {}
@@ -79,31 +80,33 @@ llm:
     ephemeral:
       storageClassName: mlstorage
       quantity: 512Gi
-
-# -- Values passed to the `embedding` Subchart (aimchart-embedding) --
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
+    epyc:
+      image: "docker.io/amdenterpriseai/aim-epyc-meta-llama-llama-3-1-8b-instruct:0.13.0"
+      gpus: 0
+      # Fit weights + KV cache + overhead to avoid OOMKilled;
+      memory: 128
+      # cpus=188 keeps the LLM within a single NUMA node (EPYC 9965 = 192 cores/node, SMT off).
+      cpus: 188
+      env_vars:
+        AIM_PRECISION: "bf16"
+        AIM_ALLOW_UNOPTIMIZED: "true"
 
 embedding:
-  metadata:
-    labels: {}
-  image: "michaelf34/infinity:0.0.70-amd-gfx942"
-  model: "intfloat/multilingual-e5-large-instruct"
-  gpus: 1
-  resources:
-    requests: { cpu: "2", memory: "32Gi" }
-    limits: { cpu: "4", memory: "192Gi" }
-  storage:
-    ephemeral:
-      quantity: 20Gi
-    dshm:
-      sizeLimit: 16Gi
-  deployment:
-    ports:
-      http: 7997
-    command:
-    - infinity_emb
-    args:
-    - v1
-    - server
+  nameOverride: "aimchart-embedding"
+  platformDefaults:
+    epyc:
+      resources:
+        requests:
+          cpu: "32"
+          memory: "32Gi"
+        limits:
+          cpu: "32"
+          memory: "32Gi"
 
 # -- Values passed to the `chromadb` Subchart (aimchart-chromadb) --
 
@@ -111,7 +114,7 @@ chromadb:
   metadata:
     labels: {}
   image:
-    repository: "chromadb/chroma"
+    repository: "docker.io/chromadb/chroma"
     tag: "1.3.5"
   resources:
     requests: { cpu: "1", memory: "4Gi" }

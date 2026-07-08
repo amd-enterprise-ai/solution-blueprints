@@ -86,3 +86,35 @@
 {{ toYaml .extraVolumes | nindent 0 }}
 {{- end }}
 {{- end -}}
+
+{{- define "telecom.serviceUrls" -}}
+{{- $ := .root -}}
+stt:       {{ include "aimchart-qwen-asr.url" (dict "Values" $.Values.stt       "Release" $.Release "Chart" (dict "Name" "stt"))       | trim | quote }}
+llm:       {{ include "aimchart-llm.url"      (dict "Values" $.Values.llm       "Release" $.Release "Chart" (dict "Name" "llm"))       | trim | quote }}
+tts:       {{ include "aimchart-qwen-tts.url" (dict "Values" $.Values.tts       "Release" $.Release "Chart" (dict "Name" "tts"))       | trim | quote }}
+chromadb:  {{ include "aim-chromadb.url"      (dict "Values" $.Values.chromadb  "Release" $.Release "Chart" (dict "Name" "chromadb"))  | trim | quote }}
+embedding: {{ include "aim-embedding.url"     (dict "Values" $.Values.embedding "Release" $.Release "Chart" (dict "Name" "embedding")) | trim | quote }}
+vlm:       {{ include "aimchart-llm.url"      (dict "Values" $.Values.vlm       "Release" $.Release "Chart" (dict "Name" "vlm"))       | trim | quote }}
+{{- end -}}
+
+{{- define "telecom.waitHttp" -}}
+- name: wait-for-{{ .name }}
+  image: curlimages/curl:8.18.0
+  command: ["sh", "-c"]
+  args:
+    - |
+      echo "Waiting for {{ .name }} ({{ .url }})..."
+      until curl -s -f -o /dev/null "{{ .url }}"; do sleep 5; done
+      echo "{{ .name }} is up"
+{{- end -}}
+
+{{- define "telecom.waitTcp" -}}
+- name: wait-for-{{ .name }}
+  image: busybox:1.36
+  command: ["sh", "-c"]
+  args:
+    - |
+      echo "Waiting for {{ .name }} ({{ .host }}:{{ .port }})..."
+      until nc -z {{ .host }} {{ .port }}; do sleep {{ .interval | default 5 }}; done
+      echo "{{ .name }} is up"
+{{- end -}}

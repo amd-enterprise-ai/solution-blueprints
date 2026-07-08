@@ -8,11 +8,76 @@ const path = require("path");
 const { AccessToken } = require("livekit-server-sdk");
 
 const app = express();
-app.use(express.json());
 
-const { LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL, PORT = "3000" } = process.env;
+const {
+  LIVEKIT_API_KEY,
+  LIVEKIT_API_SECRET,
+  LIVEKIT_URL,
+  PORT = "3000",
+  AGENT_URL
+} = process.env;
 
-app.post("/api/connection-details", async (req, res) => {
+console.log(`[STARTUP] AGENT_URL: ${AGENT_URL}`);
+
+// Proxy for /agent - handles file uploads (multipart/form-data)
+app.use("/agent", async (req, res) => {
+  if (!AGENT_URL) {
+    return res.status(500).json({ error: "AGENT_URL env var not configured" });
+  }
+
+  let agentHost;
+  try {
+    agentHost = new URL(AGENT_URL).host;
+  } catch (e) {
+    return res.status(500).json({ error: "Invalid AGENT_URL", message: e.message });
+  }
+
+  // Preserve the full original path including /agent
+  const originalPath = req.originalUrl;
+
+  console.log(`[PROXY] ${req.method} ${originalPath}`);
+  console.log(`[PROXY] Target: ${AGENT_URL}${originalPath}`);
+
+  try {
+    const targetUrl = `${AGENT_URL}${originalPath}`;
+
+    const fetchOptions = {
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: agentHost,
+      },
+    };
+
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      fetchOptions.body = req;
+      fetchOptions.duplex = 'half';
+    }
+
+    delete fetchOptions.headers['host'];
+    delete fetchOptions.headers['content-length'];
+
+    const response = await fetch(targetUrl, fetchOptions);
+
+    console.log(`[PROXY] Response status: ${response.status}`);
+
+    const responseBody = await response.arrayBuffer();
+
+    response.headers.forEach((value, key) => {
+      if (key !== 'content-encoding' && key !== 'content-length') {
+        res.setHeader(key, value);
+      }
+    });
+
+    res.status(response.status);
+    res.send(Buffer.from(responseBody));
+  } catch (error) {
+    console.error('[PROXY] Error:', error);
+    res.status(500).json({ error: 'Proxy failed', message: error.message });
+  }
+});
+
+app.post("/api/connection-details", express.json(), async (req, res) => {
   if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
     return res.status(500).json({ error: "LiveKit env vars not configured" });
   }
@@ -52,7 +117,8 @@ app.post("/api/connection-details", async (req, res) => {
 // In production, serve the built Vite app
 const clientDist = path.join(__dirname, "../dist");
 app.use(express.static(clientDist));
-app.get("/{*path}", (_req, res) => {
+
+app.use((req, res) => {
   res.sendFile(path.join(clientDist, "index.html"));
 });
 

@@ -12,7 +12,7 @@ spec:
   - group: gateway.networking.k8s.io
     kind: Gateway
     name: {{ .Values.http_route.gateway.name | default "https" }}
-    namespace: {{ .Values.http_route.gateway.namespace | default "kgateway-system" }}
+    namespace: {{ .Values.http_route.gateway.namespace | default "envoy-gateway-system" }}
   {{- if .Values.http_route.hostname }}
   hostnames:
   - {{ .Values.http_route.hostname }}

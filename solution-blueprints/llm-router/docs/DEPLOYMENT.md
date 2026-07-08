@@ -4,41 +4,79 @@ Copyright © Advanced Micro Devices, Inc., or its affiliates.
 SPDX-License-Identifier: MIT
 -->
 
-# Helm Deployment
-Solution Blueprints are provided as Helm Charts.
+# LLM Router Deployment Guide
 
-The recommended approach to deploy them is to pipe the output of `helm template` to `kubectl apply -f -`.
+Solution Blueprints are provided as Helm Charts. The recommended approach to deploy them is to pipe the output of `helm template` to `kubectl apply -f -`.
 We don't recommend `helm install`, which by default uses a Secret to keep track of the related resources.
 This does not work well with Enterprise clusters that often have limitations on the kinds of resources that
 regular users are allowed to create.
 
-## Start Helm template
+This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms. Unless otherwise specified, the commands below cover the default **Instinct** deployment. For deployment with Radeon, see:
 
-Set basic variables:
+- [Deploy on AMD Radeon](#amd-radeon-gpu)
+
+## Multi-platform Support
+
+The chart ships defaults for two platforms, selected with `--set global.platform=<platform>`: `instinct` (GPU, the default) and `radeon` (GPU). Each sets a matching AIM image and resource profile; inspect them with `helm show values . --jsonpath '{.primary.platformDefaults}'` and `helm show values . --jsonpath '{.secondary.platformDefaults}'`.
+
+> **Helm note**: Built and tested on Helm 3.17 or higher. On Helm v4, if the piped `kubectl apply` is rejected, run `helm pull oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router --untar` first and template the local `./aimsb-llm-router` directory instead.
+
+### AMD Instinct (GPU, default)
+
+To deploy the blueprint, run the following command:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
+  --set deployDemonstrationLLMs=true \
+  | kubectl apply -f - -n $namespace
 ```
-export name="aimsb-llm-router"
-export namespace="llm-router"
+
+### AMD Radeon (GPU)
+
+To deploy the blueprint, run the following command:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
+  --set deployDemonstrationLLMs=true \
+  --set global.platform=radeon \
+  | kubectl apply -f - -n $namespace
 ```
-## Option 1: Demo Deployment with Self-Hosted LLMs
+
+## Deployment Configuration
+
+Set deployment variables:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+```
+
+### Option 1: Demo Deployment with Self-Hosted LLMs
 
 This option deploys two demonstration LLM pods (requires at least 2 GPUs available on the cluster).
-```
+
+```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
---namespace $namespace \
---set deployDemonstrationLLMs=true \
-| kubectl apply -f - -n $namespace
+  --set deployDemonstrationLLMs=true \
+  | kubectl apply -f - -n $namespace
 ```
-## Option 2: Deployment with Existing External LLMs
+
+### Option 2: Deployment with Existing External LLMs
 
 This approach is suitable if you have deployed LLMs and want to reuse them.
 No matter where they are deployed, you can reuse them by following the instructions below.
 This is the main operational mode. You have several configuration approaches:
 
-### Understanding Routing Rules
+#### Understanding Routing Rules
 
 The routing system uses a **configurable classification approach** to direct requests to the most appropriate LLM. You can choose between two classification strategies in the UI:
 
-#### Option 1: Task-Based Routing
+##### Option 1: Task-Based Routing
+
 When **Task-Based** routing is selected, the system analyzes the user's query to understand the **intended task type**. Common task classes include:
 - `Code Generation` - Writing new code
 - `Summarization` - Condensing long texts
@@ -46,33 +84,37 @@ When **Task-Based** routing is selected, the system analyzes the user's query to
 - `Creative Writing` - Generating stories or marketing copy
 - And many others...
 
-#### Option 2: Complexity-Based Routing
+##### Option 2: Complexity-Based Routing
+
 When **Complexity-Based** routing is selected, the system evaluates the **complexity level** of the request:
 - `Easy` - Simple, straightforward tasks
 - `Middle` - Moderately complex requests
 - `Hard` - Complex reasoning or long-form generation
 - `Trivial` - Very simple queries
 
-### Classifier Interpretation
+#### Classifier Interpretation
 
 The classifier supports two classification approaches, selected via `embedding.enabled`:
 
-#### Embedding-based Classification
+##### Embedding-based Classification
+
 (values: `embedding.enabled: true`, default)
 
-Uses the `intfloat/multilingual-e5-large-instruct` model via the Infinity embedding server. Each class has a `description` field — the classifier computes semantic similarity between the incoming prompt and class descriptions, routing to the closest match. This approach is **faster, deterministic, and recommended for production use**.
+Uses the `intfloat/multilingual-e5-large-instruct` model via a vLLM-based embedding server (aim-base). Each class has a `description` field — the classifier computes semantic similarity between the incoming prompt and class descriptions, routing to the closest match. This approach is **faster, deterministic, and recommended for production use**.
 
-#### LLM-based Classification
+##### LLM-based Classification
+
 (values: `embedding.enabled: false`)
 
 Uses a configured LLM backend to classify the prompt. The LLM receives the conversation and the list of class names, and returns a structured JSON response with the chosen class. This approach requires no additional embedding service but adds an extra LLM inference call to every request.
 
 Both approaches fall back to `Unknown` when the query doesn't clearly match any defined class.
 
-### Approach A: Configure via values.yaml File
+#### Approach A: Configure via values.yaml File
 
 Create or modify `values.yaml`:
-```
+
+```yaml
 models:
   - name: primary
     base_url: http://primary
@@ -122,48 +164,51 @@ classifier:
 embedding:
   enabled: true  # true = embedding approach, false = LLM approach
 ```
+
 Then deploy with:
-```
+
+```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
---namespace $namespace \
--f values.yaml \
-| kubectl apply -f - -n $namespace
+  -f values.yaml \
+  | kubectl apply -f - -n $namespace
 ```
-### Approach B: Configure via Command Line Parameters
+
+#### Approach B: Configure via Command Line Parameters
 
 Set all parameters directly (example command):
-```
+
+```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
---namespace $namespace \
---set embedding.enabled=false \
---set models[0].name=primary \
---set models[0].base_url=http://167.99.61.150:8000 \
---set models[1].name=secondary \
---set models[1].base_url=http://167.99.61.150:8000 \
---set models[2].name=third \
---set models[2].base_url=http://167.99.61.150:8000 \
---set models[3].name=four \
---set models[3].base_url=http://167.99.61.150:8000 \
---set routing.rules.task_router.classes.Code\ Generation=secondary \
---set routing.rules.task_router.classes.Code\ Review=secondary \
---set routing.rules.task_router.classes.Refactoring=secondary \
---set routing.rules.task_router.classes.Summarization=primary \
---set routing.rules.task_router.classes.Documentation=primary \
---set routing.rules.task_router.classes.Reasoning=third \
---set routing.rules.task_router.classes.Logical\ Analysis=third \
---set routing.rules.task_router.classes.Planning=third \
---set routing.rules.task_router.classes.Decision\ Making=third \
---set routing.rules.task_router.classes.Creative\ Writing=four \
---set routing.rules.task_router.classes.Brainstorming=four \
---set routing.rules.task_router.classes.Marketing\ Text=four \
---set routing.rules.task_router.classes.Unknown=primary \
---set routing.rules.complexity_router.classes.Hard=secondary \
---set routing.rules.complexity_router.classes.Middle=secondary \
---set routing.rules.complexity_router.classes.Easy=primary \
---set routing.rules.complexity_router.classes.Trivial=third \
---set routing.rules.complexity_router.classes.Unknown=primary \
-| kubectl apply -f - -n $namespace
+  --set embedding.enabled=false \
+  --set models[0].name=primary \
+  --set models[0].base_url=http://167.99.61.150:8000 \
+  --set models[1].name=secondary \
+  --set models[1].base_url=http://167.99.61.150:8000 \
+  --set models[2].name=third \
+  --set models[2].base_url=http://167.99.61.150:8000 \
+  --set models[3].name=four \
+  --set models[3].base_url=http://167.99.61.150:8000 \
+  --set routing.rules.task_router.classes.Code\ Generation=secondary \
+  --set routing.rules.task_router.classes.Code\ Review=secondary \
+  --set routing.rules.task_router.classes.Refactoring=secondary \
+  --set routing.rules.task_router.classes.Summarization=primary \
+  --set routing.rules.task_router.classes.Documentation=primary \
+  --set routing.rules.task_router.classes.Reasoning=third \
+  --set routing.rules.task_router.classes.Logical\ Analysis=third \
+  --set routing.rules.task_router.classes.Planning=third \
+  --set routing.rules.task_router.classes.Decision\ Making=third \
+  --set routing.rules.task_router.classes.Creative\ Writing=four \
+  --set routing.rules.task_router.classes.Brainstorming=four \
+  --set routing.rules.task_router.classes.Marketing\ Text=four \
+  --set routing.rules.task_router.classes.Unknown=primary \
+  --set routing.rules.complexity_router.classes.Hard=secondary \
+  --set routing.rules.complexity_router.classes.Middle=secondary \
+  --set routing.rules.complexity_router.classes.Easy=primary \
+  --set routing.rules.complexity_router.classes.Trivial=third \
+  --set routing.rules.complexity_router.classes.Unknown=primary \
+  | kubectl apply -f - -n $namespace
 ```
+
 > By default `embedding.enabled=true` (embedding-based classification). Set `embedding.enabled=false` to use LLM-based classification instead. When using LLM-based classification, `classifier.llmBackend` must reference a valid model from the `models` list.
 
 For each model, you can provide either `api_key` directly or `api_key_secret_ref` to read the key from a Kubernetes Secret.
@@ -191,29 +236,30 @@ If both are set, `api_key` is used.
       Example: `http://my-model-service:8000`
     - The most common case inside Kubernetes: when models are running in the same cluster → use the **Kubernetes service name** (without external IP)
 
-### Approach C: Configure with API Keys and Model Names (Optional)
+#### Approach C: Configure with API Keys and Model Names (Optional)
 
 If your LLMs require authentication, or you need to specify specific models (example command):
-```
+
+```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
---namespace $namespace \
---set embedding.enabled=false \
---set models[0].name=primary \
---set models[0].base_url=https://router.huggingface.co \
---set models[0].api_key=exampleapikey \
---set models[0].model_name=meta-llama/Llama-3.1-8B-Instruct:novita \
---set models[1].name=secondary \
---set models[1].base_url=https://router.huggingface.co \
---set models[1].api_key=exampleapikey \
---set models[1].model_name=meta-llama/Llama-3.1-8B-Instruct:novita \
---set routing.rules.task_router.classes.Code\ Generation=secondary \
---set routing.rules.task_router.classes.Summarization=primary \
---set routing.rules.task_router.classes.Unknown=primary \
---set routing.rules.complexity_router.classes.Hard=secondary \
---set routing.rules.complexity_router.classes.Easy=primary \
---set routing.rules.complexity_router.classes.Unknown=primary \
-| kubectl apply -f - -n $namespace
+  --set embedding.enabled=false \
+  --set models[0].name=primary \
+  --set models[0].base_url=https://router.huggingface.co \
+  --set models[0].api_key=exampleapikey \
+  --set models[0].model_name=meta-llama/Llama-3.1-8B-Instruct:novita \
+  --set models[1].name=secondary \
+  --set models[1].base_url=https://router.huggingface.co \
+  --set models[1].api_key=exampleapikey \
+  --set models[1].model_name=meta-llama/Llama-3.1-8B-Instruct:novita \
+  --set routing.rules.task_router.classes.Code\ Generation=secondary \
+  --set routing.rules.task_router.classes.Summarization=primary \
+  --set routing.rules.task_router.classes.Unknown=primary \
+  --set routing.rules.complexity_router.classes.Hard=secondary \
+  --set routing.rules.complexity_router.classes.Easy=primary \
+  --set routing.rules.complexity_router.classes.Unknown=primary \
+  | kubectl apply -f - -n $namespace
 ```
+
 > By default `embedding.enabled=true` (embedding-based classification). Set `embedding.enabled=false` to use LLM-based classification instead. When using LLM-based classification, `classifier.llmBackend` must reference a valid model from the `models` list.
 
 ## Default AIM images and GPU compatibility
@@ -224,13 +270,12 @@ When `deployDemonstrationLLMs=true`, the chart deploys two default AIMs:
 - `secondary.image=amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1`
 
 On newer GPUs, these images may not be the best match and can fail to start or run sub-optimally.
-To choose newer AIMs or deploy a different LLMs, override `primary.image` and/or `secondary.image` to compatible images. See the [catalog of available AIMs](https://enterprise-ai.docs.amd.com/en/latest/aims/catalog/models.html) for options.
+To choose newer AIMs or deploy different LLMs, override `primary.image` and/or `secondary.image` to compatible images. See the [catalog of available AIMs](https://enterprise-ai.docs.amd.com/en/latest/aims/catalog/models.html) for options.
 
 Example:
 
 ```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
-  --namespace $namespace \
   --set deployDemonstrationLLMs=true \
   --set primary.image=amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:<NEWER_TAG> \
   --set secondary.image=amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:<NEWER_TAG> \
@@ -240,24 +285,30 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router 
 ## Connecting to the Service
 
 After deployment, check pod status:
-```
+
+```bash
 kubectl get pods -n $namespace
 ```
+
 Wait until all pods show ready status `1/1`.
 
 ### Option 1: Port Forwarding
+
 To access the web interface, set up port forwarding:
+
+```bash
+kubectl port-forward services/$name-aimsb-llm-router-ui 8080:8008 -n $namespace
 ```
-kubectl port-forward svc/$name-ui 8080:8008 -n $namespace
-```
-The UI will then be available at http://localhost:8080
+
+The UI will then be available at <http://localhost:8080>.
 
 ### Option 2: HTTPRoute (Gateway Access)
 
 If your cluster has a Gateway API compatible gateway (e.g., Kubernetes Gateway, Istio, etc.), you can enable HTTPRoute creation to route traffic through the gateway.
 
 **Prerequisites:**
-- A Gateway named `https` must exist in the `kgateway-system` namespace (or configure a different gateway).
+
+- A Gateway named `https` must exist in the `envoy-gateway-system` namespace (or configure a different gateway).
 - The Gateway must be properly configured with listeners.
 
 **Enabling HTTPRoute:**
@@ -265,31 +316,31 @@ If your cluster has a Gateway API compatible gateway (e.g., Kubernetes Gateway, 
 Use `--set http_route.enabled=true` in the `helm template` command to enable HTTPRoute creation:
 
 ```bash
+name="my-deployment"
+namespace="my-namespace"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
-  --namespace $namespace \
   --set http_route.enabled=true \
-  # ... (other parameters as needed) ...
   | kubectl apply -f - -n $namespace
 ```
 
 **Obtaining the URL:**
 
 The URL to access the blueprint via HTTPRoute is formed by the chart name, release name, and the gateway's hostname. Use this command to produce the URL by querying the hostname from the cluster:
-   ```bash
-   echo "https://aimsb-llm-router-$name$(kubectl get gtw -A -o jsonpath='{.items[*].spec.listeners[?(@.name=="https")].hostname}' | tr -d \*)/"
-   ```
 
-## Stopping the Deployment
-
-To stop and remove the service, run the same helm template command but with `delete`:
-
-### Use the same helm template command you used for deployment, but with delete
+```bash
+echo "https://aimsb-llm-router-$name$(kubectl get gtw -A -o jsonpath='{.items[*].spec.listeners[?(@.name=="https")].hostname}' | tr -d \*)/"
 ```
+
+## Clean Up
+
+When you are finished, remove the deployed resources:
+
+```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
---namespace $namespace \
-# ... (same parameters as deployment) ...
-| kubectl delete -f - -n $namespace
+  --set deployDemonstrationLLMs=true \
+  | kubectl delete -f - -n $namespace
 ```
+
 ## Important Notes
 
 - All model names referenced in `routing` and `classifier` sections must exist in the `models` list

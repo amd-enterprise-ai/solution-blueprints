@@ -1,8 +1,7 @@
 # Copyright © Advanced Micro Devices, Inc., or its affiliates.
 #
 # SPDX-License-Identifier: MIT
-
-{{- range $name, $svc := .Values.infraServices }}
+{{ range $name, $svc := .Values.infraServices }}
 {{- if $svc.enabled }}
 {{- $root := $ -}}
 {{- $fullname := include "release.componentName" (dict "root" $root "name" $name) -}}
@@ -44,17 +43,7 @@ spec:
             limits:
               cpu: 100m
               memory: 64Mi
-        - name: wait-for-postgres
-          image: busybox:1.36
-          command: ["sh", "-c"]
-          args:
-            - |
-              echo "Waiting for Postgres({{ $dbHost }}:{{ $dbPort }})..."
-              until nc -z {{ $dbHost }} {{ $dbPort }}; do
-                echo "Postgres is not ready yet. Retry in 5 seconds..."
-                sleep 5
-              done
-              echo "LibreDesk DB is up"
+        {{- include "telecom.waitTcp" (dict "name" "postgres" "host" $dbHost "port" $dbPort) | nindent 8 }}
       {{- end }}
       containers:
         - name: {{ $name }}

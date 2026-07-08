@@ -6,19 +6,22 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
 
 backend:
   replicaCount: 1
-  image: "python:3.11-slim"
+  image: "docker.io/library/python:3.11-slim"
   port: 8091
   env:
     OPENAI_API_KEY: "dummy"
 
 frontend:
   replicaCount: 1
-  image: "python:3.11-slim"
+  image: "docker.io/library/python:3.11-slim"
   port: 8092
+
+global:
+  platform: instinct
 
 llm:
   # Use existing external AIM service instead of deploying our own
@@ -26,10 +29,7 @@ llm:
   existingService: null
 
   # Configuration for deploying own AIM service (used when existingService is not set)
-  nameOverride: llama33-70b-instruct
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  env_vars:
-    AIM_PRECISION: "fp8"
+  nameOverride: aimsb-codedocs-llm
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
   apiKeySecretRef: {}
@@ -37,6 +37,20 @@ llm:
   # apiKeySecretRef:
   #   name: my-secretname
   #   key: api-key
+
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+    epyc:
+      image: "docker.io/amdenterpriseai/aim-epyc-meta-llama-llama-3-1-8b-instruct:0.13.0"
+      gpus: 0
+      # Fit weights + KV cache + overhead to avoid OOMKilled;
+      memory: 128
+      # cpus=188 keeps the LLM within a single NUMA node (EPYC 9965 = 192 cores/node, SMT off).
+      cpus: 188
+      env_vars:
+        AIM_PRECISION: "bf16"
+        AIM_ALLOW_UNOPTIMIZED: "true"
 
   storage:
     ephemeral:

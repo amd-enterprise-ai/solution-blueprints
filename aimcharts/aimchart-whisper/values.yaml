@@ -16,14 +16,14 @@ ASR_MODEL_PATH: "openai/whisper-small"
 # Compute target
 device: "cpu"
 
-"replicaCount": 1
+replicaCount: 1
 
-"image":
-  "repository": "registry-1.docker.io/amdenterpriseai/image-aimchart-whisper"
-  "tag": ""
+image:
+  repository: "docker.io/amdenterpriseai/image-aimchart-whisper"
+  tag: ""
 
-"imagePullPolicy": "Always"
-"imagePullSecrets": []
+imagePullPolicy: "Always"
+imagePullSecrets: []
 
 service:
   type: ClusterIP

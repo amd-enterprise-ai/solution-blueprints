@@ -150,7 +150,7 @@ you can enable HTTPRoute creation to route traffic through the gateway.
 
 **Prerequisites:**
 
-- A Gateway named `https` must exist in the `kgateway-system` namespace
+- A Gateway named `https` must exist in the `envoy-gateway-system` namespace
   (or configure a different gateway).
 - The Gateway must be properly configured with listeners.
 

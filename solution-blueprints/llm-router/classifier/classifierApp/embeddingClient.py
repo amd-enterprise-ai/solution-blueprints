@@ -88,11 +88,16 @@ async def fetch_classes_config(controller_url: str) -> Dict[str, str]:
             raise RuntimeError(f"Failed to load config from {url}: {e}")
 
 
-async def get_embeddings(infinity_url: str, texts: List[str]) -> np.ndarray:
-    """Fetch embeddings from Infinity server"""
-    payload = {"model": MODEL_NAME, "input": texts, "encoding_format": "float"}
+async def get_embeddings(embedding_url: str, texts: List[str]) -> np.ndarray:
+    """Fetch embeddings from the OpenAI-compatible embedding server"""
+    payload = {
+        "model": MODEL_NAME,
+        "input": texts,
+        "encoding_format": "float",
+        "truncate_prompt_tokens": 512,
+    }
     async with httpx.AsyncClient() as client:
-        resp = await client.post(infinity_url, json=payload, timeout=30.0)
+        resp = await client.post(embedding_url, json=payload, timeout=30.0)
         resp.raise_for_status()
         data = resp.json()["data"]
         embs = [item["embedding"] for item in data]
@@ -104,7 +109,7 @@ def normalize_embeddings(embs: np.ndarray) -> np.ndarray:
     return embs / norms.clip(min=1e-12)
 
 
-async def load_class_embeddings(infinity_url: str, controller_url: str):
+async def load_class_embeddings(embedding_url: str, controller_url: str):
     """Load config and compute embeddings for class descriptions (called once)"""
     global class_embeddings, class_names, class_descriptions
 
@@ -115,7 +120,7 @@ async def load_class_embeddings(infinity_url: str, controller_url: str):
     if not class_descriptions:
         raise RuntimeError("No class descriptions loaded")
 
-    raw_embs = await get_embeddings(infinity_url, class_descriptions)
+    raw_embs = await get_embeddings(embedding_url, class_descriptions)
     class_embeddings = normalize_embeddings(raw_embs)
 
     logger.info("Loaded classes:")
@@ -126,10 +131,10 @@ async def load_class_embeddings(infinity_url: str, controller_url: str):
 
 class EmbeddingClassifierClient:
     def __init__(self):
-        infinity_url_env = os.getenv("INFINITY_URL")
-        if infinity_url_env is None:
-            raise RuntimeError("INFINITY_URL environment variable is required")
-        self.infinity_url = f"{infinity_url_env.rstrip('/')}/embeddings"
+        embedding_url_env = os.getenv("EMBEDDING_URL")
+        if embedding_url_env is None:
+            raise RuntimeError("EMBEDDING_URL environment variable is required")
+        self.embedding_url = embedding_url_env
 
         controller_url = os.getenv("CONTROLLER_URL")
         if controller_url is None:
@@ -144,7 +149,7 @@ class EmbeddingClassifierClient:
 
         async with _init_lock:
             if not self.initialized:
-                await load_class_embeddings(self.infinity_url, self.controller_url)
+                await load_class_embeddings(self.embedding_url, self.controller_url)
                 self.initialized = True
 
     async def classify(
@@ -167,7 +172,7 @@ class EmbeddingClassifierClient:
         )
         logger.debug("Instruct text: %s", instruct_text)
 
-        query_emb_raw = await get_embeddings(self.infinity_url, [instruct_text])
+        query_emb_raw = await get_embeddings(self.embedding_url, [instruct_text])
         query_emb = normalize_embeddings(query_emb_raw)[0]
 
         if classes:

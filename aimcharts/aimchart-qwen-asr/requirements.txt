@@ -1,0 +1,8 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+blinker==1.9.0
+fastapi>=0.100.0,<0.137
+qwen-asr==0.0.6
+vllm[audio]==0.14.0rc3.dev30+gb026cf14e.rocm700

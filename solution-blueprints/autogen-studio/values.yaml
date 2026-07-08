@@ -12,11 +12,7 @@ llm:
   # Set to null or comment out to deploy own AIM service
   existingService: null
 
-  nameOverride: llama33-70b-instruct
-  # Configuration for deploying own AIM service (used when existingService is not set)
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  env_vars:
-    AIM_PRECISION: "fp8"
+  nameOverride: aimsb-autogen-studio-llm
 
   model: "" # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
@@ -30,6 +26,11 @@ llm:
     ephemeral:
       quantity: 512Gi
       storageClassName: mlstorage
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
 
 kaiwo:
   enabled: false
@@ -38,7 +39,7 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
 
 metadata:
   labels:

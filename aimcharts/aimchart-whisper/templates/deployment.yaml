@@ -61,7 +61,7 @@ spec:
       {{- if not (hasPrefix "/data/" $vals.ASR_MODEL_PATH) }}
       initContainers:
         - name: "downloader"
-          image: "huggingface/downloader:0.17.3"
+          image: "docker.io/huggingface/downloader:0.17.3"
 
           volumeMounts:
             {{- toYaml $mounts | nindent 12 }}

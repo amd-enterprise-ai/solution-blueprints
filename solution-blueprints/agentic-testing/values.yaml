@@ -19,7 +19,7 @@ ui:
   httpRoute:
     enabled: false
     gatewayName: https
-    gatewayNamespace: kgateway-system
+    gatewayNamespace: envoy-gateway-system
 
   # Test execution settings
   maxIterations: 20
@@ -61,8 +61,7 @@ llm:
   existingService: null
 
   # Change name override according to model name from image (aim-{model}:{version})
-  image: "amdenterpriseai/aim-openai-gpt-oss-120b:0.11.1"
-  nameOverride: openai-gpt-oss-120b
+  nameOverride: aimsb-agentic-testing-llm
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
   apiKeySecretRef: {}
@@ -75,6 +74,11 @@ llm:
     ephemeral:
       quantity: 512Gi
       storageClassName: mlstorage
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-openai-gpt-oss-120b:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
 
 kaiwo:
   enabled: false

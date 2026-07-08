@@ -8,16 +8,19 @@ metadata:
 
 http_route:
   enabled: false
+  gateway:
+    name: https
+    namespace: envoy-gateway-system
 
 image:
-  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-med-assist-backend"
+  repository: "docker.io/amdenterpriseai/image-aimsb-med-assist-backend"
   tag: "{{ .Chart.Version }}"
 
 imagePullPolicy: Always
 imagePullSecrets: []
 
 uiImage:
-  repository: "registry-1.docker.io/amdenterpriseai/image-aimsb-med-assist-ui"
+  repository: "docker.io/amdenterpriseai/image-aimsb-med-assist-ui"
   tag: "{{ .Chart.Version }}"
 
 storage:
@@ -121,16 +124,16 @@ livekit:
 # (single LoadBalancer port), STUNner routes media internally to LiveKit pods.
 # This replaces the wide UDP 50000-60000 node-level exposure entirely.
 #
-# PREREQUISITE: stunner-gateway-operator must be installed cluster-wide.
-# Run ./install-prerequisites.sh once per cluster before deploying this chart.
+# PREREQUISITE: The STUNner operator and the shared "stunner" GatewayClass must
+# be installed cluster-wide by a cluster-admin before deploying this chart.
+# Run ./install-prerequisites.sh once per cluster.
+#
+# Each blueprint deployment creates its own Gateway, GatewayConfig, and UDPRoute.
+# The shared cluster-level operator reconciles them independently, so multiple
+# blueprint deployments can coexist on the same cluster without conflicts.
 # =============================================================================
 stunner:
   enabled: true
-
-  # STUNner subchart values (alias: stunner).
-  # The subchart installs only the CRDs/controller — actual gateway pods are
-  # provisioned automatically by the operator per Gateway resource below.
-  stunner: {}  # override stunner subchart values here if needed
 
   # TURN credentials used by browsers to authenticate with STUNner.
   # Must match what LiveKit advertises to clients in its TURN config.
@@ -143,15 +146,16 @@ stunner:
     port: 3478
 
 llm:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  env_vars:
-    AIM_PRECISION: "fp8"
-
-  nameOverride: "llama33-70b-instruct"
+  nameOverride: "aimsb-med-assist-llm"
   storage:
     ephemeral:
       storageClassName: mlstorage
       quantity: 512Gi
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
 
 qwen-asr:
   nameOverride: "qwen-asr"

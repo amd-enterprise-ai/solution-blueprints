@@ -10,7 +10,7 @@ SPDX-License-Identifier: MIT
 
 The `routing-classifier` service is a FastAPI-based service that classifies conversation messages
 into predefined categories. It supports two classification approaches: **embedding-based** (using
-semantic similarity via Infinity embedding server) and **LLM-based** (using a language model). The
+semantic similarity via an OpenAI-compatible vLLM embedding server) and **LLM-based** (using a language model). The
 approach is selected via the `CLASSIFIER_APPROACH` environment variable.
 
 ## API Endpoints
@@ -72,9 +72,9 @@ The required environment variables depend on the selected `CLASSIFIER_APPROACH`.
 
 ### Embedding Approach (`CLASSIFIER_APPROACH=embedding`)
 
-| Environment Variable | Description                               | Example Value           |
-|----------------------|-------------------------------------------|-------------------------|
-| `INFINITY_URL`       | Base URL of the Infinity embedding server | `http://embedding:7997` |
+| Environment Variable | Description                                                          | Example Value                          |
+|----------------------|----------------------------------------------------------------------|----------------------------------------|
+| `EMBEDDING_URL`      | Full URL of the OpenAI-compatible embeddings endpoint (`/v1/embeddings`) | `http://embedding:7997/v1/embeddings` |
 
 ### LLM Approach (`CLASSIFIER_APPROACH=llm`)
 
@@ -89,7 +89,7 @@ The required environment variables depend on the selected `CLASSIFIER_APPROACH`.
 ### Embedding Approach
 
 1. **Initialization**: On startup, fetches class names and descriptions from the router-controller
-   `/config` endpoint and computes their embeddings via the Infinity server.
+   `/config` endpoint and computes their embeddings via the vLLM embedding server.
 2. **Classification**: Encodes the conversation as a query embedding and computes cosine similarity
    against all class embeddings.
 3. **Threshold**: If the highest similarity score is below the threshold (0.70 for ≤5 classes, 0.68
@@ -116,7 +116,7 @@ The required environment variables depend on the selected `CLASSIFIER_APPROACH`.
 
 - **500 Internal Server Error**:
     - Missing required environment variables for the selected approach.
-    - LLM API or Infinity server request failure.
+    - LLM API or embedding server request failure.
     - Controller `/config` endpoint unreachable during initialization.
 
 ### Debug Logging

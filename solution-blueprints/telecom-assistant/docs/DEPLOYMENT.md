@@ -27,12 +27,12 @@ To uninstall:
 
 > **Note:** STUNner routes media traffic from the browser to LiveKit. UDP ports `50000-60000` on worker nodes do **not** need to be opened. However, TCP access to the LiveKit signaling port (NodePort or Gateway port 80/443) is still required.
 
-# Helm deployment
-Solution Blueprints are provided as Helm Charts.
-
-The recommended approach to deploy them is to pipe the output of `helm template` to `kubectl apply -f -`.
-We don't recommend `helm install`, which by default uses a Secret to keep track of the related resources.
-This does not work well with Enterprise clusters that often have limitations on the kinds of resources that
+Solution Blueprints are provided as Helm Charts. The recommended approach to deploy them is to pipe the output of `helm template` to
+`kubectl apply -f -`.
+We don't recommend `helm install`, which by default uses a Secret to keep track of the related
+resources.
+This does not work well with Enterprise clusters that often have limitations on the kinds of
+resources that
 regular users are allowed to create.
 
 An example for command-line usage:
@@ -52,12 +52,23 @@ Media traffic from the browser to LiveKit is routed through **STUNner** regardle
 
 - Set `mainServices.frontend.env.LIVEKIT_URL` to an externally reachable LiveKit WebSocket URL.
 - If this value is empty, chart rendering fails.
-- The agent service can still use in-cluster LiveKit automatically when `mainServices.agent.env.LIVEKIT_URL` is left empty.
+- The agent service can still use in-cluster LiveKit automatically when
+  `mainServices.agent.env.LIVEKIT_URL` is left empty.
 
-For the **frontend** (the URL the browser uses to connect to LiveKit WebSockets via the Gateway), the value for `LIVEKIT_URL` must be supplied when deploying; the chart cannot set it automatically. At render time (`helm template`) the chart has no access to the cluster, and the external hostname is determined by your Gateway, DNS, and how you expose the service—so it has to be provided (or derived with the command below) by the deployer. The frontend runs in the user's browser, so it cannot use in-cluster addresses; it must use the same hostname the Gateway exposes (e.g. `livekit.<gateway-domain>`) so that WebSocket connections are routed correctly to the LiveKit service. The URL has the form `wss://livekit` + hostname (with wildcards removed). The chart’s HTTPRoute for LiveKit targets the default Gateway `https` in namespace `kgateway-system` and listener `https`; if your cluster uses that setup, you can build the frontend WebSocket URL like this:
+For the **frontend** (the URL the browser uses to connect to LiveKit WebSockets via the Gateway),
+the value for `LIVEKIT_URL` must be supplied when deploying; the chart cannot set it automatically.
+At render time (`helm template`) the chart has no access to the cluster, and the external hostname
+is determined by your Gateway, DNS, and how you expose the service—so it has to be provided (or
+derived with the command below) by the deployer. The frontend runs in the user's browser, so it
+cannot use in-cluster addresses; it must use the same hostname the Gateway exposes (e.g.
+`livekit.<gateway-domain>`) so that WebSocket connections are routed correctly to the LiveKit
+service. The URL has the form `wss://livekit` + hostname (with wildcards removed). The chart’s
+HTTPRoute for LiveKit targets the default Gateway `https` in namespace `envoy-gateway-system` and
+listener `https`; if your cluster uses that setup, you can build the frontend WebSocket URL like
+this:
 
 ```bash
-frontend_livekit_ws_url="wss://livekit-aimsb-telecom-assistant-${name}$(kubectl get gtw https -n kgateway-system -o jsonpath='{.spec.listeners[?(@.name=="https")].hostname}' | tr -d '*')"
+frontend_livekit_ws_url="wss://livekit-aimsb-telecom-assistant-${name}$(kubectl get gtw https -n envoy-gateway-system -o jsonpath='{.spec.listeners[?(@.name=="https")].hostname}' | tr -d '*')"
 ```
 
 Use this value when deploying, e.g. `--set "mainServices.frontend.env.LIVEKIT_URL=$frontend_livekit_ws_url"`.
@@ -76,7 +87,7 @@ In short: you do **not** need to open the wide UDP range. You **do** need TCP ac
 See the STUNner documentation for Gateway-specific firewall details.
 
 ## Using an existing deployment or external services
-By default, any required AIMs (STT, LLM, TTS, Embedding, ChromaDB) are deployed by the helm chart. If you already have compatible services deployed, you can use them instead, and reuse resources.
+By default, any required AIMs (STT, LLM, TTS, VLM, Embedding, ChromaDB) are deployed by the helm chart. If you already have compatible services deployed, you can use them instead, and reuse resources.
 
 To use an existing deployment, set the `existingService` value for the respective component. You should use the Kubernetes Service name, or if the service is in a different namespace, you can use the long form `<SERVICENAME>.<NAMESPACE>.svc.cluster.local:<SERVICEPORT>`. If needed, you can pass a whole URL.
 
@@ -86,24 +97,25 @@ To use an existing deployment, set the `existingService` value for the respectiv
 
 By default, the following models are used:
 
-| Role   | Default Model                   |
-|--------|---------------------------------|
-| STT    | Qwen3 ASR 1.7B                  |
-| LLM    | GPT OSS 120B                    |
-| TTS    | Qwen3 TTS 12Hz 1.7B CustomVoice |
+| Role | Default Model                                 |
+|------|-----------------------------------------------|
+| STT  | Qwen3 ASR 1.7B                                |
+| LLM  | GPT OSS 120B                                  |
+| TTS  | Qwen3 TTS 12Hz 1.7B CustomVoice               |
+| VLM  | mistralai/Mistral-Small-3.2-24B-Instruct-2506 |
 
 > **Note:** Compatibility with other models for the same purposes is not guaranteed.
 
 To override the default values, set the following environment variables:
 
-| Variable                               | Description                               |
-|----------------------------------------|-------------------------------------------|
-| `mainServices.agent.env.STT_MODEL`     | STT model name                            |
-| `mainServices.agent.env.STT_API_KEY`   | API key for the STT service (if required) |
-| `mainServices.agent.env.LLM_MODEL`     | LLM model name                            |
-| `mainServices.agent.env.LLM_API_KEY`   | API key for the LLM service (if required) |
-| `mainServices.agent.env.TTS_MODEL`     | TTS model name                            |
-| `mainServices.agent.env.TTS_API_KEY`   | API key for the TTS service (if required) |
+| Variable                              | Description                                |
+|---------------------------------------|--------------------------------------------|
+| `mainServices.agent.env.STT_MODEL`   | STT model name                             |
+| `mainServices.agent.env.STT_API_KEY` | API key for the STT service (if required)  |
+| `mainServices.agent.env.LLM_MODEL`   | LLM model name                             |
+| `mainServices.agent.env.LLM_API_KEY` | API key for the LLM service (if required)  |
+| `mainServices.agent.env.TTS_MODEL`   | TTS model name                             |
+| `mainServices.agent.env.TTS_API_KEY` | API key for the TTS service (if required)  |
 
 >If you are using external models, follow the instructions in the sections below
 
@@ -151,6 +163,17 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-telecom-ass
   --namespace $namespace \
   | kubectl apply -f - -n $namespace
 ```
+
+### External VLM
+Set `vlm.existingService` to the endpoint.
+```bash
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-telecom-assistant \
+  --set vlm.existingService="http://my-vlm-service:8000/v1" \
+  --namespace $namespace \
+  | kubectl apply -f - -n $namespace
+```
+> **WARNING**
+> Url for vlm.existingService should include '/v1'
 
 ### Deploy with LiveKit
 
@@ -245,7 +268,6 @@ with the required records after LibreDesk has fully started.
 
 ```bash
 kubectl port-forward "svc/aimsb-telecom-assistant-$name-frontend" 3000:3000 -n $namespace
-kubectl port-forward "svc/$name-livekit" 7880:7880 -n $namespace
 ```
 
 Then open `http://localhost:3000`.
@@ -256,7 +278,8 @@ If your cluster has a Gateway API compatible gateway, you can route frontend tra
 
 **Prerequisites:**
 
-- A Gateway named `https` in namespace `kgateway-system` (or adapt templates/values to your gateway naming).
+- A Gateway named `https` in namespace `envoy-gateway-system` (or adapt templates/values to your gateway
+  naming).
 - A valid external LiveKit WebSocket URL for frontend env.
 
 **Note:** Media (RTP) traffic is routed through STUNner, so opening the wide UDP port range (`50000-60000`) on LiveKit nodes is usually not required. However, TCP access to the signaling port (NodePort or Gateway) is still needed.
@@ -264,6 +287,10 @@ If your cluster has a Gateway API compatible gateway, you can route frontend tra
 Enable frontend HTTPRoute creation:
 
 ```bash
+name="my-deployment"
+namespace="my-namespace"
+frontend_livekit_ws_url="wss://livekit.example.com"
+
 helm template $name . \
   --set "mainServices.frontend.env.LIVEKIT_URL=$frontend_livekit_ws_url" \
   --set "http_route.enabled=true" \
@@ -282,3 +309,15 @@ echo "https://aimsb-telecom-assistant-$name$(kubectl get gtw -A -o jsonpath='{.i
 ```
 
 Use your gateway/controller tooling to resolve the exact routable hostname in your cluster.
+
+### Clean Up
+
+When you are finished, remove the deployed resources:
+
+```bash
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-telecom-assistant \
+  --namespace $namespace \
+  --set "mainServices.frontend.env.LIVEKIT_URL=$frontend_livekit_ws_url" \
+  # ... (same parameters as deployment) ...
+  | kubectl delete -f - -n $namespace
+```

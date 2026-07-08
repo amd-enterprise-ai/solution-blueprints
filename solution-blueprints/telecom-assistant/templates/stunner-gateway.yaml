@@ -3,6 +3,11 @@
 # SPDX-License-Identifier: MIT
 
 {{- if .Values.stunner.enabled }}
+{{- /*
+  References the shared GatewayClass "stunner" installed cluster-wide by install-prerequisites.sh.
+  A single GatewayClass is shared across all blueprint deployments on the cluster — each deployment
+  gets its own Gateway, GatewayConfig, and UDPRoute, which the operator reconciles independently.
+*/ -}}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -10,7 +15,7 @@ metadata:
   name: {{ include "release.fullname" . }}-stunner-gw
   namespace: {{ .Release.Namespace }}
 spec:
-  gatewayClassName: {{ include "release.fullname" . }}-stunner
+  gatewayClassName: stunner
   listeners:
     - name: udp-listener
       port: {{ .Values.stunner.gateway.port }}

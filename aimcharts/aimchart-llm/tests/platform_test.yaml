@@ -1,0 +1,133 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+suite: platform selection
+templates:
+  - deployment.yml
+tests:
+  - it: should default to "instinct"
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.11.1"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests["amd.com/gpu"]
+          value: "1"
+
+  - it: should pick up global.platform if platform is not defined
+    set:
+      global.platform: epyc
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.io/amdenterpriseai/aim-epyc-meta-llama-llama-3-1-8b-instruct:0.11.0-preview"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits
+          value:
+            cpu: "188"
+            memory: "128Gi"
+      - notExists:
+          path: spec.template.spec.containers[0].resources.requests["amd.com/gpu"]
+
+  - it: should give precedence to platform over global.platform
+    set:
+      global.platform: epyc
+      platform: radeon
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests
+          value:
+            amd.com/gpu: "1"
+            cpu: "4"
+            memory: "32Gi"
+
+  - it: should allow user to override defaults
+    set:
+      platform: epyc
+      image: my-custom-image
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-custom-image
+      - notExists:
+          path: spec.template.spec.containers[0].resources.requests["amd.com/gpu"]
+
+  - it: should merge platform default env_vars with user provided env_vars
+    set:
+      platform: epyc
+      env_vars:
+        MY_CUSTOM_VAR: "hello"
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AIM_PRECISION
+            value: "bf16"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AIM_ALLOW_UNOPTIMIZED
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MY_CUSTOM_VAR
+            value: "hello"
+
+  - it: should merge user provided env_vars into the container
+    set:
+      env_vars:
+        MY_CUSTOM_VAR: "hello"
+        ANOTHER_VAR: "world"
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MY_CUSTOM_VAR
+            value: "hello"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ANOTHER_VAR
+            value: "world"
+
+  - it: should render secretKeyRef env_vars
+    set:
+      env_vars:
+        HF_TOKEN:
+          name: hf-token
+          key: hf-token
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HF_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: hf-token
+                key: hf-token
+
+  - it: should not render env when env_vars is empty
+    asserts:
+      - isKind:
+          of: Deployment
+      - notExists:
+          path: spec.template.spec.containers[0].env

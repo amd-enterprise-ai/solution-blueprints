@@ -49,7 +49,7 @@ Wait until all pods show ready status `1/1`.
 ### 3. Access the Web Interface
 Set up port forwarding to access the UI:
 ```
-kubectl port-forward svc/aimsb-llm-router-ui 8080:8008 -n $namespace
+kubectl port-forward services/${name}-aimsb-llm-router-ui 8080:8008 -n $namespace
 ```
 The web interface will be available at http://localhost:8080
 
@@ -92,7 +92,7 @@ The classifier supports two classification approaches, selected via `embedding.e
 #### Embedding-based Classification
 (values: `embedding.enabled: true`, default)
 
-Uses the `intfloat/multilingual-e5-large-instruct` model via the Infinity embedding server. Each class has a `description` field — the classifier computes semantic similarity between the incoming prompt and class descriptions, routing to the closest match. This approach is **faster, deterministic, and recommended for production use**.
+Uses the `intfloat/multilingual-e5-large-instruct` model via a vLLM-based embedding server (aim-base). Each class has a `description` field — the classifier computes semantic similarity between the incoming prompt and class descriptions, routing to the closest match. This approach is **faster, deterministic, and recommended for production use**.
 
 #### LLM-based Classification
 (values: `embedding.enabled: false`)
@@ -333,7 +333,7 @@ Wait until all pods show ready status `1/1`.
 ### 3. Access the Web Interface
 Set up port forwarding:
 ```
-kubectl port-forward svc/$name-ui 8080:8008 -n $namespace
+kubectl port-forward services/${name}-aimsb-llm-router-ui 8080:8008 -n $namespace
 ```
 Access the web interface at http://localhost:8080
 

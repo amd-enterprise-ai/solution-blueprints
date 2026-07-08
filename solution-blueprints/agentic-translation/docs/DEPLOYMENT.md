@@ -4,15 +4,27 @@ Copyright © Advanced Micro Devices, Inc., or its affiliates.
 SPDX-License-Identifier: MIT
 -->
 
-# Helm deployment
-Solution Blueprints are provided as Helm Charts.
+# Agentic Translation Deployment Guide
 
-The recommended approach to deploy them is to pipe the output of `helm template` to `kubectl apply -f -`.
+Solution Blueprints are provided as Helm Charts. The recommended approach to deploy them is to pipe the output of `helm template` to `kubectl apply -f -`.
 We don't recommend `helm install`, which by default uses a Secret to keep track of the related resources.
 This does not work well with Enterprise clusters that often have limitations on the kinds of resources that
 regular users are allowed to create.
 
-An example for command-line usage:
+This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms. Unless otherwise specified, the commands below cover the default **Instinct** deployment. For deployment with Radeon, see:
+
+- [Deploy on AMD Radeon](#amd-radeon-gpu)
+
+## Multi-platform Support
+
+The chart ships defaults for two platforms, selected with `--set global.platform=<platform>`: `instinct` (GPU, the default) and `radeon` (GPU). Each sets a matching AIM image and resource profile; inspect them with `helm show values . --jsonpath '{.llm.platformDefaults}'`.
+
+> **Helm note**: Built and tested on Helm 3.17 or higher. On Helm v4, if the piped `kubectl apply` is rejected, run `helm pull oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-translation --untar` first and template the local `./aimsb-agentic-translation` directory instead.
+
+### AMD Instinct (GPU, default)
+
+To deploy the blueprint, run the following command:
+
 ```bash
 name="my-deployment"
 namespace="my-namespace"
@@ -20,12 +32,26 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-tra
   | kubectl apply -f - -n $namespace
 ```
 
+### AMD Radeon (GPU)
+
+To deploy the blueprint, run the following command:
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-translation \
+  --set global.platform=radeon \
+  | kubectl apply -f - -n $namespace
+```
+
 ## Using an existing deployment or external LLM
-By default, any required AIMs are deployed by the helm chart. If you already have a compatible AIM deployed, you can use that instead, and reuse resources.
+
+By default, any required AIMs are deployed by the helm chart. If you already have a compatible AIM deployed, you can use that instead and reuse resources.
 
 To use an existing deployment or external LLM, set the value `llm.existingService` to that endpoint. Then, any other values you pass in the `llm` mapping are simply ignored, and your existing service is used instead. You should use the Kubernetes Service name, or if the service is in a different namespace, you can use the long form `<SERVICENAME>.<NAMESPACE>.svc.cluster.local:<SERVICEPORT>`. If needed, you can pass a whole URL.
 
 Full example command:
+
 ```bash
 name="my-deployment"
 namespace="my-namespace"
@@ -104,6 +130,8 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-tra
 To use a custom version of the image from another repo, you can set the `image` and `imagePullSecrets`, if necessary, from the command line as follows:
 
 ```bash
+name="my-deployment"
+namespace="my-namespace"
 imagerepository="my-repo/custom-agentic-translation-application"
 imagetag="0.0.1"
 secretname="my-registry-secret"
@@ -118,7 +146,7 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-tra
 
 ### Option 1: Port Forwarding
 
-Then, to connect to the UI, port-forward 8501 to be able to access the UI. The UI will then be available at <http://localhost:8501>
+To connect to the UI, port-forward port 8501. The UI will then be available at <http://localhost:8501>.
 
 ```bash
 kubectl port-forward service/aimsb-agentic-translation-$name 8501:8501 -n $namespace
@@ -129,20 +157,18 @@ kubectl port-forward service/aimsb-agentic-translation-$name 8501:8501 -n $names
 If your cluster has a Gateway API compatible gateway (e.g., Kubernetes Gateway, Istio, etc.), you can enable HTTPRoute creation to route traffic through the gateway.
 
 **Prerequisites:**
-- A Gateway named `https` must exist in the `kgateway-system` namespace (or configure a different gateway)
+
+- A Gateway named `https` must exist in the `envoy-gateway-system` namespace (or configure a different gateway)
 - The Gateway must be properly configured with listeners
 
 **Enabling HTTPRoute:**
 
 Use `--set http_route.enabled=true` in the `helm template` command to enable HTTPRoute creation:
-(notice, the command contains an existing Llm service running in the cluster).
 
 ```bash
 name="my-deployment"
 namespace="my-namespace"
-servicename="aim-llm-my-model-123456"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-translation \
-  --set llm.existingService=$servicename \
   --set http_route.enabled=true \
   | kubectl apply -f - -n $namespace
 ```
@@ -150,6 +176,16 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-tra
 **Obtaining the URL:**
 
 The URL to access the blueprint via HTTPRoute is formed by the service name and the hostname of the gateway. Use this command to produce the URL by querying the hostname from the cluster:
-   ```bash
-   echo "https://aimsb-agentic-translation-$name$(kubectl get gtw -A -o jsonpath='{.items[*].spec.listeners[?(@.name=="https")].hostname}' | tr -d \*)/"
-   ```
+
+```bash
+echo "https://aimsb-agentic-translation-$name$(kubectl get gtw -A -o jsonpath='{.items[*].spec.listeners[?(@.name=="https")].hostname}' | tr -d \*)/"
+```
+
+## Clean Up
+
+When you are finished, remove the deployed resources:
+
+```bash
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-translation \
+  | kubectl delete -f - -n $namespace
+```

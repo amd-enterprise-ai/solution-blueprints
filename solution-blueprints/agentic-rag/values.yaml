@@ -7,7 +7,7 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
 
 metadata:
   labels: {}
@@ -19,9 +19,9 @@ env_vars:
   INIT_RETRIES: "5"
   INITIAL_DELAY: "1.0"
   BACKOFF_FACTOR: "2.0"
-  CHUNK_SIZE: "1500"
-  CHUNK_OVERLAP: "300"
-  TOP_K_DOCS: "5"
+  CHUNK_SIZE: "300"
+  CHUNK_OVERLAP: "60"
+  TOP_K_DOCS: "6"
 
 # AGENT UI (Runs rag_app.py)
 agentApp:
@@ -93,10 +93,10 @@ kaiwo:
 
 # Values passed to the `llm` Subchart (aimchart-llm)
 llm:
+  nameOverride: aimsb-agentic-rag-llm
   service:
     enabled: true
     type: ClusterIP
-  image: "amdenterpriseai/aim-openai-gpt-oss-20b:0.11.1"
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
   apiKeySecretRef: {}
@@ -108,30 +108,15 @@ llm:
     ephemeral:
       storageClassName: mlstorage
       quantity: 512Gi
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-openai-gpt-oss-20b:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
 
 # Values passed to the `embedding` Subchart (aimchart-embedding)
 embedding:
-  metadata:
-    labels: {}
-  image: "michaelf34/infinity:0.0.70-amd-gfx942"
-  model: "intfloat/multilingual-e5-large-instruct"
-  gpus: 1
-  resources:
-    requests: { cpu: "2", memory: "32Gi" }
-    limits: { cpu: "4", memory: "192Gi" }
-  storage:
-    ephemeral:
-      quantity: 20Gi
-    dshm:
-      sizeLimit: 16Gi
-  deployment:
-    ports:
-      http: 7997
-    command:
-      - infinity_emb
-    args:
-      - v1
-      - server
+  nameOverride: "aimchart-embedding"
 
 # Values passed to the `chromadb` Subchart (aimchart-chromadb)
 chromadb:

@@ -14,19 +14,11 @@ from utils import setup_logging  # type: ignore[attr-defined]
 # It exposes tools (build, retrieve, clear, stats) that the agent calls over SSE.
 # The agent discovers these tools via the MCP handshake and uses them at runtime.
 
-# Initialize standardized logging
 logger = setup_logging("mcp_server")
 
-# 1. INITIALIZE FastMCP
 # The name "AgenticRAG-Backend" is sent to the agent during tool discovery.
-# The agent sees this name in its available tools list.
 mcp = FastMCP("AgenticRAG-Backend")
-kb = KnowledgeBase()  # Singleton DB wrapper — shared across all tool calls
-
-# 2. DEFINE TOOLS
-# Each @mcp.tool decorator registers a function as a tool the agent can call.
-# The description= text is what the LLM reads to decide WHEN to use each tool.
-# Clear docstrings act as additional instructions for the LLM.
+kb = KnowledgeBase()  # Singleton DB wrapper, shared across all tool calls.
 
 
 @mcp.tool(description="Indexes text chunks into the vector database. Use this when new files are uploaded.")
@@ -82,7 +74,6 @@ def get_database_stats() -> str:
         return "ChromaDB Status: Empty / Not Initialized"
 
 
-# 3. MIDDLEWARE FOR K8S COMPATIBILITY
 class MCPNetworkMiddleware:
     """
     Ensures that the SSE handshake is not rejected by FastMCP due to
@@ -104,7 +95,6 @@ class MCPNetworkMiddleware:
         await self.app(scope, receive, send)
 
 
-# 4. SERVER EXECUTION
 if __name__ == "__main__":
     # Create the Starlette/FastAPI app from FastMCP
     app = mcp.sse_app()

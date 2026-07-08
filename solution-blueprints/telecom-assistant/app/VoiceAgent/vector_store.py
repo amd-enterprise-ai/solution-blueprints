@@ -1,6 +1,7 @@
 # Copyright © Advanced Micro Devices, Inc., or its affiliates.
 #
 # SPDX-License-Identifier: MIT
+
 import asyncio
 import logging
 import re
@@ -35,7 +36,7 @@ class AIMEmbeddings:
 
 
 class ChromaHybridStore:
-    def __init__(self):
+    def __init__(self, collection_name: str = None):
         chroma_url = settings.chroma_url
         if chroma_url:
             parsed = urllib.parse.urlparse(chroma_url)
@@ -53,8 +54,10 @@ class ChromaHybridStore:
 
         self.embedder = AIMEmbeddings(base_url=settings.embeddings_url, api_key=settings.embeddings_api_key)
 
+        collection_to_use = collection_name if collection_name else settings.collection_name
+
         self.collection = self.client.get_or_create_collection(
-            name=settings.collection_name,
+            name=collection_to_use,
             metadata={"hnsw:space": "cosine"},
         )
 
@@ -133,14 +136,77 @@ class ChromaHybridStore:
 
         return [doc_id for doc_id, _ in ranked]
 
+    def _filter_low_quality_documents(self, documents: list[dict]) -> list[dict]:
+        filtered = []
+        skip_patterns = [
+            r"(?i)copyright\s+©",
+            r"(?i)all rights reserved",
+            r"(?i)confidential",
+            r"(?i)proprietary",
+            r"(?i)trade\s*mark",
+            r"(?i)patent",
+            r"(?i)legalinformation",
+            r"(?i)disclaimer",
+        ]
+
+        for doc in documents:
+            content = doc.get("document", "")
+            if not content:
+                continue
+
+            content_lower = content.lower()
+
+            is_low_quality = False
+            for pattern in skip_patterns:
+                if re.search(pattern, content_lower):
+                    is_low_quality = True
+                    break
+
+            if not is_low_quality and len(content) > 50:
+                filtered.append(doc)
+
+        return filtered
+
+    def _rerank_by_relevance(self, documents: list[dict], query: str) -> list[dict]:
+        if not documents or not query:
+            return documents
+
+        query_tokens = self.normalize_text(query)
+        if not query_tokens:
+            return documents
+
+        for doc in documents:
+            content = doc.get("document", "")
+            content_tokens = self.normalize_text(content)
+
+            if not content_tokens:
+                doc["relevance_score"] = 0.0
+                continue
+
+            common_tokens = set(query_tokens) & set(content_tokens)
+            score = len(common_tokens) / max(len(query_tokens), 1)
+
+            if any(word in content.lower() for word in ["button", "light", "led", "port", "reset", "wan", "lan"]):
+                score += 0.2
+
+            if any(word in content.lower() for word in ["wi-fi", "wireless", "broadband", "internet"]):
+                score += 0.15
+
+            doc["relevance_score"] = min(score, 1.0)
+
+        documents.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
+
+        return documents
+
     async def hybrid_search(
         self,
         query: str,
-        k: int = 4,
-        candidate_multiplier: int = 5,
+        k: int = 3,
+        candidate_multiplier: int = 3,
         rrf_k: int = 10,
         dense_weight: float = 2.0,
         keyword_weight: float = 1.0,
+        min_score_threshold: float = 0.03,
     ) -> list[dict]:
         if not query.strip():
             return []
@@ -176,11 +242,16 @@ class ChromaHybridStore:
         if not rrf_scores:
             return []
 
+        filtered_scores = {k: v for k, v in rrf_scores.items() if v >= min_score_threshold}
+
+        if not filtered_scores:
+            return []
+
         sorted_ids = sorted(
-            rrf_scores.keys(),
-            key=lambda x: rrf_scores[x],
+            filtered_scores.keys(),
+            key=lambda x: filtered_scores[x],
             reverse=True,
-        )[:k]
+        )[: k * 2]
 
         final_docs = self.collection.get(
             ids=sorted_ids,
@@ -191,6 +262,7 @@ class ChromaHybridStore:
             id_: {
                 "document": doc,
                 "metadata": meta,
+                "rrf_score": filtered_scores.get(id_, 0),
             }
             for id_, doc, meta in zip(
                 final_docs["ids"],
@@ -199,16 +271,22 @@ class ChromaHybridStore:
             )
         }
 
-        output = []
+        candidate_docs = []
         for doc_id in sorted_ids:
             if doc_id in id_to_data:
-                output.append(
+                candidate_docs.append(
                     {
                         "id": doc_id,
                         "document": id_to_data[doc_id]["document"],
                         "metadata": id_to_data[doc_id]["metadata"],
-                        "rrf_score": rrf_scores[doc_id],
+                        "rrf_score": id_to_data[doc_id]["rrf_score"],
                     }
                 )
 
-        return output
+        filtered_docs = self._filter_low_quality_documents(candidate_docs)
+
+        reranked_docs = self._rerank_by_relevance(filtered_docs, query)
+
+        final_results = reranked_docs[:k]
+
+        return final_results

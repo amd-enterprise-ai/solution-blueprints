@@ -9,7 +9,7 @@
 metadata:
   labels: {}
 
-image: "python:3.12"
+image: "docker.io/library/python:3.12"
 imagePullPolicy: Always
 
 enableUI: True
@@ -93,17 +93,17 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
+
+global:
+  platform: instinct
 
 # LLM dependency configuration
 # Set llm.existingService to use an existing LLM instead of deploying one
 # Example: --set llm.existingService=my-llm-service
 llm:
   existingService: ""  # If set, skips LLM deployment and uses this service
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  nameOverride: llama33-70b-instruct
-  env_vars:
-    AIM_PRECISION: "fp8"
+  nameOverride: aimsb-rge-llm
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
   apiKeySecretRef: {}
@@ -111,7 +111,23 @@ llm:
   # apiKeySecretRef:
   #   name: my-secretname
   #   key: api-key
-  cpu_per_gpu: 1  # Reduced from 4 to 1 CPU
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+      cpu_per_gpu: 1
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
+      cpu_per_gpu: 1
+    epyc:
+      image: "docker.io/amdenterpriseai/aim-epyc-meta-llama-llama-3-1-8b-instruct:0.13.0"
+      gpus: 0
+      # Fit weights + KV cache + overhead to avoid OOMKilled;
+      memory: 128
+      # cpus=188 keeps the LLM within a single NUMA node (EPYC 9965 = 192 cores/node, SMT off).
+      cpus: 188
+      env_vars:
+        AIM_PRECISION: "bf16"
+        AIM_ALLOW_UNOPTIMIZED: "true"
   storage:
     ephemeral:
       storageClassName: mlstorage  # Set to null for emptyDir (no PVC)

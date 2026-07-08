@@ -19,6 +19,12 @@ spec:
     app: {{ include "aimchart-llm.release.fullname" . }}
 {{- end }}
 
+{{- $pv := include "aimchart-llm.platformValues" . | fromYaml -}}
+{{- $ctx := merge (dict "Values" $pv) (omit . "Values") -}}
+{{- with $ctx -}}
+
 {{- if not .Values.existingService }}
 {{- include "aimchart-llm.service" . }}
 {{- end }}
+
+{{- end -}}

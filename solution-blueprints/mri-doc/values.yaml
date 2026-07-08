@@ -64,11 +64,10 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
 
 llm:
-  nameOverride: gpt-oss-20b
-  image: "amdenterpriseai/aim-openai-gpt-oss-20b:0.11.1"
+  nameOverride: "aimsb-mri-doc-llm"
 
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
@@ -82,6 +81,11 @@ llm:
     ephemeral:
       storageClassName: mlstorage
       quantity: 120Gi
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-openai-gpt-oss-20b:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
 
   env_vars:
     AIM_PORT: 8000

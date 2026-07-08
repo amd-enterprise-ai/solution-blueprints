@@ -6,7 +6,7 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
 
 replicaCount: 1
 enableUI: true
@@ -21,14 +21,18 @@ ports:
 deployDemonstrationLLMs: false
 
 primary:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.11.1"
-  env_vars:
-    AIM_PRECISION: "fp8"
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-1-8b-instruct:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-meta-llama-llama-3-1-8b-instruct:0.12.0-preview"
 
 secondary:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  env_vars:
-    AIM_PRECISION: "fp8"
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
 
 # NOTE: Any number of models with arbitrary names can be declared in this section.
 # You can add as many models as needed, each with a unique name and corresponding configuration.
@@ -93,26 +97,7 @@ storage:
   dshm:
     sizeLimit: 1Gi
 
+# Minimal overrides only; everything else inherits aimchart-embedding defaults.
 embedding:
   enabled: true
-  metadata:
-    labels: {}
-  image: "michaelf34/infinity:0.0.70-amd-gfx942"
-  model: "intfloat/multilingual-e5-large-instruct"
-  gpus: 1
-  resources:
-    requests: { cpu: "2", memory: "32Gi" }
-    limits: { cpu: "4", memory: "192Gi" }
-  storage:
-    ephemeral:
-      quantity: 20Gi
-    dshm:
-      sizeLimit: 16Gi
-  deployment:
-    ports:
-      http: 7997
-    command:
-      - infinity_emb
-    args:
-      - v1
-      - server
+  nameOverride: "aimchart-embedding"

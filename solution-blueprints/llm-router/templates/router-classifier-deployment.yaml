@@ -56,10 +56,10 @@ spec:
             - name: CONTROLLER_URL
               value: {{ include "controller.url" . }}
             {{- if .Values.embedding.enabled }}
-            - name: INFINITY_URL
-              value: {{ include "embedding.url" . | quote }}
+            - name: EMBEDDING_URL
+              value: {{ printf "%s/v1/embeddings" (include "embedding.url" .) | quote }}
             - name: CLASSIFIER_EMBEDDING_MODEL_NAME
-              value: {{ .Values.embedding.model | quote }}
+              value: {{ default "intfloat/multilingual-e5-large-instruct" .Values.embedding.model | quote }}
             {{- else }}
             - name: CLASSIFIER_BASE_URL
               value: {{ include "llm.backendBaseUrl" (dict "backend" .Values.classifier.llmBackend "Values" .Values "Release" .Release) | quote }}

@@ -5,7 +5,7 @@
 metadata:
   labels: {}
 
-image: "python:3.12"
+image: "docker.io/library/python:3.12"
 imagePullPolicy: Always
 
 enableUI: True
@@ -58,13 +58,13 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
+
+global:
+  platform: instinct
 
 llm:
-  image: "amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
-  nameOverride: aim-llama-70b
-  env_vars:
-    AIM_PRECISION: "fp8"
+  nameOverride: aimsb-fsi-llm
   model: ""  # If connecting to an external LLM service, optionally specify model to use
   apiKey: "" # If connecting to an external LLM service, optionally specify an API key
   apiKeySecretRef: {}
@@ -72,7 +72,21 @@ llm:
   # apiKeySecretRef:
   #   name: my-secretname
   #   key: api-key
-
+  platformDefaults:
+    instinct:
+      image: "docker.io/amdenterpriseai/aim-meta-llama-llama-3-3-70b-instruct:0.11.1"
+    radeon:
+      image: "docker.io/amdenterpriseai/aim-radeon-qwen-qwen3-vl-8b-instruct:0.12.0-preview"
+    epyc:
+      image: "docker.io/amdenterpriseai/aim-epyc-meta-llama-llama-3-1-8b-instruct:0.13.0"
+      gpus: 0
+      # Fit weights + KV cache + overhead to avoid OOMKilled;
+      memory: 128
+      # cpus=188 keeps the LLM within a single NUMA node (EPYC 9965 = 192 cores/node, SMT off).
+      cpus: 188
+      env_vars:
+        AIM_PRECISION: "bf16"
+        AIM_ALLOW_UNOPTIMIZED: "true"
   storage:
     ephemeral:
       storageClassName: mlstorage

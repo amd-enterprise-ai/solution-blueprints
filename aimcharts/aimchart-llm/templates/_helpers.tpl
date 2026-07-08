@@ -2,6 +2,14 @@
 #
 # SPDX-License-Identifier: MIT
 
+# create a filled in version of .Values with the platform-specific values
+# .Values.platform takes priority over .Values.global.platform
+{{- define "aimchart-llm.platformValues" -}}
+{{- $global := .Values.global | default dict -}}
+{{- $p := coalesce .Values.platform $global.platform "instinct" -}}
+{{- mergeOverwrite (index .Values.platformDefaults $p | deepCopy) (deepCopy .Values) | toYaml -}}
+{{- end -}}
+
 # Base URL helper
 {{- define "aimchart-llm.httpRoute.baseUrl" -}}
 {{- $projectId := default "project_id" .Values.metadata.project_id -}}
@@ -34,20 +42,32 @@
 {{- print (include "aimchart-llm.release.fullname" .) "-custom-profiles" | trunc 63 }}
 {{- end -}}
 
-# Container resources helper
+# Container resources helper:
+# 1. if .Values.resources is explicitly defined, use that
+# 2. gpus != 0; set cpu and memory dynamically based on .Values.cpu_per_gpu and .Values.memory_per_gpu.
+# 3. gpus == 0; set cpu and memory from .Values.cpus and .Values.memory.
 {{- define "aimchart-llm.container.resources" -}}
+{{- if .Values.resources -}}
+{{- toYaml .Values.resources -}}
+{{- else -}}
+{{- if .Values.gpus }}
 requests:
   memory: "{{ max (mul .Values.gpus .Values.memory_per_gpu) 4 }}Gi"
   cpu: "{{ max (mul .Values.gpus .Values.cpu_per_gpu) 1 }}"
-  {{- if .Values.gpus }}
   amd.com/gpu: "{{ .Values.gpus }}"
-  {{- end }}
 limits:
   memory: "{{ max (mul .Values.gpus .Values.memory_per_gpu) 4 }}Gi"
   cpu: "{{ max (mul .Values.gpus .Values.cpu_per_gpu) 1 }}"
-  {{- if .Values.gpus }}
   amd.com/gpu: "{{ .Values.gpus }}"
-  {{- end }}
+{{- else -}}
+requests:
+  memory: "{{ .Values.memory }}Gi"
+  cpu: "{{ .Values.cpus }}"
+limits:
+  memory: "{{ .Values.memory }}Gi"
+  cpu: "{{ .Values.cpus }}"
+{{- end -}}
+{{- end -}}
 {{- end -}}
 
 # Container environment variables helper

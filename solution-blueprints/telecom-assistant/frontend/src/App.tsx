@@ -8,6 +8,8 @@ import type { RpcInvocationData } from "livekit-client";
 import { RpcError } from "livekit-client";
 import type { ConnectionState } from "./types";
 import { ConsoleLayout } from "./components/ConsoleLayout/ConsoleLayout";
+import { RatingModal } from "./components/RatingModal/RatingModal";
+import "./components/RatingModal/RatingModal.css";
 import { Header } from "./components/Header/Header";
 import { BottomBar } from "./components/BottomBar/BottomBar";
 // import { CustomerProfile } from "./components/CustomerProfile/CustomerProfile";
@@ -48,9 +50,9 @@ const PASSPHRASE_PLAN_MAP: Record<string, string> = {
 };
 
 function FunctionToolsRpcHandler({
-  onUserAuthenticated,
-  onUserAuthFailed,
-}: {
+                                   onUserAuthenticated,
+                                   onUserAuthFailed,
+                                 }: {
   onUserAuthenticated: (name: string) => void;
   onUserAuthFailed: () => void;
 }) {
@@ -109,6 +111,9 @@ function App() {
 
   const [callSessionId, setCallSessionId] = useState(0);
   const [localUserMessages, setLocalUserMessages] = useState<LocalUserMessage[]>([]);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const endSessionPendingRef = useRef(false);
+  const endSessionRoomRef = useRef("");
 
   const handleConnect = useCallback(async () => {
     setConnectionState("connecting");
@@ -140,6 +145,8 @@ function App() {
   }, [handleConnect]);
 
   const handleEndCall = useCallback(() => {
+    setShowRatingModal(false);
+    endSessionPendingRef.current = false;
     setIsCallActive(false);
     setIsUserAuthenticated(false);
     setCustomerData(DEFAULT_CUSTOMER);
@@ -162,8 +169,8 @@ function App() {
       minute: "2-digit",
       hour12: true,
     })
-      .format(now)
-      .toLowerCase();
+        .format(now)
+        .toLowerCase();
 
     setLocalUserMessages((prev) => [
       ...prev,
@@ -174,6 +181,24 @@ function App() {
       },
     ]);
   }, []);
+
+  const handleEndSessionSignaled = useCallback((roomName: string) => {
+    endSessionPendingRef.current = true;
+    // Store room name for the modal (passed up from ClientSimulator)
+    endSessionRoomRef.current = roomName;
+  }, []);
+
+  const handleAgentFinalTranscript = useCallback(() => {
+    if (endSessionPendingRef.current) {
+      endSessionPendingRef.current = false;
+      setTimeout(() => setShowRatingModal(true), 2000);
+    }
+  }, []);
+
+  const handleRatingSubmitted = useCallback(() => {
+    setShowRatingModal(false);
+    handleEndCall();
+  }, [handleEndCall]);
 
   const handleToolExecuted = useCallback((event: ToolEvent) => {
     setToolEvents((prev) => [...prev, event]);
@@ -205,79 +230,88 @@ function App() {
   if (!connectionInfo) return null;
 
   return (
-    <LiveKitRoom
-      token={connectionInfo.participantToken}
-      serverUrl={connectionInfo.serverUrl}
-      connect={isCallActive}
-      audio={true}
-      onError={(err) => {
-        setLastError(err?.message || "Connection lost");
-        setConnectionState("error");
-        setIsCallActive(false);
-        setIsUserAuthenticated(false);
-      }}
-      onDisconnected={() => {
-        setIsCallActive(false);
-      }}
-    >
-      <FunctionToolsRpcHandler
-        onUserAuthenticated={(name) => {
-          setCustomerData({
-            name,
-            phone: "",
-            plan: detectedPlanRef.current,
-            status: "active",
-          });
-          setIsUserAuthenticated(true);
-        }}
-        onUserAuthFailed={() => setIsUserAuthenticated(false)}
-      />
-
-      <RoomAudioRenderer />
-
-      <ConsoleLayout
-        header={
-          <Header
-            isLive={isCallActive}
-            isMicOn={micOn}
-            showCustomerInfo={isUserAuthenticated}
-            customer={customerData}
-          />
-        }
-        bottomBar={isCallActive ? <BottomBar isAuthenticated={false} /> : null}
-      >
-        {showToolsPanel && <ToolsPanel tools={toolEvents} />}
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "24px",
-            flex: "1 0 0",
-            alignSelf: "stretch",
-            minHeight: 0,
+      <LiveKitRoom
+          token={connectionInfo.participantToken}
+          serverUrl={connectionInfo.serverUrl}
+          connect={isCallActive}
+          audio={true}
+          onError={(err) => {
+            setLastError(err?.message || "Connection lost");
+            setConnectionState("error");
+            setIsCallActive(false);
+            setIsUserAuthenticated(false);
           }}
+          onDisconnected={() => {
+            setIsCallActive(false);
+          }}
+      >
+        <FunctionToolsRpcHandler
+            onUserAuthenticated={(name) => {
+              setCustomerData({
+                name,
+                phone: "",
+                plan: detectedPlanRef.current,
+                status: "active",
+              });
+              setIsUserAuthenticated(true);
+            }}
+            onUserAuthFailed={() => setIsUserAuthenticated(false)}
+        />
+
+        <RoomAudioRenderer />
+
+        <ConsoleLayout
+            header={
+              <Header
+                  isLive={isCallActive}
+                  isMicOn={micOn}
+                  showCustomerInfo={isUserAuthenticated}
+                  customer={customerData}
+              />
+            }
+            bottomBar={isCallActive ? <BottomBar isAuthenticated={false} /> : null}
         >
-          <ConversationPanelLivekit
-            isCallActive={isCallActive}
-            resetKey={callSessionId}
-            localUserMessages={localUserMessages}
-            hideSystemMessages={showToolsPanel}
-            onToolExecuted={handleToolExecuted}
-          />
-          <ClientSimulator
-            isCallActive={isCallActive}
-            micOn={micOn}
-            onMicToggle={setMicOn}
-            showToolsPanel={showToolsPanel}
-            onToggleToolsPanel={setShowToolsPanel}
-            onStartCall={handleStartCall}
-            onEndCall={handleEndCall}
-            onSendMessage={handleLocalSendMessage}
-          />
-        </div>
-      </ConsoleLayout>
-    </LiveKitRoom>
+          {showToolsPanel && <ToolsPanel tools={toolEvents} />}
+
+          <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "24px",
+                flex: "1 0 0",
+                alignSelf: "stretch",
+                minHeight: 0,
+              }}
+          >
+            <ConversationPanelLivekit
+                isCallActive={isCallActive}
+                resetKey={callSessionId}
+                localUserMessages={localUserMessages}
+                hideSystemMessages={showToolsPanel}
+                onToolExecuted={handleToolExecuted}
+                onAgentFinalTranscript={handleAgentFinalTranscript}
+            />
+            <ClientSimulator
+                isCallActive={isCallActive}
+                micOn={micOn}
+                onMicToggle={setMicOn}
+                showToolsPanel={showToolsPanel}
+                onToggleToolsPanel={setShowToolsPanel}
+                onStartCall={handleStartCall}
+                onEndCall={handleEndCall}
+                onSendMessage={handleLocalSendMessage}
+                onEndSessionSignaled={handleEndSessionSignaled}
+                showRatingModal={showRatingModal}
+            />
+            {showRatingModal && (
+                <RatingModal
+                    roomName={endSessionRoomRef.current}
+                    onRatingSubmitted={handleRatingSubmitted}
+                />
+            )}
+          </div>
+        </ConsoleLayout>
+      </LiveKitRoom>
   );
 }
 

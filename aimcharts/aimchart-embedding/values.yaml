@@ -2,7 +2,55 @@
 #
 # SPDX-License-Identifier: MIT
 
-image: "michaelf34/infinity:0.0.70-amd-gfx942"
+# platform defaults are filled in when the key is missing at the top level.
+platformDefaults:
+  instinct:
+    platform: instinct
+    image: "docker.io/amdenterpriseai/aim-base:0.12"
+    model: "intfloat/multilingual-e5-large-instruct"
+    gpus: 1
+    resources:
+      requests:
+        cpu: "2"
+        memory: "32Gi"
+      limits:
+        cpu: "4"
+        memory: "192Gi"
+    env_vars:
+      HF_HOME: "/workload/.cache/huggingface"
+  radeon:
+    platform: radeon
+    image: "docker.io/amdenterpriseai/aim-radeon-base:0.12-preview"
+    model: "intfloat/multilingual-e5-large-instruct"
+    gpus: 1
+    resources:
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+      limits:
+        cpu: "4"
+        memory: "32Gi"
+    env_vars:
+      HF_HOME: "/workload/.cache/huggingface"
+  epyc:
+    platform: epyc
+    image: "docker.io/amdenterpriseai/aim-epyc-base:0.11"
+    model: "intfloat/multilingual-e5-small"
+    gpus: 0
+    resources:
+      requests:
+        cpu: "188"
+        memory: "128Gi"
+      limits:
+        cpu: "188"
+        memory: "128Gi"
+    deployment:
+      args:
+        - --dtype
+        - bfloat16
+    env_vars:
+      HF_HOME: "/workload/.cache/huggingface"
+
 imagePullPolicy: "Always"
 
 existingService: null
@@ -13,22 +61,17 @@ fullnameOverride: null
 deployment:
   ports:
     http: 7997
-
-resources:
-  requests:
-    cpu: "2"
-    memory: "8Gi"
-  limits:
-    cpu: "4"
-    memory: "16Gi"
-
-gpus: 0
+  command:
+    - vllm
+    - serve
 
 env_vars: {}
-  # HF_HOME: "/workload/.cache/huggingface"
-  # INFINITY_ANONYMOUS_USAGE_STATS: "0"
-
-model: "intfloat/multilingual-e5-large-instruct"
+  # Available AIM Environment Variables:
+  #
+  # You may provide a HuggingFace token that's stored in a Secret called `hf-token` in the key `hf-token` by adding:
+  # HF_TOKEN:
+  #   key: hf-token
+  #   name: hf-token
 
 storage:
   ephemeral:
@@ -41,20 +84,17 @@ metadata:
 
 startupProbe:
   httpGet:
-    path: /models
-    port: 7997
+    path: /health
   initialDelaySeconds: 15
   periodSeconds: 10
   failureThreshold: 90
 
 readinessProbe:
   httpGet:
-    path: /models
-    port: 7997
+    path: /health
   periodSeconds: 10
 
 livenessProbe:
   httpGet:
     path: /health
-    port: 7997
   periodSeconds: 10

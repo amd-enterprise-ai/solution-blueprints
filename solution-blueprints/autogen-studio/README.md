@@ -11,7 +11,7 @@ AutoGen Studio is a web-based interface for creating, configuring, and managing 
 ## Prerequisites
 
 - Kubernetes cluster with kubectl access
-- Helm 3.x installed
+- Helm 3.17 or higher installed
 - Sufficient cluster resources (2 CPU, 4Gi memory minimum)
 
 ## Quick Start

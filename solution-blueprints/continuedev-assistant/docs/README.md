@@ -19,7 +19,7 @@ The [Continue.dev](https://docs.continue.dev/#core-features) Coding Assistant is
 
 For details, see the [Continue.dev documentation](https://docs.continue.dev/#core-features) and the [quick start guide](https://docs.continue.dev/ide-extensions/quick-start).
 
-AMD Solution Blueprints are packaged as [helm charts](https://helm.sh/) for deployment on a Kubernetes cluster. For development or further exploration, the source code is public and available in the [solution-blueprints GitHub repository](https://github.com/amd-enterprise-ai/solution-blueprints/tree/main/solution-blueprints/continuedev-assistant).
+AMD Solution Blueprints are packaged as [helm charts](https://helm.sh/) for deployment on a Kubernetes cluster. For development or further exploration, the source code is public and available in the [Solution Blueprints GitHub repository](https://github.com/amd-enterprise-ai/solution-blueprints/tree/main/solution-blueprints/continuedev-assistant).
 
 ## Architecture
 
@@ -49,7 +49,9 @@ The blueprint integrates three components: a **code-server** browser IDE, the **
 
 ## Getting Started
 
-This is a quick start guide on how to deploy the blueprint. For advanced options, such as reusing an existing AIM, providing a Hugging Face token, or overriding storage classes, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html).
+This is a quick start guide on how to deploy the blueprint. For advanced options, such as reusing an existing AIM, providing a Hugging Face token, or overriding storage classes, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html) or explore the [advanced deployment guide](./DEPLOYMENT.md).
+
+This blueprint is designed to run on **AMD Instinct** GPUs.
 
 ### Prerequisites
 
@@ -57,7 +59,7 @@ This is a quick start guide on how to deploy the blueprint. For advanced options
 
 The blueprint requires the following cluster resources by default:
 
-| Resource | Default configuration |
+| Resource | Default Configuration |
 |--|-------------------|
 | GPUs | 3 (one for each component) |
 | CPUs | 8 CPU cores |
@@ -65,8 +67,8 @@ The blueprint requires the following cluster resources by default:
 
 To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
-- [`kubectl`](https://kubernetes.io/docs/tasks/tools/): Installed and configured to communicate with the cluster
-- [Helm](https://helm.sh/docs/intro/install/) installed on your local machine
+- [kubectl](https://kubernetes.io/docs/tasks/tools/): Installed and configured to communicate with the cluster
+- [Helm](https://helm.sh/docs/intro/install/) 3.17 or higher: Installed on your local machine
 
 ### Deployment
 
@@ -79,7 +81,7 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-continuedev
   | kubectl apply -f - -n $namespace
 ```
 
-Note: You can create a namespace using `kubectl create namespace $namespace`
+Note: You can create a namespace using `kubectl create namespace $namespace`.
 
 To check the status of the deployment, run:
 
@@ -109,6 +111,8 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-continuedev
 ```
 
 ## Third-Party Components
+
+This Solution Blueprint utilizes multiple components. For third-party license information, refer to each component's documentation. Key third-party components can be seen below:
 
 | Component | License |
 |---------|---------|

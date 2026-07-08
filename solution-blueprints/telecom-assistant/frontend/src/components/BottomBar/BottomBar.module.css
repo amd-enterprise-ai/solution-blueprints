@@ -75,6 +75,7 @@ SPDX-License-Identifier: MIT
   display: flex;
   align-items: center;
   gap: var(--space-lg);
+  flex-wrap: nowrap;
 }
 
 .btn {
@@ -123,4 +124,49 @@ SPDX-License-Identifier: MIT
   padding: 0 var(--space-xxs);
   justify-content: center;
   align-items: center;
+}
+.btnPrimary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-tertiary);
+  box-shadow: none;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.uploadHint {
+  font-size: var(--font-size-md);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.resultInline {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.loader {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

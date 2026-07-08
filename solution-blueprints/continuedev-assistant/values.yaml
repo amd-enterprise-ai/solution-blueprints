@@ -60,7 +60,7 @@ http_route:
   enabled: false
   gateway:
     name: https
-    namespace: kgateway-system
+    namespace: envoy-gateway-system
 
 persistent_storage:
   enabled: false

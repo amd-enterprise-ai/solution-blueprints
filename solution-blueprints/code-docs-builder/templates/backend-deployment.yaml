@@ -18,7 +18,7 @@ spec:
     spec:
       initContainers:
         - name: unpack-workload
-          image: busybox:latest
+          image: docker.io/library/busybox:latest
           command: [ "/bin/sh", "-c" ]
           args:
             - |

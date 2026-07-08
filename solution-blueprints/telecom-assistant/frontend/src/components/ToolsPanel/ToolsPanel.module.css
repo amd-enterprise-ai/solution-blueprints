@@ -225,3 +225,42 @@ SPDX-License-Identifier: MIT
   font-weight: 400;
   line-height: 20px;
 }
+
+
+.alertDescription {
+  max-height: 240px;
+  overflow-y: auto;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  padding-right: 8px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.alertOutputMarkdown {
+  width: 100%;
+}
+
+.alertOutputPre {
+  max-height: 240px;
+  overflow-y: auto;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: var(--font-size-xs);
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.alertDescription::-webkit-scrollbar,
+.alertOutputPre::-webkit-scrollbar {
+  width: 6px;
+}
+.alertDescription::-webkit-scrollbar-thumb,
+.alertOutputPre::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 3px;
+}

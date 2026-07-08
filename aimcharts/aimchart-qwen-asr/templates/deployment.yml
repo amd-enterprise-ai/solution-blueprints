@@ -38,21 +38,16 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              echo "Checking audio dependencies..."
-
               apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                 ffmpeg \
                 libsndfile1 \
                 git \
                 curl
-
-              echo "Updating Transformers..."
-              pip install --ignore-installed blinker==1.9.0
-              pip install qwen-asr==0.0.6
+              printf '%s' {{ .Files.Get "requirements.txt" | b64enc | quote }} | base64 -d > /tmp/requirements.txt
+              pip install --ignore-installed blinker==$(grep "^blinker==" /tmp/requirements.txt | cut -d= -f3)
+              pip install -r /tmp/requirements.txt
 
               cd ..
-              pip install "vllm[audio]"==0.14.0rc3.dev30+gb026cf14e.rocm700
-
               echo "Starting vLLM for Qwen3-ASR..."
               qwen-asr-serve \
                 {{ .Values.model }} \

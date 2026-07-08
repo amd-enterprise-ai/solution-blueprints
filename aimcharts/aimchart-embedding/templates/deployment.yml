@@ -2,7 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-{{ if not .Values.existingService -}}
+{{- $pv := include "aimchart-embedding.platformValues" . | fromYaml -}}
+{{- $ctx := merge (dict "Values" $pv) (omit . "Values") -}}
+{{- with $ctx -}}
+
+{{- if not .Values.existingService }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,21 +30,49 @@ spec:
       - name: aim-embedding
         image: "{{ .Values.image }}"
         imagePullPolicy: {{ .Values.imagePullPolicy }}
+        {{- if .Values.deployment.command }}
         command:
-          - "infinity_emb"
+          {{- toYaml .Values.deployment.command | nindent 10 }}
+          - {{ .Values.model | quote }}
+          - --port
+          - {{ .Values.deployment.ports.http | quote }}
+        {{- end }}
+        {{- if .Values.deployment.args }}
         args:
-          - "v1"
+          {{- toYaml .Values.deployment.args | nindent 10 }}
+        {{- end }}
         ports:
         - name: http
           containerPort: {{ .Values.deployment.ports.http }}
+        {{- if .Values.env_vars }}
         env:
           {{- include "aim-embedding.container.env" . | nindent 10 }}
+        {{- end }}
+        {{- $port := .Values.deployment.ports.http }}
+        {{- with .Values.startupProbe }}
         startupProbe:
-          {{- toYaml .Values.startupProbe | nindent 10 }}
+          {{- $probe := deepCopy . }}
+          {{- if and $probe.httpGet (not $probe.httpGet.port) }}
+          {{- $_ := set $probe.httpGet "port" $port }}
+          {{- end }}
+          {{- toYaml $probe | nindent 10 }}
+        {{- end }}
+        {{- with .Values.readinessProbe }}
         readinessProbe:
-          {{- toYaml .Values.readinessProbe | nindent 10 }}
+          {{- $probe := deepCopy . }}
+          {{- if and $probe.httpGet (not $probe.httpGet.port) }}
+          {{- $_ := set $probe.httpGet "port" $port }}
+          {{- end }}
+          {{- toYaml $probe | nindent 10 }}
+        {{- end }}
+        {{- with .Values.livenessProbe }}
         livenessProbe:
-          {{- toYaml .Values.livenessProbe | nindent 10 }}
+          {{- $probe := deepCopy . }}
+          {{- if and $probe.httpGet (not $probe.httpGet.port) }}
+          {{- $_ := set $probe.httpGet "port" $port }}
+          {{- end }}
+          {{- toYaml $probe | nindent 10 }}
+        {{- end }}
         resources:
           requests:
             {{- toYaml .Values.resources.requests | nindent 12 }}
@@ -56,4 +88,6 @@ spec:
           {{- include "aim-embedding.container.volumeMounts" . | nindent 10 }}
       volumes:
         {{- include "aim-embedding.container.volumes" . | nindent 8 }}
+{{- end -}}
+
 {{- end -}}

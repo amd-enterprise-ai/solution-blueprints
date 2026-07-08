@@ -48,12 +48,13 @@ app: {{ include "aimsb-talk-to-your-documents.fullname" . }}
 Helper for container environment variables.
 */}}
 {{- define "aimsb-talk-to-your-documents.container.env" -}}
+{{- $chromadbSub := dict "Values" (merge (dict) .Values.chromadb) "Release" .Release "Chart" (dict "Name" "chromadb") -}}
+{{- $llmSub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") -}}
+{{- $embeddingSub := dict "Values" (merge (dict) .Values.embedding) "Release" .Release "Chart" (dict "Name" "embedding") -}}
 - name: CHROMADB_URL
-  {{ $sub := dict "Values" (merge (dict) .Values.chromadb) "Release" .Release "Chart" (dict "Name" "chromadb") }}
-  value: {{ include "aim-chromadb.url" $sub | quote }}
+  value: {{ include "aim-chromadb.url" $chromadbSub | quote }}
 - name: VLLM_URL
-  {{ $sub := dict "Values" (merge (dict) .Values.llm) "Release" .Release "Chart" (dict "Name" "llm") }}
-  value: {{ include "aimchart-llm.url" $sub }}
+  value: {{ include "aimchart-llm.url" $llmSub | quote }}
 {{- if .Values.llm.apiKeySecretRef }}
 - name: VLLM_API_KEY
   valueFrom:
@@ -69,11 +70,9 @@ Helper for container environment variables.
   value: {{ .Values.llm.model | quote }}
 {{- end }}
 - name: EMBEDDING_URL
-  {{ $sub := dict "Values" (merge (dict) .Values.embedding) "Release" .Release "Chart" (dict "Name" "embedding") }}
-  value: {{ include "aim-embedding.url" $sub }}/embeddings
+  value: {{ printf "%s/v1/embeddings" (include "aim-embedding.url" $embeddingSub) | quote }}
 - name: EMBEDDING_OPENAI_URL
-  {{ $sub := dict "Values" (merge (dict) .Values.embedding) "Release" .Release "Chart" (dict "Name" "embedding") }}
-  value: {{ include "aim-embedding.url" $sub }}/v1
+  value: {{ printf "%s/v1" (include "aim-embedding.url" $embeddingSub) | quote }}
 {{- range $key, $value := .Values.env_vars }}
 - name: {{ $key }}
   value: {{ tpl $value $ | quote }}

@@ -25,7 +25,27 @@ spec:
         app.kubernetes.io/instance: {{ include "release.fullname" . }}
         app.kubernetes.io/component: knowledge-mcp
     spec:
-      # Init Container: Wait for DB & Models
+      initContainers:
+        - name: wait-for-dependencies
+          image: alpine:latest
+          command: ['sh', '-c']
+          args:
+            - |
+              set -e
+              apk add --no-cache curl >/dev/null
+              echo "Waiting for ChromaDB ($CHROMADB_URL/api/v2/heartbeat)..."
+              until curl -s -f -o /dev/null "$CHROMADB_URL/api/v2/heartbeat"; do sleep 5; done
+              echo "ChromaDB is up"
+
+              EMBED_BASE="${EMBEDDING_URL%/v1/embeddings}"
+              echo "Waiting for Embedding service ($EMBED_BASE/health)..."
+              until curl -s -f -o /dev/null "$EMBED_BASE/health"; do sleep 5; done
+              echo "Embedding service is up"
+          env:
+            - name: CHROMADB_URL
+              value: {{ include "chromadb.url" . | quote }}
+            - name: EMBEDDING_URL
+              value: {{ printf "%s/v1/embeddings" (include "embedding.baseUrl" .) | quote }}
 
       # Main Container: MCP Server
       containers:
@@ -44,7 +64,7 @@ spec:
             - name: CHROMADB_URL
               value: {{ include "chromadb.url" . | quote }}
             - name: EMBEDDING_URL
-              value: {{ printf "%s/embeddings" (include "embedding.baseUrl" .) | quote }}
+              value: {{ printf "%s/v1/embeddings" (include "embedding.baseUrl" .) | quote }}
             {{- range $key, $val := .Values.env_vars }}
             - name: {{ $key }}
               value: {{ $val | quote }}

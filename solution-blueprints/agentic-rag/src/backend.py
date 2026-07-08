@@ -22,7 +22,27 @@ from utils import (  # type: ignore[attr-defined]
 
 # This is the only file that contains ChromaDB-specific code.
 # To swap to a different vector DB (Pgvector, Pinecone, etc.),
-# rewrite this class and update config.py — no other files need changes.
+# rewrite this class and update config.py - no other files need changes.
+
+
+def _make_splitter() -> RecursiveCharacterTextSplitter:
+    """Build a splitter that respects the embedding model's max token length.
+
+    When the tokenizer is available, chunk_size/overlap are treated as tokens.
+    Otherwise we fall back to characters with a 2x multiplier - conservative
+    enough for dense scripts (CJK, Arabic) where 1 token ~ 1 char.
+    """
+    tok = config.get_embed_tokenizer()
+    if tok is not None:
+        return RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
+            tokenizer=tok,
+            chunk_size=config.CHUNK_SIZE,
+            chunk_overlap=config.CHUNK_OVERLAP,
+        )
+    return RecursiveCharacterTextSplitter(
+        chunk_size=config.CHUNK_SIZE * 2,
+        chunk_overlap=config.CHUNK_OVERLAP * 2,
+    )
 
 
 class KnowledgeBase:
@@ -36,8 +56,8 @@ class KnowledgeBase:
         self.vector_store = None  # LangChain Chroma wrapper (also lazy)
         self.collection_name = "rag_collection"  # Single collection for all documents
         self.embedding_function = RemoteEmbeddingFunction(
-            url=config.INFINITY_EMBEDDING_URL,  # Infinity embedding server endpoint
-            model=config.EMBED_MODEL,  # Model auto-detected at startup
+            url=config.EMBEDDING_URL,  # vLLM embedding server endpoint
+            model=config.get_embed_model(),  # auto-detected from /v1/models
         )
 
     @property
@@ -74,10 +94,7 @@ class KnowledgeBase:
         logger.info(f"--- DB Sync Start | Source: {source_name} ---")
 
         all_docs = [Document(page_content=t, metadata={"source": source_name}) for t in texts]
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=config.CHUNK_SIZE,  # Default: 1000 chars per chunk
-            chunk_overlap=config.CHUNK_OVERLAP,  # Default: 200 chars overlap for context continuity
-        )
+        splitter = _make_splitter()
         chunks = splitter.split_documents(all_docs)
 
         # MD5 deduplication: identical content produces the same ID.
@@ -95,7 +112,7 @@ class KnowledgeBase:
         # to the index not yet being ready.
         try:
             vs.similarity_search("warmup", k=1)
-            logger.info("Index warmup complete — HNSW index is ready for queries.")
+            logger.info("Index warmup complete - HNSW index is ready for queries.")
         except Exception as e:
             logger.warning(f"Index warmup query failed (non-fatal): {e}")
 

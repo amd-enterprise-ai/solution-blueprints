@@ -64,6 +64,14 @@ limits:
 - name: LLM_MODEL
   value: {{ .Values.llm.model | quote }}
 {{- end }}
+{{/*
+  Surface the deployed platform so the UI can describe the hardware/runtime
+  (epyc => ZenDNN/EPYC, instinct|radeon => ROCm/Instinct). Mirror aimchart-llm's
+  resolution order (llm.platform > global.platform > "instinct") so the banner
+  always matches the hardware the LLM actually runs on.
+*/}}
+- name: PLATFORM
+  value: {{ coalesce (.Values.llm).platform (.Values.global).platform "instinct" | quote }}
 - name: GRADIO_SERVER_PORT
   value: {{ .Values.deployment.ports.http | quote }}
 {{- range $key, $value := .Values.env_vars }}

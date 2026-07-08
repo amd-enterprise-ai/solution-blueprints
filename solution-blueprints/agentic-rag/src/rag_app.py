@@ -94,7 +94,7 @@ async def clear_kb():
 
 async def run_rag_ui(question):
     """The main UI bridge for the Agentic RAG generator.
-    Files are NOT ingested here — use 'Upload to Knowledge Base' first."""
+    Files are NOT ingested here - use 'Upload to Knowledge Base' first."""
     q_text = question if question else ""
     q_text = q_text.strip()
     if not q_text:
@@ -158,7 +158,7 @@ CLEAR_JS = """
 with gr.Blocks(title=TITLE, css=custom_css) as demo:
     gr.Markdown(f"# {TITLE}")
     gr.Markdown(
-        "Upload your documents and ask questions — this agent retrieves relevant context from your files and generates grounded answers using RAG."
+        "Upload your documents and ask questions - this agent retrieves relevant context from your files and generates grounded answers using RAG."
     )
 
     with gr.Row():
