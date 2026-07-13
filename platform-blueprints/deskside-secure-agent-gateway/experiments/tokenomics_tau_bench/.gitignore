@@ -1,0 +1,8 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+# Run outputs — regenerate by running run_tokenomics_ab.sh
+artifacts/
+# Downloaded dataset parquet
+data/swebench_verified.parquet

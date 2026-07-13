@@ -1,0 +1,17 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+seed=42  retail=25  airline=25  total=50
+retail indices: [3, 4, 11, 13, 14, 17, 27, 28, 29, 31, 35, 54, 64, 69, 71, 75, 77, 81, 86, 94, 97, 101, 106, 111, 112]
+airline indices: [0, 2, 3, 6, 9, 10, 11, 12, 13, 14, 17, 19, 21, 26, 27, 28, 34, 36, 37, 40, 41, 44, 45, 47, 49]
+
+--- retail samples ---
+  [3] You are Yusuf Rossi in 19122. You want to know how many tshirt options are available in the online s
+  [4] You are Yusuf Rossi in 19122. You want to know how many tshirt options are available in the online s
+  [11] You are mia_garcia_4516 (mia.garcia2723@example.com). For some reason, you want to return all things
+
+--- airline samples ---
+  [0] Your user id is mia_li_3668. You want to fly from New York to Seattle on May 20 (one way). You do no
+  [2] Your user id is omar_davis_3817, you just faced some money issue and want to downgrade all business
+  [3] Your user id is sofia_kim_7287, and you want to change for your Houston to Denver trip (reservation

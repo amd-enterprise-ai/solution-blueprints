@@ -1,0 +1,31 @@
+# Copyright © Advanced Micro Devices, Inc., or its affiliates.
+#
+# SPDX-License-Identifier: MIT
+
+You are fixing a bug in the Flask repository that is checked out in your current
+working directory. Use ONLY the `run` tool (mcp__axis__run) for everything —
+exploring files, editing files, and running tests. You do not have direct file
+access; every action must be a shell command passed to `run`.
+
+The bug:
+---
+Require a non-empty name for Blueprints. Things do not work correctly if a
+Blueprint is given an empty name. A `ValueError` should be raised when a Blueprint
+is constructed with an empty name.
+---
+
+Do this:
+1. Find where the Blueprint class validates its name (look in src/flask/blueprints.py).
+   It already raises ValueError when the name contains a dot "."; add an analogous
+   check that raises ValueError when the name is empty.
+2. Make the edit through the `run` tool. Prefer a Python heredoc that reads the
+   file, inserts the new check next to the existing dot check, and writes it back
+   (e.g. `python3 - <<'PY' ... PY`). Avoid `sed -i` — it is unreliable in this
+   sandbox. Keep the change minimal.
+3. Verify by running the focused test through the `run` tool:
+   python -m pytest -q tests/test_blueprints.py::test_dotted_name_not_allowed
+   (the empty-name test is added by the grader; just make sure existing blueprint
+   tests still pass and your check is in place).
+
+Keep it tight: a couple of `run` calls to inspect, one to edit, one to test. Then
+stop and report what you changed.
