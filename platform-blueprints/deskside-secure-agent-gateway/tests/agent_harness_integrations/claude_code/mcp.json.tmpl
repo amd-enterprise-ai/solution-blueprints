@@ -1,7 +1,6 @@
 # Copyright © Advanced Micro Devices, Inc., or its affiliates.
 #
 # SPDX-License-Identifier: MIT
-
 {
   "mcpServers": {
     "axis": {
@@ -10,17 +9,10 @@
       "env": {
         "AXIS_BIN": "@AXIS_BIN@",
         "AXIS_POLICY": "@AXIS_POLICY@",
-        "DEFENSECLAW_URL": "http://127.0.0.1:@DC_PORT@",
-        "DEFENSECLAW_MODE": "action",
-        "DEFENSECLAW_FAIL_OPEN": "0",
-        "DEFENSECLAW_GATEWAY_TOKEN": "@DC_TOKEN@",
-        "SPLUNK_SINK": "@SINK@",
-        "SPLUNK_HEC_URL": "@HEC_URL@",
-        "SPLUNK_HEC_TOKEN": "@HEC_TOKEN@",
-        "NODE_TLS_REJECT_UNAUTHORIZED": "0",
+        "AUDIT_DB": "@AUDIT_DB@",
         "AXIS_SESSION": "@SESSION@",
         "AXIS_TENANT": "client-deskside",
-        "AXIS_USER": "amd",
+        "AXIS_USER": "@AXIS_USER@",
         "AXIS_POLICY_SOURCE": "local-control",
         "AXIS_POLICY_ID": "swebench-coding"
       }

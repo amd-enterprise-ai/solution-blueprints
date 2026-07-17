@@ -59,7 +59,7 @@ export function extractRequest(body) {
  *  fresh human prompt) vs. an agent-loop continuation (the model being called
  *  again after a tool call, where the last message carries tool_result blocks).
  *
- *  Cisco's trace model groups one user prompt with all the LLM/tool calls it
+ *  The trace model groups one user prompt with all the LLM/tool calls it
  *  triggers until the next user prompt. The proxy uses this to mint a new trace
  *  only on a real user turn. Heuristic on the Anthropic Messages shape:
  *    - the LAST message must have role "user";

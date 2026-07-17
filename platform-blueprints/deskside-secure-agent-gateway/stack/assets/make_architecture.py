@@ -5,7 +5,7 @@
 
 """Regenerate stack/assets/architecture.png.
 
-Two-plane governance diagram. Splunk is drawn as a standalone sink that sits
+Two-plane governance diagram. The SQLite audit DB is drawn as a standalone sink that sits
 OUTSIDE both the inference plane and the tool/audit plane, with arrows showing
 that both the lemonade_proxy and the axis MCP connector report to it.
 """
@@ -30,7 +30,7 @@ ORANGE_E, ORANGE_F = "#e8823a", "#fdf0e6"
 PURPLE_E, PURPLE_F = "#7048e8", "#f0ebfb"
 BANNER_E, BANNER_F = "#e8823a", "#fdf3e3"
 GREY_E, DARK = "#8a94a6", "#3b4252"
-SPLUNK, INK = "#5aa02c", "#242a33"
+AUDIT, INK = "#5aa02c", "#242a33"
 
 W, H = 1100, 812
 fig = plt.figure(figsize=(W / 100, H / 100), dpi=100)
@@ -157,7 +157,7 @@ card(
     BLUE_E,
     BLUE_T,
     "lemonade_proxy (Node)",
-    "transparent telemetry proxy\n" "identity -> Policy Engine Guard\n" "semantic router (consult)",
+    "transparent telemetry proxy\n" "identity + metadata\n" "semantic router (consult)",
     glyph="oo",
 )
 
@@ -178,26 +178,11 @@ card(
     GREEN_E,
     GREEN_T,
     "axis MCP connector (Node)",
-    "identity -> Policy Engine\n" "AXIS -> Observalibilty Pipeline event",
+    "identity + redacted argv\n" "AXIS -> SQLite audit event",
     glyph="<>",
 )
 
-arrow([(RC, 478), (RC, 464)], GREEN_E, lw=2.0, scale=14)
-
-card(
-    695,
-    374,
-    905,
-    462,
-    ORANGE_E,
-    ORANGE_E,
-    "Policy Engine Gateway",
-    ":18970  (action)\npolicy / verdict",
-    glyph="!",
-    face=ORANGE_F,
-    tsize=9.5,
-)
-arrow([(RC, 374), (RC, 364)], ORANGE_E, lw=2.0, scale=14)
+arrow([(RC, 478), (RC, 364)], GREEN_E, lw=2.0, scale=14)
 
 card(
     695,
@@ -207,15 +192,15 @@ card(
     PURPLE_E,
     PURPLE_E,
     "AXIS sandbox",
-    "seccomp + landlock\nnetns (enforcement)",
+    "seccomp + landlock + netns\n(sole enforcement layer)",
     glyph="#",
     face=PURPLE_F,
 )
 
-# ---------------------------------------------------------------- Splunk (OUTSIDE both planes)
+# ------------------------------------------------- SQLite audit DB (OUTSIDE both planes)
 SX0, SY0, SX1, SY1 = 410, 158, 690, 232
 SYM = (SY0 + SY1) / 2
-card(SX0, SY0, SX1, SY1, SPLUNK, SPLUNK, "Observalibilty Pipeline", "events.jsonl", glyph=">", face="#f3f8ee")
+card(SX0, SY0, SX1, SY1, AUDIT, AUDIT, "SQLite audit DB", "audit.db (local)", glyph=">", face="#f3f8ee")
 ax.text(
     (SX0 + SX1) / 2,
     SY0 - 11,
@@ -224,17 +209,17 @@ ax.text(
     va="center",
     fontsize=8.5,
     style="italic",
-    color=SPLUNK,
+    color=AUDIT,
 )
 
-# reporting arrows: proxy -> Splunk (left) and connector -> Splunk (right)
-arrow([(100, 528), (40, 528), (40, SYM), (SX0, SYM)], SPLUNK, lw=2.4, scale=18)
-arrow([(1000, 528), (1060, 528), (1060, SYM), (SX1, SYM)], SPLUNK, lw=2.4, scale=18)
+# reporting arrows: proxy -> audit DB (left) and connector -> audit DB (right)
+arrow([(100, 528), (40, 528), (40, SYM), (SX0, SYM)], AUDIT, lw=2.4, scale=18)
+arrow([(1000, 528), (1060, 528), (1060, SYM), (SX1, SYM)], AUDIT, lw=2.4, scale=18)
 ax.text(
-    230, SYM + 8, "reports: llm.request event", ha="center", va="bottom", fontsize=9, color=SPLUNK, family="monospace"
+    230, SYM + 8, "reports: llm.request event", ha="center", va="bottom", fontsize=9, color=AUDIT, family="monospace"
 )
 ax.text(
-    870, SYM + 8, "reports: AXIS event (JSONL)", ha="center", va="bottom", fontsize=9, color=SPLUNK, family="monospace"
+    870, SYM + 8, "reports: axis.toolcall event", ha="center", va="bottom", fontsize=9, color=AUDIT, family="monospace"
 )
 
 # ---------------------------------------------------------------- banner
@@ -243,7 +228,7 @@ icon(104, 78, ORANGE_E, "!")
 ax.text(
     128,
     78,
-    "both planes -> Policy Engine guardrail + Observalibilty Pipeline",
+    "tool plane -> AXIS sandbox;  both planes -> SQLite audit DB",
     ha="left",
     va="center",
     fontsize=12,

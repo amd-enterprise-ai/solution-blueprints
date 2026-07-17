@@ -111,9 +111,13 @@ log "Lemonade up=$LEMON_UP"
 [ "$LEMON_UP" -eq 1 ] || { log "FATAL: Lemonade required for the session capture"; exit 2; }
 
 # --- 4. inference proxy (in front of Lemonade, same session + trace state) -
+# Content capture (prompt + LLM answer text) is a Cisco ask; enable it for the
+# deliverable so the capture shows it. Override with LLM_CAPTURE_CONTENT=off.
 log "starting inference proxy on :$PROXY_PORT"
 LEMON_PROXY_PORT="$PROXY_PORT" \
 LEMON_UPSTREAM="http://127.0.0.1:$LEMONADE_PORT" \
+LLM_CAPTURE_CONTENT="${LLM_CAPTURE_CONTENT:-on}" \
+LLM_CAPTURE_MAX_CHARS="${LLM_CAPTURE_MAX_CHARS:-8192}" \
   node "$PROXY" >"$OUT/proxy_boot.txt" 2>&1 &
 PIDS+=("$!")
 PROXY_UP=0
@@ -246,6 +250,16 @@ Both planes ship OTEL-shaped events to Splunk HEC (\`index=axis\`), correlated b
    \`execution_location\`).
 3. **Per-turn trace_id** — a new user prompt starts a new \`trace_id\`; the LLM
    calls and tool calls it triggers share it (see \`by_trace.md\`).
+
+## Also in this capture (requested follow-ups)
+- **User identity** — every event's \`identity\` block carries \`user\` and
+  \`user_source\` (\`env\`\|\`os\`\|\`sso\`\|\`unknown\`). No auth exists yet, so the
+  user is *asserted*, not verified; \`user_source\` records the trust level. The
+  same \`user\`/\`user_source\` is also passed into DefenseClaw's inspect requests
+  for per-user policy/logging. See \`SCHEMA.md\` §3.
+- **Prompt + answer text** — each \`llm.request\` carries a \`content\` block with
+  the raw user prompt and the LLM answer (opt-in \`LLM_CAPTURE_CONTENT=on\`, on for
+  this capture; truncated to \`LLM_CAPTURE_MAX_CHARS\`). See \`SCHEMA.md\` §7.5.
 EOF
 
 # --- 8. package -----------------------------------------------------------

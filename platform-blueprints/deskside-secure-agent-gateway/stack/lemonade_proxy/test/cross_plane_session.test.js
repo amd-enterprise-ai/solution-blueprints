@@ -5,7 +5,7 @@
 // Cross-plane session correlation contract.
 //
 // The tool plane (axis_mcp_connector) and the inference plane (lemonade_proxy)
-// run as separate processes and emit into the same Splunk index=axis. They only
+// run as separate processes and emit into the same SQLite audit DB. They only
 // correlate if both stamp the SAME identity.session. The agreed seam is a single
 // AXIS_SESSION exported by whatever launches the agent, inherited by both planes,
 // with LLM_SESSION left unset so the proxy falls back to AXIS_SESSION.
@@ -37,7 +37,7 @@ test("both planes share identity.session when a single AXIS_SESSION is injected 
   assert.equal(tool.session, "cc-unified-1");
   assert.equal(infer.session, "cc-unified-1");
   // The whole identity block (the fields both planes ship) must match, so a
-  // Splunk search on any of them returns both planes for one logical session.
+  // query on any of them returns both planes for one logical session.
   assert.deepEqual(infer.identityBlock(), tool.identityBlock());
 });
 

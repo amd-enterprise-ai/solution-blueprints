@@ -79,7 +79,7 @@ export class DefenseClawClient {
    *     reachable: bool, raw }
    *  `decision` already accounts for mode + fail-open: it is what the caller
    *  should act on (block ⇒ do not run AXIS). */
-  async admitToolCall({ session, tool = "run", argv, cwd }) {
+  async admitToolCall({ session, user, userSource, tool = "run", argv, cwd }) {
     const args = { argv, cwd };
     try {
       const verdict = await this.#post("/api/v1/inspect/tool", {
@@ -87,6 +87,11 @@ export class DefenseClawClient {
         args: JSON.stringify(args),
         direction: "tool_call",
         session_id: session,
+        // Identity passthrough so DefenseClaw can do per-user policy/logging.
+        // Asserted, not verified (no auth yet) — user_source records the trust
+        // level; DefenseClaw is a consumer of identity, never its producer.
+        user,
+        user_source: userSource,
         connector: this.connector,
       });
       return this.#normalize(verdict);
@@ -97,13 +102,15 @@ export class DefenseClawClient {
 
   /** Optionally inspect a tool result (observe lane). Failures are swallowed —
    *  result inspection never blocks a call that already ran. */
-  async inspectToolResult({ session, tool = "run", content }) {
+  async inspectToolResult({ session, user, userSource, tool = "run", content }) {
     try {
       const verdict = await this.#post("/api/v1/inspect/tool", {
         tool,
         content,
         direction: "tool_result",
         session_id: session,
+        user,
+        user_source: userSource,
         connector: this.connector,
       });
       return this.#normalize(verdict);

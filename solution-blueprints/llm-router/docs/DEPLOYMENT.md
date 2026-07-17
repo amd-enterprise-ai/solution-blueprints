@@ -35,7 +35,18 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router 
 
 ### AMD Radeon (GPU)
 
-To deploy the blueprint, run the following command:
+When deployed with demonstration LLMs (`deployDemonstrationLLMs=true`), the chart deploys two AIM backends by default: **primary** (Llama 3.1 8B) and **secondary** (Qwen3 VL 8B). The primary Radeon AIM is a **gated** model, so provide a Hugging Face token through a Kubernetes secret.
+
+To create a secret, run the command below (replace `<YOUR_HF_TOKEN_HERE>` with your token):
+
+```bash
+namespace="my-namespace"
+kubectl create secret generic hf-token \
+  --from-literal=hf-token="<YOUR_HF_TOKEN_HERE>" \
+  -n $namespace
+```
+
+Pass the secret to the primary AIM with `primary.env_vars.HF_TOKEN`. To deploy the blueprint, run the command below:
 
 ```bash
 name="my-deployment"
@@ -43,8 +54,12 @@ namespace="my-namespace"
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
   --set deployDemonstrationLLMs=true \
   --set global.platform=radeon \
+  --set primary.env_vars.HF_TOKEN.name=hf-token \
+  --set primary.env_vars.HF_TOKEN.key=hf-token \
   | kubectl apply -f - -n $namespace
 ```
+
+The default secondary model does not require a Hugging Face token. If you override `secondary.image` to a gated model, also add `--set secondary.env_vars.HF_TOKEN.name=hf-token` and `--set secondary.env_vars.HF_TOKEN.key=hf-token`.
 
 ## Deployment Configuration
 
@@ -181,13 +196,13 @@ Set all parameters directly (example command):
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
   --set embedding.enabled=false \
   --set models[0].name=primary \
-  --set models[0].base_url=http://167.99.61.150:8000 \
+  --set models[0].base_url="http://<primary-model-service-ip-address>:8000" \
   --set models[1].name=secondary \
-  --set models[1].base_url=http://167.99.61.150:8000 \
+  --set models[1].base_url="http://<secondary-model-service-ip-address>:8000" \
   --set models[2].name=third \
-  --set models[2].base_url=http://167.99.61.150:8000 \
-  --set models[3].name=four \
-  --set models[3].base_url=http://167.99.61.150:8000 \
+  --set models[2].base_url="http://<third-model-service-ip-address>:8000" \
+  --set models[3].name=fourth \
+  --set models[3].base_url="http://<fourth-model-service-ip-address>:8000" \
   --set routing.rules.task_router.classes.Code\ Generation=secondary \
   --set routing.rules.task_router.classes.Code\ Review=secondary \
   --set routing.rules.task_router.classes.Refactoring=secondary \
@@ -197,9 +212,9 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router 
   --set routing.rules.task_router.classes.Logical\ Analysis=third \
   --set routing.rules.task_router.classes.Planning=third \
   --set routing.rules.task_router.classes.Decision\ Making=third \
-  --set routing.rules.task_router.classes.Creative\ Writing=four \
-  --set routing.rules.task_router.classes.Brainstorming=four \
-  --set routing.rules.task_router.classes.Marketing\ Text=four \
+  --set routing.rules.task_router.classes.Creative\ Writing=fourth \
+  --set routing.rules.task_router.classes.Brainstorming=fourth \
+  --set routing.rules.task_router.classes.Marketing\ Text=fourth \
   --set routing.rules.task_router.classes.Unknown=primary \
   --set routing.rules.complexity_router.classes.Hard=secondary \
   --set routing.rules.complexity_router.classes.Middle=secondary \
@@ -219,7 +234,7 @@ If both are set, `api_key` is used.
 
 - `base_url` is **only the base address of the model service**, without any API path suffix
   Correct examples:
-    - `http://167.99.61.150:8000`
+    - `http://<my-model-service-ip-address>:8000`
     - `http://llama3-70b-instruct`
     - `http://my-model.default.svc.cluster.local`
     - `http://vllm-backend.llm-router.svc.cluster.local:8000`

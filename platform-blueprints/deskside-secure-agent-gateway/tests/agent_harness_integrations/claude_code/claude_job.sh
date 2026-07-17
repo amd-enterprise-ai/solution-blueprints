@@ -6,8 +6,8 @@
 # claude_job.sh — launch real Claude Code to solve a SWE-bench instance, with its
 # inference coming from the AMD LLM Gateway (claude-opus-4.8) and its ONLY tool
 # being the CLIENT-SIDE axis MCP connector's `run`. Every command the model runs
-# therefore funnels through DefenseClaw admission -> AXIS sandbox -> the Splunk
-# event builder (shipping to the real Splunk HEC).
+# therefore funnels through the AXIS sandbox (sole enforcement layer) -> the
+# SQLite audit event builder (local AUDIT_DB).
 #
 # Claude Code itself is NOT sandboxed; what is contained + audited is each command
 # it runs via `run`. Built-in tools are disallowed so `run` is the only way the

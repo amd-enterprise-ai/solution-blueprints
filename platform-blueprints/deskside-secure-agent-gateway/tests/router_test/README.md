@@ -7,10 +7,10 @@ SPDX-License-Identifier: MIT
 # Client-Side Router Test: **semantic routing** on the inference-plane proxy
 
 Extends [`../lemonade_test/`](../lemonade_test/) (which
-proved the transparent inference-plane telemetry proxy → real Splunk `index=axis`)
+proved the transparent inference-plane telemetry proxy → the SQLite audit DB)
 by adding the **vLLM Semantic Router** to that proxy. The router does difficulty-based
 per-prompt routing: easy → local free model, hard → frontier Claude. It runs
-entirely on the deskside, integrated into the proxy, with an A/B test, and the Splunk
+entirely on the deskside, integrated into the proxy, with an A/B test, and the audit
 telemetry is extended to carry the routing decision.
 
 ## The consult-only integration (no inline data plane)
@@ -26,17 +26,15 @@ and without sitting in the data path**.
      │ ANTHROPIC_BASE_URL -> proxy
      ▼
    lemonade_proxy  (LEMON_ROUTER=on)
-     │  1. DefenseClaw /api/v1/inspect/request        (prompt guardrail, observe)
-     │  2. router.route(prompt):
+     │  1. router.route(prompt):
      │       POST semantic-router /api/v1/classify/intent {text}      (NO inference)
      │       -> recommended_model, routing_decision, matched_signals.complexity
      │       tier = claude-* ? frontier : local            (fail-OPEN -> local)
-     │  3a. tier=local     -> forward BYTE-FOR-BYTE ─────►  Lemonade :13305 (Qwen3-8B)
-     │  3b. tier=frontier  -> swap model + auth header ──►  AMD LLM Gateway (claude-opus-4.8)
+     │  2a. tier=local     -> forward BYTE-FOR-BYTE ─────►  Lemonade :13305 (Qwen3-8B)
+     │  2b. tier=frontier  -> swap model + auth header ──►  AMD LLM Gateway (claude-opus-4.8)
      │        (only when a frontier key is configured; else fail-safe to local)
-     │  4. DefenseClaw /api/v1/inspect/response        (completion guardrail, observe)
-     │  5. emit llm.request  (now with a `routing` block) ─► REAL Splunk index=axis
-     ▼                                                        sourcetype axis:llm
+     │  3. emit llm.request  (now with a `routing` block) ─► SQLite audit DB (AUDIT_DB)
+     ▼
    response streamed back + additive x-lemon-* routing headers (body untouched)
 ```
 
@@ -58,22 +56,21 @@ Anthropic direct.
 
 ## Fail-open, always
 
-A router hiccup must never take inference down (same principle as the DefenseClaw
-inference client). Router unreachable / slow / erroring → the request stays on the
-**local** tier and inference continues. When the router picks frontier but no
-frontier key is configured, the proxy records the **decision** but serves local
-(fail-safe).
+A router hiccup must never take inference down. Router unreachable / slow / erroring
+→ the request stays on the **local** tier and inference continues. When the router
+picks frontier but no frontier key is configured, the proxy records the **decision**
+but serves local (fail-safe).
 
 ## What it proves
 
 1. **transparent + consult-only** — the proxy still forwards byte-for-byte; the
    router is only asked for a decision, never in the data path.
 2. **baseline (router off)** — every prompt stays local; `llm.request` with
-   `routing.enabled=false` confirmed in `index=axis`.
+   `routing.enabled=false` confirmed in the SQLite audit DB.
 3. **router-on** — simple prompts stay local, hard prompts get a **frontier
    decision** (`routing.selected_model=claude-*`) and, with a key, actually
    escalate (`routing.tier=frontier`). Routing correctness is read from the
-   proxy's `x-lemon-*` response headers **and** the Splunk `routing` block.
+   proxy's `x-lemon-*` response headers **and** the audit DB's `routing` block.
 4. **Claude Code through the router-on proxy** (best-effort) — its inference lands
    `llm.request` events carrying the routing block under session `cc-router`.
 
@@ -101,9 +98,8 @@ Every `llm.request` now carries (metadata only, no prompt/completion text):
 
 - `../../stack/lemonade_proxy/` — the proxy (now with `src/router.js`) + unit tests.
 - `../../stack/lemonade/run_lemonade.sh` — local Lemonade (local tier).
-- `../../stack/defenseclaw/run_gateway.sh` — the real DefenseClaw gateway.
 - the semantic-router build — provides `~/repos/semantic-router/bin/router` + models (reused here).
-- `../../stack/splunk/install_splunk.sh` + `query_splunk.sh` — real Splunk + read-back.
+- `../lib/audit_db.sh` — shared SQLite audit-DB read-back helpers.
 
 ## Layout
 
@@ -115,7 +111,7 @@ router_test/
   router_ab_probe.py          Anthropic /v1/messages A/B driver (reads x-lemon-*)
   test_router_ab_probe.py     pure-logic unit tests for the probe
   claude_job.sh               Claude Code with ANTHROPIC_BASE_URL -> router-on proxy
-  artifacts/                  SUMMARY.txt, ab_results.json, events.jsonl, splunk_query.txt, *.log
+  artifacts/                  SUMMARY.txt, ab_results.json, audit.db, *.log
 ```
 
 ## Quick start
@@ -124,9 +120,7 @@ See [SETUP.md](./SETUP.md).
 
 ```bash
 cd router_test
-export PATH=$HOME/.local/go/bin:$PATH   # DefenseClaw's Go check
 GATEWAY_KEY=<amd-gateway-key> \
-SPLUNK_PASS=<SPLUNK_PASS> HEC_TOKEN=<HEC_TOKEN> \
   bash run_router_telemetry.sh
 ```
 

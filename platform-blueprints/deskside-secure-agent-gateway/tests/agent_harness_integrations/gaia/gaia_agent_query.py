@@ -5,11 +5,11 @@
 
 # gaia_agent_query.py — agentic proof: a gaia Agent (LLM = a small GGUF model on
 # CPU via the LOCAL Lemonade server) decides on its own to call the axis
-# connector's run tool, which flows through DefenseClaw -> AXIS -> Splunk.
+# connector's run tool, which flows through the AXIS sandbox -> SQLite audit DB.
 #
 # gaia's MCPClientMixin loads servers from the config the runner points at via
-# GAIA_MCP_CONFIG (the connector command + the full AXIS/DefenseClaw/Splunk env
-# and AXIS_SESSION=gaia-agent), so the tool surfaces as mcp_axis_run.
+# GAIA_MCP_CONFIG (the connector command + the AXIS_* / AUDIT_DB env and
+# AXIS_SESSION=gaia-agent), so the tool surfaces as mcp_axis_run.
 #
 # LLM plane: gaia's native Lemonade provider (use_claude=False) honours
 # LEMONADE_BASE_URL and serves GAIA_MODEL (default Qwen3-8B-GGUF) from the local

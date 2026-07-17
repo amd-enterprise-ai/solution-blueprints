@@ -8,13 +8,13 @@ SPDX-License-Identifier: MIT
 
 End-to-end demos of the [gateway](../../stack/) governing **real agent harnesses**
 on real tasks. Each proves the *same* `axis_mcp_connector` — every tool call flows
-through DefenseClaw admission → AXIS sandbox → a Splunk audit event — while the MCP
+through the AXIS sandbox (sole enforcement) → a SQLite audit event — while the MCP
 *host* changes.
 
 | Demo | Host | What it shows |
 |------|------|---------------|
-| [`claude_code/`](./claude_code/) | Claude Code | Solves the real SWE-bench issue `pallets__flask-5014` under full governance; every tool call verified in Splunk. |
-| [`gaia/`](./gaia/) | [gaia](https://github.com/amd/gaia) | The same connector driven by a *second* MCP host — one connector, two hosts, both landing in one Splunk index. |
+| [`claude_code/`](./claude_code/) | Claude Code | Solves the real SWE-bench issue `pallets__flask-5014` under full governance; every tool call verified in the SQLite audit DB. |
+| [`gaia/`](./gaia/) | [gaia](https://github.com/amd/gaia) | The same connector driven by a *second* MCP host — one connector, two hosts, both landing in one SQLite audit DB. |
 
 Each demo is self-contained: see its `README.md` for what it proves and `SETUP.md`
 for the copy-paste run. The two headline quick-starts (swebench + gaia) are in the

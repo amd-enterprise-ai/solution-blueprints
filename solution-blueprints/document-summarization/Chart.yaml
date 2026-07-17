@@ -8,7 +8,7 @@ description: Document Summarization blueprint
 type: application
 
 # Semantic Versioning
-version: 2.1.2
+version: 2.1.3
 
 maintainers:
 - name: AMD

@@ -91,7 +91,7 @@ export name="fintech"
 export namespace="fintech-onboarding"
 
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
-  --set vlm.existingService="129.212.190.161:8000" \
+  --set vlm.existingService="<my-vlm-service-ip-address>:8000" \
   | kubectl apply -f - -n $namespace
 ```
 
@@ -101,7 +101,7 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onb
 - `vlm.existingService` is **only the base address of the model service**, without API path suffix
   `/v1` and without `http://` prefix.
   Correct examples:
-    - `129.212.190.161:8000`
+    - `<my-vlm-service-ip-address>:8000`
     - `mistralai-small-24B-Instruct`
     - `my-model.default.svc.cluster.local`
     - `vlm-fintech-onboarding.svc.cluster.local:8000`
@@ -139,7 +139,7 @@ The end of using:
 
 ```
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fintech-onboarding \
-  --set vlm.existingService="129.212.190.161:8000" \
+  --set vlm.existingService="<my-vlm-service-ip-address>:8000" \
   | kubectl delete -f - -n $namespace
 ```
 

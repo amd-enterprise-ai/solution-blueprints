@@ -2,13 +2,13 @@
 //
 // SPDX-License-Identifier: MIT
 
-// Per-turn trace ids (Cisco telemetry delta #3) — TOOL-plane reader.
+// Per-turn trace ids — TOOL-plane reader.
 //
 // The inference-plane proxy is the trace authority: it sees the user prompt,
 // detects a new turn, and writes {trace_id, root_span_id, turn} to a shared
 // statefile (see lemonade_proxy/src/trace.js). This connector only READS that
 // statefile so its axis.toolcall events carry the SAME trace_id as the LLM calls
-// in the same turn — that is what lets a Splunk/OTLP consumer reconstruct "one
+// in the same turn — that is what lets an OTLP consumer reconstruct "one
 // user prompt -> its LLM calls -> its tool calls" as a single trace.
 //
 // If the statefile isn't there yet (a tool call fired before any LLM call, or the

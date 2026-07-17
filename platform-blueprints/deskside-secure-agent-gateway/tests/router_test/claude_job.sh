@@ -5,7 +5,7 @@
 
 # claude_job.sh — launch real Claude Code with its inference routed THROUGH the
 # ROUTER-ON lemonade proxy. The proxy consults the semantic router per prompt and
-# emits an llm.request Splunk event (now with a `routing` block) per call.
+# emits an llm.request SQLite audit event (now with a `routing` block) per call.
 #
 # Same shape as ../lemonade_test/claude_job.sh (inference plane, no
 # gateway tool, dummy auth) — the only difference is the proxy behind

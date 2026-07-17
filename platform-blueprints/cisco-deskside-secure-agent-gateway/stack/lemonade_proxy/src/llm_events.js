@@ -12,14 +12,22 @@
 //
 // Privacy by default: we ship metadata only — model, timing, token counts,
 // prompt/response CHAR COUNTS, and the DefenseClaw verdicts (findings/severity).
-// We do NOT ship prompt or completion TEXT (mirrors the connector shipping
-// exit/duration, not stdout). DefenseClaw sees the content for scanning; Splunk
-// sees only the verdict.
+// We do NOT ship prompt or completion TEXT by default (mirrors the connector
+// shipping exit/duration, not stdout). DefenseClaw sees the content for scanning;
+// Splunk sees only the verdict.
+//
+// Content capture (opt-in): Cisco asked to also land the raw user prompt and the
+// LLM answer in the telemetry. This is OFF by default (LLM_CAPTURE_CONTENT=on to
+// enable) because it ships potentially sensitive text to the audit index. When
+// on, an llm.request additionally carries a `content` block with the prompt and
+// completion text, each truncated to LLM_CAPTURE_MAX_CHARS (default 8192) so a
+// giant prompt can't bloat the index; the block records whether truncation
+// happened so a consumer knows the text is partial.
 //
 //   llm.session_start { event, time, identity, policy{id,source} }
 //   llm.request       { event, time, identity, policy, request{...}, decision,
 //                       result{...}, routing{...}, defenseclaw_request{...},
-//                       defenseclaw_response{...} }
+//                       defenseclaw_response{...}, content{...}|null }
 //   llm.session_end   { event, time, identity }
 //
 // The routing block is the vLLM Semantic Router decision (see router.js): which
@@ -85,6 +93,44 @@ function dcBlock(v) {
   };
 }
 
+/** Truncate to a char cap, reporting whether anything was dropped. */
+function clip(text, maxChars) {
+  const s = typeof text === "string" ? text : "";
+  if (s.length <= maxChars) return { text: s, truncated: false };
+  return { text: s.slice(0, maxChars), truncated: true };
+}
+
+/** Opt-in prompt/completion text capture (Cisco ask). `null` unless capture is
+ *  enabled AND at least one side has text — so a plain metadata build (the
+ *  privacy default) keeps emitting `content: null`. Each side is truncated to
+ *  `maxChars`; `*_chars` records the ORIGINAL length so the char counts stay
+ *  meaningful even when `*_truncated` is true. */
+export function contentBlock({ capture, maxChars, promptText, completionText = "" }) {
+  if (!capture) return null;
+  const prompt = typeof promptText === "string" ? promptText : "";
+  const completion = typeof completionText === "string" ? completionText : "";
+  // Emit the block whenever at least the prompt is present — the block path
+  // has no completion yet, but the prompt is exactly what was blocked and is
+  // the most valuable field in a security audit event.
+  if (!prompt) return null;
+  // Fix: Number("0") is falsy so || would silently revert to 8192. Use an
+  // explicit > 0 guard so LLM_CAPTURE_MAX_CHARS=0 is honoured as "truncate
+  // everything" (empty strings, truncated=true when original length > 0).
+  const cap = Number.isFinite(maxChars) && maxChars > 0 ? maxChars : 8192;
+  const p = clip(prompt, cap);
+  const c = clip(completion, cap);
+  return {
+    captured: true,
+    max_chars: cap,
+    prompt: p.text,
+    prompt_chars: prompt.length,
+    prompt_truncated: p.truncated,
+    completion: c.text,
+    completion_chars: completion.length,
+    completion_truncated: c.truncated,
+  };
+}
+
 /** The vLLM Semantic Router decision, shaped for Splunk. `upstream` is the base
  *  URL the proxy actually forwarded to (local Lemonade or the frontier gateway). */
 function routingBlock(r) {
@@ -141,6 +187,7 @@ export function buildLlmRequest({
   defenseclawResponse,
   trace,
   gpu,
+  content,
 }) {
   // Each LLM call is its own span, parented to the turn's root span.
   const spanId = newSpanId();
@@ -201,5 +248,7 @@ export function buildLlmRequest({
         },
     defenseclaw_request: dcBlock(defenseclawRequest),
     defenseclaw_response: dcBlock(defenseclawResponse),
+    // Opt-in raw prompt/completion text (null on the privacy-default build).
+    content: content ?? null,
   };
 }

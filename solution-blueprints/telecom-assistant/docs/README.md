@@ -16,7 +16,7 @@ data retrieval, document search, and support ticket escalation. The solution int
 for real-time voice communication, BSS Gateway for billing information, and vector stores for FAQ
 and plan documentation.
 
-This blueprint is designed to run on **AMD Instinct** GPUs. For examples of deploying on **AMD EPYC** and **AMD Radeon**, see the other blueprints in the catalog.
+AMD Solution Blueprints are packaged as [Helm charts](https://helm.sh/) for deployment on a Kubernetes cluster. For development or further exploration, the source code is public and available in the [Solution Blueprints GitHub repository](https://github.com/amd-enterprise-ai/solution-blueprints/tree/main/solution-blueprints/telecom-assistant/).
 
 ## Architecture
 
@@ -50,7 +50,7 @@ This blueprint is designed to run on **AMD Instinct** GPUs. For examples of depl
 > is
 > no longer required in most setups.
 >
-> For configuration details, see `docs/DEPLOYMENT.md`.
+> For configuration details, see [Deployment](./DEPLOYMENT.md).
 
 ### Key Features
 
@@ -81,13 +81,33 @@ This blueprint is designed to run on **AMD Instinct** GPUs. For examples of depl
 
 ## Getting Started
 
+This is a quick start guide on how to deploy the blueprint. For advanced options, such as reusing an existing AIM, providing a Hugging Face token, or overriding storage classes, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html). For blueprint specific details such as STUNner configuration, see the [advanced deployment guide](./DEPLOYMENT.md).
+
+This blueprint is designed to run on **AMD Instinct** GPUs.
+
 ### Prerequisites
+
+Requirements:
 
 - Access to a Kubernetes cluster with `cluster-admin` rights (or permissions to create CRDs,
   ClusterRole, and ClusterRoleBinding).
-- STUNner Operator installed on the cluster (run `./install-prerequisites.sh` once per cluster).
+- STUNner Operator installed on the cluster (run `./install-prerequisites.sh` once per cluster). See below for further information.
 - Persistent storage available for ChromaDB and Redis.
 - LLM, VLM, ASR, TTS, and Embedding model endpoints (self-hosted or external).
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) configured and pointing at your target cluster.
+- [Helm](https://helm.sh/docs/intro/install/) 3.17 or higher installed.
+
+Before deploying the Telecom Assistant blueprint, you must install the **STUNner Operator** — a Kubernetes-native WebRTC media gateway used for routing browser media traffic to LiveKit.
+
+Clone the public
+repository [https://github.com/amd-enterprise-ai/solution-blueprints/](https://github.com/amd-enterprise-ai/solution-blueprints/),
+then run the provided script once per cluster:
+
+```bash
+git clone https://github.com/amd-enterprise-ai/solution-blueprints.git
+cd solution-blueprints/telecom-assistant
+./install-prerequisites.sh
+```
 
 ### System Requirements
 
@@ -139,8 +159,7 @@ kubectl get pods -n $namespace
 
 Wait until all pods report `Running` and `Ready`.
 
-> Refer to `docs/DEPLOYMENT.md` for full deployment instructions, including STUNner and LiveKit
-configuration details.
+> Refer to [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md) for full deployment instructions, including STUNner and LiveKit configuration details.
 
 ### Connect to the UI
 
@@ -159,7 +178,7 @@ After deployment, open the web interface URL in your browser. The frontend suppo
 - **Document ingestion** — upload PDF files via the "Upload PDF" button (bottom right) to extend the
   RAG knowledge base without redeployment.
 
-> Refer to `docs/DEPLOYMENT.md` for full Connect to the UI instructions.
+> Refer to [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md) for full Connect to the UI instructions.
 
 ### Clean Up
 
@@ -307,7 +326,7 @@ examples.
      >    this document would be uploaded in advance by an engineer, not provided by the end user during a
      >    support session.
 > 2. All files used in these scenarios (including the troubleshooting guides PDF) are available in
-     >    the [demo directory](../docs/demo).
+     >    the [demo directory](./demo) (see the repository).
 
 ### Scenario 3: Wi-Fi and fiber internet troubleshooting (success)
 

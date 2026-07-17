@@ -176,7 +176,6 @@ def create_interface():
 ### Usage Instructions
 
 1. **Upload an MRI scan** (DICOM `.dcm`, NIfTI `.nii`/`.nii.gz`, or standard images `.png`/`.jpg`/`.jpeg`).
-   - Example file: `src/abdomen_MRI.dcm` (bundled with the blueprint repository)
 2. **Patient Information** (optional) improves report context.
 3. **Image Type** is optional; it only guides how the AI report is phrased and does **not** change image processing.
 4. Click **Analyze MRI Scan** and review the tabs.

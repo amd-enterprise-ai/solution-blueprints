@@ -5,11 +5,11 @@
 // Scripted MCP client for the client-side connector. Connects to server.js over
 // stdio and invokes the `run` tool exactly as Claude Code would if the model
 // emitted the tool call. This validates the full control plane (MCP transport
-// -> tool registration -> DefenseClaw admission -> AXIS exec -> Splunk event)
+// -> tool registration -> AXIS exec -> SQLite audit event)
 // independently of whatever model Lemonade is serving.
 //
 // Usage: node mcp_probe.mjs <server.js path> <command>
-// Inherits AXIS_BIN / AXIS_POLICY / DEFENSECLAW_* / SPLUNK_* / AXIS_SESSION env.
+// Inherits AXIS_BIN / AXIS_POLICY / AUDIT_DB / AXIS_SESSION env.
 // Exit 0 on success, 1 on tool/transport failure. Prints the tool output text
 // (or the [blocked ...] note) to stdout.
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";

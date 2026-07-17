@@ -24,7 +24,7 @@
 // and the local model NAME for simple ones. We map that name to a tier and let server.js send
 // the request to Lemonade (local) or the frontier gateway.
 //
-// Fail-OPEN by default, exactly like the DefenseClaw inference client: a router
+// Fail-OPEN by default: a router
 // hiccup must never take inference down — an unreachable/slow router just means
 // the request stays on the local tier.
 

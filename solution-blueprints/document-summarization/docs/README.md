@@ -56,8 +56,8 @@ The blueprint requires the following cluster resources by default:
 | Resource | Default Configuration |
 |----------|-------------------------|
 | GPUs | 1 |
-| CPUs | 4 CPU cores |
-| RAM | 64 Gi |
+| CPUs | 5 CPU cores |
+| RAM | 65 Gi |
 
 To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 

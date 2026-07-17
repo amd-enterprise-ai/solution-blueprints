@@ -6,44 +6,41 @@
 # run_router_telemetry.sh — CLIENT-SIDE semantic-router A/B, end to end, one node.
 #
 # Sibling of ../lemonade_test/run_lemonade_telemetry.sh. That test
-# proved the inference-plane telemetry proxy (transparent, DefenseClaw guardrails,
-# llm.request -> real Splunk index=axis). This test adds the vLLM Semantic Router
+# proved the inference-plane telemetry proxy (transparent passthrough,
+# llm.request -> SQLite audit DB). This test adds the vLLM Semantic Router
 # to that proxy: per prompt the proxy CONSULTS the router's standalone classify
 # API (POST /api/v1/classify/intent — NO Envoy, NO inference) and, on a "hard"
 # verdict AND a configured frontier key, escalates the request to the frontier
 # tier (AMD LLM Gateway, Anthropic-compatible); otherwise it stays byte-for-byte
 # on local Lemonade. The routing decision is surfaced on the client response as
 # additive x-lemon-* headers AND recorded in a new `routing` block on every
-# llm.request Splunk event.
+# llm.request SQLite audit event.
 #
 # Toggle is a PROXY env (LEMON_ROUTER=on|off). The runner starts a BASELINE proxy
 # (router off) and a ROUTER-ON proxy and runs the A/B against both.
 #
-# Every llm.request is HARD-verified by reading it back out of Splunk's search
-# API — routing block included.
+# Every llm.request is HARD-verified by reading it back out of the SQLite audit DB —
+# routing block included.
 #
 # Stages (pass/fail -> artifacts/SUMMARY.txt):
 #   0. preconditions: node + proxy unit tests (37) green
-#   1. real Splunk (reuse-or-install); HEC + mgmt/search health
-#   2. DefenseClaw gateway (:18970)
 #   3. Lemonade (reuse-or-boot Qwen3-8B on CPU, :13305) — the local tier
 #   4. semantic-router classify API (reuse a local ~/repos/semantic-router build)
 #   5. frontier preflight (AMD LLM Gateway) — real completion if a key is set
-#   6. BASELINE (router off, session router-baseline): all local, confirmed in Splunk
+#   6. BASELINE (router off, session router-baseline): all local, confirmed in SQLite DB
 #   7. ROUTER-ON (router on, session router-on): easy->local, hard->frontier
-#      decision; routing correctness; routing block CONFIRMED in index=axis
+#      decision; routing correctness; routing block CONFIRMED in SQLite DB
 #   8. Claude Code THROUGH the router-on proxy (best-effort, session cc-router)
-#   9. summary + splunk_query.txt
+#   9. summary (SQLite event count)
 #
-# Env: SPLUNK_PASS, HEC_TOKEN (reuse the node's shared Splunk), GATEWAY_KEY (or
+# Env: AUDIT_DB (SQLite path, default $ART/audit.db), GATEWAY_KEY (or
 #      ANTHROPIC_API_KEY / FRONTIER_AUTH_KEY) for the frontier tier, LEMON_MODEL,
-#      LEMONADE_PORT, ROUTER_API_PORT, DC_PORT, RUN_CC, FRONTIER_* overrides.
+#      LEMONADE_PORT, ROUTER_API_PORT, RUN_CC, FRONTIER_* overrides.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ART="$HERE/artifacts"; mkdir -p "$ART"
 CSI="$(cd "$HERE/../../stack" && pwd)"
-SPLUNK_TEST="$(cd "$CSI/splunk" && pwd)"          # vendored real-Splunk install + query
 PROXY="$CSI/lemonade_proxy"
 PROXY_SERVER="$PROXY/src/server.js"
 
@@ -58,7 +55,7 @@ PROXY_ROUTER_PORT="${PROXY_ROUTER_PORT:-13398}"
 PROXY_CC_PORT="${PROXY_CC_PORT:-13397}"
 
 # --- semantic router (classify API only) ---------------------------------
-# NOTE: :8088 is Splunk HEC here, so the classify API runs on a distinct port.
+# NOTE: :8088 is reserved on some nodes; the classify API runs on a distinct port.
 ROUTER_REPO_DIR="${ROUTER_REPO_DIR:-$HOME/repos/semantic-router}"
 ROUTER_API_PORT="${ROUTER_API_PORT:-18088}"
 ROUTER_URL="http://127.0.0.1:$ROUTER_API_PORT"
@@ -76,25 +73,15 @@ FRONTIER_AUTH_HEADER="${FRONTIER_AUTH_HEADER:-Ocp-Apim-Subscription-Key}"
 FRONTIER_AUTH_KEY="${FRONTIER_AUTH_KEY:-${GATEWAY_KEY:-${ANTHROPIC_API_KEY:-}}}"
 FRONTIER_EXTRA_HEADERS="${FRONTIER_EXTRA_HEADERS:-}"
 
-# --- control plane -------------------------------------------------------
-DC_PORT="${DC_PORT:-18970}"
-
-# --- audit plane: real Splunk --------------------------------------------
-SPLUNK_HOME="${SPLUNK_HOME:-$HOME/splunk}"
-SPLUNK_USER="${SPLUNK_USER:-admin}"
-SPLUNK_PASS="${SPLUNK_PASS:?set SPLUNK_PASS}"
-SPLUNK_INDEX="${SPLUNK_INDEX:-axis}"
-WEB_PORT="${WEB_PORT:-8000}"
-MGMT_PORT="${MGMT_PORT:-8089}"
-HEC_PORT="${HEC_PORT:-8088}"
-HEC_TOKEN="${HEC_TOKEN:-$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null)}"
-SPLUNK_MGMT_URL="https://127.0.0.1:$MGMT_PORT"
-SPLUNK_HEC_URL="https://127.0.0.1:$HEC_PORT"
+# --- audit plane: SQLite DB ----------------------------------------------
+AUDIT_DB="${AUDIT_DB:-$ART/audit.db}"
+# Start from a clean audit DB so probes assert on THIS run's events.
+rm -f "$AUDIT_DB"
+# shellcheck source=../lib/audit_db.sh
+source "$HERE/../lib/audit_db.sh"
 
 RUN_CC="${RUN_CC:-1}"
-SINK="$ART/events.jsonl"; : > "$SINK"
 
-# Node's fetch (proxy HEC POST) and curl talk to Splunk's self-signed HEC.
 export NODE_TLS_REJECT_UNAUTHORIZED=0
 
 log(){ echo "[rtrtest] $*"; }
@@ -104,8 +91,6 @@ check(){ if eval "$2"; then log "PASS: $1"; pass=$((pass+1)); else log "FAIL: $1
 PIDS=()
 cleanup(){
   for p in "${PIDS[@]:-}"; do kill "$p" >/dev/null 2>&1 || true; done
-  [ -n "${DEFENSECLAW_HOME:-}" ] && [ -f "$DEFENSECLAW_HOME/gateway.pid" ] \
-    && kill "$(cat "$DEFENSECLAW_HOME/gateway.pid")" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -114,24 +99,6 @@ export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 NODE_BIN_DIR="$(dirname "$(ls -t "$NVM_DIR"/versions/node/*/bin/node 2>/dev/null | head -1)" 2>/dev/null)"
 export PATH="$HOME/.local/bin:${NODE_BIN_DIR:-}:$PATH"
 
-# --- Splunk search helpers -----------------------------------------------
-splunk_export(){
-  curl -sk -u "$SPLUNK_USER:$SPLUNK_PASS" "$SPLUNK_MGMT_URL/services/search/jobs/export" \
-    --data-urlencode "search=$1" \
-    --data-urlencode "earliest_time=-15m" \
-    --data-urlencode "latest_time=now" \
-    --data-urlencode "output_mode=json" 2>/dev/null
-}
-splunk_wait(){
-  local c
-  for _ in $(seq 1 30); do
-    c="$(splunk_export "$1" | grep -c '"result":' || true)"
-    [ "${c:-0}" -ge "$2" ] && return 0
-    sleep 2
-  done
-  return 1
-}
-
 # --- proxy launcher ------------------------------------------------------
 # start_proxy <session> <port> <logtag> <router:on|off> -> exports PROXY_URL.
 start_proxy(){
@@ -139,12 +106,7 @@ start_proxy(){
   : > "$out"
   LEMON_PROXY_PORT="$port" \
   LEMON_UPSTREAM="$LEMON_UPSTREAM" \
-  DEFENSECLAW_URL="http://127.0.0.1:$DC_PORT" \
-  DEFENSECLAW_GATEWAY_TOKEN="${DEFENSECLAW_GATEWAY_TOKEN:-}" \
-  DEFENSECLAW_INFERENCE_MODE="observe" \
-  SPLUNK_SINK="$SINK" \
-  SPLUNK_HEC_URL="$SPLUNK_HEC_URL" \
-  SPLUNK_HEC_TOKEN="$HEC_TOKEN" \
+  AUDIT_DB="$AUDIT_DB" \
   LEMON_ROUTER="$router" \
   SEMANTIC_ROUTER_URL="$ROUTER_URL" \
   FRONTIER_UPSTREAM="$FRONTIER_UPSTREAM" \
@@ -191,7 +153,7 @@ log "node: $(node --version)"
 ( cd "$PROXY" && env -u FRONTIER_AUTH_KEY -u FRONTIER_AUTH_HEADER -u FRONTIER_UPSTREAM -u FRONTIER_EXTRA_HEADERS node --test ) >"$ART/proxy_unit_tests.log" 2>&1
 check "proxy unit tests green" "grep -qE '# fail 0' '$ART/proxy_unit_tests.log'"
 # The probe's pure-logic unit tests need pytest. It's a pre-flight only (the HARD
-# proof is the Splunk stages), so if pytest is absent on this node we SKIP the
+# proof is the SQLite stages), so if pytest is absent on this node we SKIP the
 # check rather than fail the whole run.
 if python3 -c 'import pytest' >/dev/null 2>&1; then
   ( cd "$HERE" && python3 -m pytest test_router_ab_probe.py -q ) >"$ART/probe_unit_tests.log" 2>&1
@@ -200,54 +162,6 @@ else
   log "SKIP: pytest not installed -> probe unit tests (verified off-node); pip install --user pytest to enable"
   echo "pytest not installed on this node" > "$ART/probe_unit_tests.log"
 fi
-
-# --- 1. real Splunk -------------------------------------------------------
-log "=== Stage 1: real Splunk (HEC + index=$SPLUNK_INDEX) ==="
-if [ ! -x "$SPLUNK_HOME/bin/splunk" ] && [ -z "${SPLUNK_URL:-}" ] && [ -z "${SPLUNK_TGZ:-}" ]; then
-  log "FATAL: Splunk not installed at $SPLUNK_HOME and no SPLUNK_URL/SPLUNK_TGZ given"; exit 2
-fi
-if curl -sk --fail "$SPLUNK_HEC_URL/services/collector/health" >/dev/null 2>&1 \
-   && curl -sk --fail -u "$SPLUNK_USER:$SPLUNK_PASS" "$SPLUNK_MGMT_URL/services/server/info" >/dev/null 2>&1; then
-  log "Splunk already up and creds valid -> reusing existing instance (skip install)"
-else
-  SPLUNK_HOME="$SPLUNK_HOME" SPLUNK_USER="$SPLUNK_USER" SPLUNK_PASS="$SPLUNK_PASS" \
-    SPLUNK_INDEX="$SPLUNK_INDEX" WEB_PORT="$WEB_PORT" MGMT_PORT="$MGMT_PORT" HEC_PORT="$HEC_PORT" \
-    HEC_TOKEN="$HEC_TOKEN" SPLUNK_URL="${SPLUNK_URL:-}" SPLUNK_TGZ="${SPLUNK_TGZ:-}" \
-    bash "$SPLUNK_TEST/install_splunk.sh" >"$ART/splunk_install.log" 2>&1 \
-    || { log "WARN: install_splunk.sh non-zero; see log"; tail -25 "$ART/splunk_install.log"; }
-fi
-SPLUNK_UP=0
-for _ in $(seq 1 60); do
-  curl -sk "$SPLUNK_HEC_URL/services/collector/health" >/dev/null 2>&1 && { SPLUNK_UP=1; break; }
-  sleep 1
-done
-check "Splunk HEC healthy on :$HEC_PORT" "[ $SPLUNK_UP -eq 1 ]"
-check "Splunk mgmt/search API auth OK on :$MGMT_PORT" "curl -sk --fail -u '$SPLUNK_USER:$SPLUNK_PASS' '$SPLUNK_MGMT_URL/services/server/info' >/dev/null 2>&1"
-
-# --- 2. DefenseClaw gateway ----------------------------------------------
-log "=== Stage 2: DefenseClaw gateway ==="
-export DC_PORT
-export DEFENSECLAW_GATEWAY_TOKEN="${DEFENSECLAW_GATEWAY_TOKEN:-gw-rtr-$$}"
-if curl -sf "http://127.0.0.1:$DC_PORT/health" >/dev/null 2>&1; then
-  log "DefenseClaw already up on :$DC_PORT -> reusing"
-  DC_UP=1
-else
-  DC_OUT="$ART/gateway_boot.txt"; : > "$DC_OUT"
-  bash "$CSI/defenseclaw/run_gateway.sh" >"$DC_OUT" 2>&1 &
-  PIDS+=("$!")
-  DC_UP=0
-  for _ in $(seq 1 150); do
-    curl -sf "http://127.0.0.1:$DC_PORT/health" >/dev/null 2>&1 && { DC_UP=1; break; }
-    sleep 0.4
-  done
-  if [ "$DC_UP" -eq 1 ]; then
-    export DEFENSECLAW_HOME="$(grep -oE 'DEFENSECLAW_HOME=.*' "$DC_OUT" | tail -1 | cut -d= -f2-)"
-  else
-    log "WARN: DefenseClaw gateway failed to start; see $DC_OUT (proxy will fail-open)"
-  fi
-fi
-check "DefenseClaw gateway healthy on :$DC_PORT" "[ ${DC_UP:-0} -eq 1 ]"
-export SPLUNK_MGMT_URL SPLUNK_USER SPLUNK_PASS SPLUNK_INDEX
 
 # --- 3. Lemonade (reuse-or-boot) -----------------------------------------
 log "=== Stage 3: Lemonade $LEMON_MODEL on CPU (:$LEMONADE_PORT) — local tier ==="
@@ -372,28 +286,28 @@ if [ "$BASE_OK" -eq 1 ] && [ "$ROUTER_ON_OK" -eq 1 ]; then
     "python3 -c \"import json,sys; d=json.load(open('$ART/ab_results.json')); r=[v for k,v in d.items() if 'ROUTER-ON' in k][0]; exp={'simple':'local','reasoning':'frontier'}; sys.exit(0 if r['ok']==7 and all(x['decision_tier']==exp[x['expected_domain']] for x in r['results']) else 1)\""
 fi
 
-# --- HARD Splunk proofs --------------------------------------------------
-log "=== Stage 6/7 HARD proof: routing events read back from index=$SPLUNK_INDEX ==="
+# --- HARD SQLite proofs --------------------------------------------------
+log "=== Stage 6/7 HARD proof: routing events read back from SQLite audit DB ==="
 # BASELINE: llm.request present with routing.enabled=false.
-check "[baseline] llm.request CONFIRMED in Splunk (session router-baseline)" \
-  "splunk_wait 'search index=$SPLUNK_INDEX sourcetype=axis:llm | spath | search identity.session=router-baseline event=llm.request' 1"
+check "[baseline] llm.request CONFIRMED in SQLite DB (session router-baseline)" \
+  "db_wait 'router-baseline' 1"
 check "[baseline] routing block shows router DISABLED (routing.enabled=false)" \
-  "splunk_wait 'search index=$SPLUNK_INDEX sourcetype=axis:llm | spath | search identity.session=router-baseline event=llm.request routing.enabled=false' 1"
+  "db_wait_line 'router-baseline' '\"enabled\":false'"
 
 # ROUTER-ON: llm.request with an enabled routing block; a frontier DECISION on
 # the hard prompts (selected_model=claude-*); and, if a key is present, an actual
 # frontier-tier escalation.
-check "[router-on] llm.request CONFIRMED in Splunk (session router-on)" \
-  "splunk_wait 'search index=$SPLUNK_INDEX sourcetype=axis:llm | spath | search identity.session=router-on event=llm.request' 1"
+check "[router-on] llm.request CONFIRMED in SQLite DB (session router-on)" \
+  "db_wait 'router-on' 1"
 check "[router-on] routing block shows router ENABLED + reachable" \
-  "splunk_wait 'search index=$SPLUNK_INDEX sourcetype=axis:llm | spath | search identity.session=router-on event=llm.request routing.enabled=true routing.reachable=true' 1"
+  "db_wait_line 'router-on' '\"enabled\":true' '\"reachable\":true'"
 check "[router-on] a HARD prompt got a FRONTIER decision (routing.selected_model=claude-*)" \
-  "splunk_wait 'search index=$SPLUNK_INDEX sourcetype=axis:llm | spath | search identity.session=router-on event=llm.request routing.selected_model=claude-*' 1"
+  "db_wait_line 'router-on' 'selected_model\":\"claude'"
 check "[router-on] a SIMPLE prompt stayed LOCAL (routing.tier=local)" \
-  "splunk_wait 'search index=$SPLUNK_INDEX sourcetype=axis:llm | spath | search identity.session=router-on event=llm.request routing.tier=local' 1"
+  "db_wait_line 'router-on' '\"decision\":\"local-simple\"' '\"tier\":\"local\"'"
 if [ "$FRONTIER_READY" -eq 1 ]; then
   check "[router-on] a HARD prompt ESCALATED to the frontier tier (routing.tier=frontier)" \
-    "splunk_wait 'search index=$SPLUNK_INDEX sourcetype=axis:llm | spath | search identity.session=router-on event=llm.request routing.tier=frontier' 1"
+    "db_wait_line 'router-on' '\"tier\":\"frontier\"'"
 else
   log "SKIP frontier-tier escalation assertion (no key) — decision proven via routing.selected_model=claude-*"
 fi
@@ -407,7 +321,7 @@ if [ "${RUN_CC:-1}" -eq 1 ] && command -v claude >/dev/null 2>&1 && [ "${LEMON_U
     GATEWAY_URL="$PROXY_CC_URL" MODEL="$LEMON_MODEL" \
       bash "$HERE/claude_job.sh" 'Reply with exactly: ROUTER_CC_OK' \
       > "$ART/claude_cc.out" 2>"$ART/claude_cc.err" || true
-    if splunk_wait "search index=$SPLUNK_INDEX sourcetype=axis:llm | spath | search identity.session=cc-router event=llm.request routing.enabled=true" 1; then
+    if db_wait "cc-router" 1; then
       CC_STATUS="ok"
       check "[cc] Claude Code produced an llm.request with a routing block (session cc-router)" "true"
     else
@@ -422,11 +336,10 @@ else
 fi
 
 # --- 9. summary -----------------------------------------------------------
-log "=== Dumping the Splunk index (search API) -> artifacts/splunk_query.txt ==="
-SPLUNK_MGMT_URL="$SPLUNK_MGMT_URL" SPLUNK_USER="$SPLUNK_USER" SPLUNK_PASS="$SPLUNK_PASS" \
-  SPLUNK_INDEX="$SPLUNK_INDEX" EARLIEST="-1h" \
-  bash "$SPLUNK_TEST/query_splunk.sh" > "$ART/splunk_query.txt" 2>&1 || true
-sed -n '1,40p' "$ART/splunk_query.txt" 2>/dev/null
+log "=== Stage 9: SQLite event count -> artifacts/SUMMARY.txt ==="
+EVENT_COUNT="$(query_db | wc -l || echo 0)"
+log "SQLite audit DB events recorded: $EVENT_COUNT"
+query_db | head -40 2>/dev/null
 
 log "=== RESULT: $pass passed, $fail failed ==="
 {
@@ -434,8 +347,8 @@ log "=== RESULT: $pass passed, $fail failed ==="
   echo "host=$(hostname) node=$(node --version)"
   echo "inference: proxy -> Lemonade $LEMON_MODEL (local :$LEMONADE_PORT) | frontier $FRONTIER_MODEL @ $FRONTIER_UPSTREAM"
   echo "router: classify API :$ROUTER_API_PORT (consult-only); toggle=LEMON_ROUTER"
-  echo "audit: real Splunk index=$SPLUNK_INDEX sourcetype=axis:llm (routing block)"
-  echo "splunk_up=${SPLUNK_UP:-0} defenseclaw_up=${DC_UP:-0} lemonade_up=${LEMON_UP:-0} router_up=${ROUTER_UP:-0} frontier_ready=${FRONTIER_READY:-0}"
+  echo "audit: SQLite audit DB=$AUDIT_DB events=$EVENT_COUNT"
+  echo "lemonade_up=${LEMON_UP:-0} router_up=${ROUTER_UP:-0} frontier_ready=${FRONTIER_READY:-0}"
   echo "routing_correct=${ROUTING_CORRECT}"
   echo "pass=$pass fail=$fail"
   echo "cc=$CC_STATUS"

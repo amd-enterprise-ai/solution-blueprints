@@ -8,11 +8,10 @@
 #
 #   source stack/platforms/halo/env.sh
 #   bash   stack/platforms/halo/run.sh          # functional loop
-#   REDTEAM_MODE=regression bash stack/run_redteam.sh
 #
-# The heavy toolchain (Go, Rust, the built AXIS + DefenseClaw binaries) lives
-# OUTSIDE the repo under $HALO_TOOLS (built by platforms/halo/setup.sh). Override HALO_TOOLS
-# to relocate it. Safe to source multiple times.
+# The heavy toolchain (Go, Rust, the built AXIS binary) lives OUTSIDE the repo
+# under $HALO_TOOLS (built by platforms/halo/setup.sh). Override HALO_TOOLS to
+# relocate it. Safe to source multiple times.
 
 HALO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -44,14 +43,15 @@ mkdir -p "$TMPDIR" 2>/dev/null || true
 export AXIS_BIN="axis"
 export AXIS_POLICY="$HALO_DIR/axis-policy-native.yaml"
 
-# Deskside hardening (see REDTEAM_FINDINGS.md): fail-closed audit is on by
-# default on the real deskside; the userspace fork-bomb cap is sized above the
-# live thread baseline so legit forks are unaffected.
+# Deskside hardening: fail-closed audit is on by default on the real deskside;
+# the userspace fork-bomb cap is sized above the live thread baseline so legit
+# forks are unaffected.
 export AUDIT_REQUIRED="${AUDIT_REQUIRED:-1}"
 export AXIS_ULIMIT_NPROC="${AXIS_ULIMIT_NPROC:-$(( $(ps -eLf -u "$USER" 2>/dev/null | wc -l) + 4096 ))}"
 
+# SQLite audit DB (written by both planes into the same file).
+export AUDIT_DB="${AUDIT_DB:-$HOME/axis-audit.db}"
+
 # Ports (override if occupied on the shared box).
-export DC_PORT="${DC_PORT:-18970}"
-export HEC_PORT="${HEC_PORT:-18088}"
 export LEMONADE_PORT="${LEMONADE_PORT:-13305}"
 export PROXY_PORT="${PROXY_PORT:-13399}"

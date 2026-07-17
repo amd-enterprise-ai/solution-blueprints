@@ -17,11 +17,11 @@ export RUN_CC="${RUN_CC:-0}"
 
 # preflight: warn if our ports are already taken (shared-box etiquette)
 busy=""
-for p in "$DC_PORT" "$HEC_PORT" "$PROXY_PORT"; do
+for p in "$PROXY_PORT"; do
   ss -ltn 2>/dev/null | grep -q ":$p " && busy="$busy $p"
 done
 if [ -n "$busy" ]; then
-  echo "WARNING: port(s) in use:$busy — override e.g. DC_PORT=28970 HEC_PORT=28088 PROXY_PORT=23399 bash platforms/halo/run.sh"
+  echo "WARNING: port(s) in use:$busy — override e.g. PROXY_PORT=23399 bash platforms/halo/run.sh"
 fi
 
 echo "== running run_integration.sh on $(hostname) (RUN_CC=$RUN_CC, axis=$(command -v axis)) =="

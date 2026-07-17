@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-telecom-assistant
 description: A Helm chart for deploying Telecom Assistant on Kubernetes
 type: application
-version: 0.2.1
+version: 0.2.2
 appVersion: "2.0.0"
 maintainers:
 - name: AMD

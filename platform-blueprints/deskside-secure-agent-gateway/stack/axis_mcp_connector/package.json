@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Client-side MCP connector: wraps every tool call in an AXIS sandbox, runs DefenseClaw admission, and builds Splunk-HEC audit events.",
+  "description": "Client-side MCP connector: wraps every tool call in an AXIS sandbox (Landlock + seccomp + netns) and records a SQLite audit event.",
   "bin": {
     "axis-mcp-connector": "src/server.js"
   },
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "better-sqlite3": "^9.6.0",
     "zod": "^3.23.8"
   },
   "engines": {

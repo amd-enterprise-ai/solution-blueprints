@@ -4,6 +4,8 @@ Copyright © Advanced Micro Devices, Inc., or its affiliates.
 SPDX-License-Identifier: MIT
 -->
 
+# Med Assist Voice Consultation Deployment Guide
+
 ## Prerequisites
 
 Before deploying the Med Assist Voice Consultation blueprint, a cluster-admin must install the **STUNner Operator**
@@ -47,7 +49,7 @@ To uninstall:
 > **Note:** STUNner routes media traffic from the browser to LiveKit. In most setups, you no longer
 > need to open UDP ports `50000-60000` on worker nodes.
 
-# Med Assist Voice Consultation Deployment Guide
+## Deployment
 
 Solution Blueprints are provided as Helm Charts. The recommended approach to deploy them is to pipe the output of `helm template` to
 `kubectl apply -f -`.

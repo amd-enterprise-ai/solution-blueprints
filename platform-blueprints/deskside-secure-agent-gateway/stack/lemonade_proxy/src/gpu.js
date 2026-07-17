@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: MIT
 
-// GPU consumption sampling for LOCAL inference (Cisco telemetry delta #1).
+// GPU consumption sampling for LOCAL inference.
 //
 // When a completion is served on the local tier (Lemonade on the Strix Halo
-// APU), we attach a `gpu` block to the llm.request event so Cisco's infra/O11y
+// APU), we attach a `gpu` block to the llm.request event so infra/O11y
 // view can see device utilization, memory, power and energy for that call.
 //
 // This reads the amdgpu **sysfs** interface directly

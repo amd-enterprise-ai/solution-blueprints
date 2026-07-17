@@ -3,28 +3,28 @@
 #
 # SPDX-License-Identifier: MIT
 
-# run_integration.sh — deskside secure agent gateway, end to end, on one machine.
+# run_integration.sh — AMD deskside agent gateway, end to end, on one machine.
 #
 # Brings up the two planes and proves the governance loop:
 #   inference plane:  Claude Code  ->  local Lemonade (7B GGUF on CPU)
-#   tool/audit plane: Claude Code  ->  axis MCP connector  ->  DefenseClaw admit
-#                                       ->  AXIS sandbox exec  ->  Splunk event
+#   tool/audit plane: Claude Code  ->  axis MCP connector  ->  AXIS sandbox exec
+#                                       (sole enforcement layer)  ->  SQLite audit event
 #
 # Stages:
-#   0. preconditions: axis, node+npm deps, claude (optional), go+gateway, lemonade
-#   1. local fake HEC + real DefenseClaw gateway (:18970, mode=action)
+#   0. preconditions: axis, node+npm deps, claude (optional), lemonade
+#   1. SQLite audit sink (local file, always available)
 #   2. Lemonade serving the 7B GGUF on CPU + a direct Anthropic-shaped probe
-#   3. control-plane probe: connector `run` -> real sandbox output + an
-#      axis.toolcall event (decision=allow) in the Splunk sink
-#   4. DENY/BLOCK: a tool call that trips a DefenseClaw rule (ssh-key read) is
-#      blocked in action mode (AXIS never runs it) and lands a decision=block event
-#   5. unified session: boot the inference proxy in front of Lemonade under the
-#      SAME AXIS_SESSION the connector uses (LLM_SESSION unset), then assert one
-#      llm.request and one axis.toolcall land in Splunk under one identity.session
+#   3. control-plane probe: connector `run` -> real sandbox output +
+#      axis.toolcall event (decision=allow) in the SQLite audit DB
+#   4. DENY: a tool call reading ~/.ssh is contained by AXIS Landlock (the read
+#      fails, command exits non-zero); a decision=error event lands in the DB
+#   5. unified session: boot the inference proxy in front of Lemonade under
+#      the SAME AXIS_SESSION the connector uses (LLM_SESSION unset), then
+#      assert one llm.request and one axis.toolcall land under one identity.session
 #   6. functional (best-effort): real Claude Code via Lemonade emits mcp__axis__run
 #   7. summary -> artifacts/SUMMARY.txt
 #
-# Env: AXIS_BIN, AXIS_POLICY, DC_PORT, LEMONADE_PORT, LEMON_MODEL, HEC_PORT, RUN_CC
+# Env: AXIS_BIN, AXIS_POLICY, LEMONADE_PORT, LEMON_MODEL, RUN_CC
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,16 +32,16 @@ ART="$HERE/artifacts"; mkdir -p "$ART"
 CONN="$HERE/axis_mcp_connector"
 SERVER="$CONN/src/server.js"
 PROBE="$HERE/mcp_probe.mjs"
+PROXY="$HERE/lemonade_proxy/src/server.js"
 
 AXIS_BIN="${AXIS_BIN:-axis}"
 AXIS_POLICY="${AXIS_POLICY:-/etc/axis/coding-agent.yaml}"
-DC_PORT="${DC_PORT:-18970}"
-HEC_PORT="${HEC_PORT:-18088}"
 LEMONADE_PORT="${LEMONADE_PORT:-13305}"
 LEMON_MODEL="${LEMON_MODEL:-Qwen3-8B-GGUF}"
 RUN_CC="${RUN_CC:-1}"
-SINK="$ART/events.jsonl"
-HEC_TOKEN="client-fake-token"
+AUDIT_DB="$ART/audit.db"
+# shellcheck source=../tests/lib/audit_db.sh
+source "$HERE/../tests/lib/audit_db.sh"
 
 log(){ echo "[itest] $*"; }
 pass=0; fail=0
@@ -50,7 +50,6 @@ check(){ if eval "$2"; then log "PASS: $1"; pass=$((pass+1)); else log "FAIL: $1
 PIDS=()
 cleanup(){
   for p in "${PIDS[@]:-}"; do kill "$p" >/dev/null 2>&1 || true; done
-  [ -f "$DEFENSECLAW_HOME/gateway.pid" ] && kill "$(cat "$DEFENSECLAW_HOME/gateway.pid")" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -66,14 +65,13 @@ command -v node >/dev/null 2>&1 || { log "FATAL: node not found"; exit 2; }
 log "node: $(node --version)"
 command -v "$AXIS_BIN" >/dev/null 2>&1 && log "axis: $(command -v "$AXIS_BIN")" || log "WARN: axis not on PATH ($AXIS_BIN)"
 
-# connector deps (MCP SDK) — server.js imports them.
+# connector deps — server.js imports them.
 if [ ! -d "$CONN/node_modules/@modelcontextprotocol" ]; then
   log "installing connector npm deps"
   ( cd "$CONN" && npm install --no-audit --no-fund ) >"$ART/npm_install.log" 2>&1 \
     || { log "FATAL: npm install failed"; tail -20 "$ART/npm_install.log"; exit 2; }
 fi
-# root deps (MCP SDK) — mcp_probe.mjs lives at the root and imports the SDK from
-# the root node_modules (ESM subpath exports can't be resolved via NODE_PATH).
+# root deps — mcp_probe.mjs imports the SDK from root node_modules.
 if [ ! -d "$HERE/node_modules/@modelcontextprotocol" ]; then
   log "installing root npm deps (for mcp_probe.mjs)"
   ( cd "$HERE" && npm install --no-audit --no-fund ) >>"$ART/npm_install.log" 2>&1 \
@@ -84,61 +82,14 @@ fi
 ( cd "$CONN" && node --test ) >"$ART/unit_tests.log" 2>&1
 check "connector unit tests green" "grep -qE '# fail 0' '$ART/unit_tests.log'"
 
-# --- 1. audit sink (fake HEC by default; real Splunk with REAL_SPLUNK=1) + gateway
-log "=== Stage 1: audit sink + DefenseClaw gateway ==="
-# The connector's SplunkEventSink always writes the local JSONL sink AND (when a
-# HEC URL is set) POSTs to /services/collector/event. Default: bundled fake_hec so
-# the suite is runnable with no Splunk. REAL_SPLUNK=1 (+ HEC_TOKEN) ships the SAME
-# events to a real Splunk HEC (index=axis) while keeping the local mirror the
-# harness reads back — i.e. real model AND real Splunk, both at once.
-if [ "${REAL_SPLUNK:-0}" = "1" ]; then
-  HEC_URL_EFF="${SPLUNK_HEC_URL:-https://127.0.0.1:18088}"
-  HEC_TOKEN_EFF="${HEC_TOKEN:?REAL_SPLUNK=1 requires a real HEC_TOKEN}"
-  export NODE_TLS_REJECT_UNAUTHORIZED=0   # real Splunk uses a self-signed cert
-  log "REAL Splunk audit ON -> $HEC_URL_EFF (index=axis, sourcetype=axis:toolcall)"
-  check "real Splunk HEC healthy" "curl -sk --max-time 5 $HEC_URL_EFF/services/collector/health >/dev/null 2>&1"
-else
-  HEC_URL_EFF="http://127.0.0.1:$HEC_PORT"
-  HEC_TOKEN_EFF="$HEC_TOKEN"
-  python3 "$HERE/fake_hec.py" --port "$HEC_PORT" --out "$ART/hec_capture.jsonl" --token "$HEC_TOKEN" \
-    >"$ART/hec.log" 2>&1 &
-  PIDS+=("$!")
-  for _ in $(seq 1 50); do curl -sf "http://127.0.0.1:$HEC_PORT/health" >/dev/null 2>&1 && break; sleep 0.1; done
-  check "fake HEC healthy" "curl -sf http://127.0.0.1:$HEC_PORT/health >/dev/null 2>&1"
-fi
-
-# real Cisco DefenseClaw gateway. run_gateway.sh runs the sidecar in the
-# background then (when run directly) blocks on `wait`, so we background the
-# whole script and poll its boot output for the health line + minted token.
-export DC_PORT
-# Pin a token so both the gateway (EnsureGatewayToken honours this env) and the
-# connector use the same one — DefenseClaw >=0.8 fails closed without it.
-export DEFENSECLAW_GATEWAY_TOKEN="${DEFENSECLAW_GATEWAY_TOKEN:-cs-itest-$$}"
-DC_OUT="$ART/gateway_boot.txt"
-: > "$DC_OUT"
-bash "$HERE/defenseclaw/run_gateway.sh" >"$DC_OUT" 2>&1 &
-PIDS+=("$!")
-DC_UP=0
-for _ in $(seq 1 150); do
-  if curl -sf "http://127.0.0.1:$DC_PORT/health" >/dev/null 2>&1; then DC_UP=1; break; fi
-  sleep 0.4
-done
-if [ "$DC_UP" -eq 1 ]; then
-  export DEFENSECLAW_HOME="$(grep -oE 'DEFENSECLAW_HOME=.*' "$DC_OUT" | tail -1 | cut -d= -f2-)"
-else
-  log "WARN: DefenseClaw gateway failed to start; see $DC_OUT"
-fi
-check "DefenseClaw gateway healthy on :$DC_PORT" "[ ${DC_UP:-0} -eq 1 ]"
+# --- 1. audit sink (SQLite — always local, always reachable) ---------------
+log "=== Stage 1: SQLite audit sink ==="
+rm -f "$AUDIT_DB"
+check "SQLite audit DB path writable" "touch '$AUDIT_DB' && rm -f '$AUDIT_DB'"
 
 # Connector env shared by the probes below.
 export AXIS_BIN AXIS_POLICY
-export DEFENSECLAW_URL="http://127.0.0.1:$DC_PORT"
-export DEFENSECLAW_MODE="action"
-export DEFENSECLAW_FAIL_OPEN="0"
-export DEFENSECLAW_GATEWAY_TOKEN  # connector authenticates with the gateway
-export SPLUNK_SINK="$SINK"
-export SPLUNK_HEC_URL="$HEC_URL_EFF"
-export SPLUNK_HEC_TOKEN="$HEC_TOKEN_EFF"
+export AUDIT_DB
 export AXIS_TENANT="client-deskside"
 export AXIS_USER="${USER:-amd}"
 
@@ -155,9 +106,6 @@ fi
 check "Lemonade server healthy" "[ ${LEMON_UP:-0} -eq 1 ] && curl -sf http://127.0.0.1:$LEMONADE_PORT/api/v1/health >/dev/null 2>&1"
 
 if [ "${LEMON_UP:-0}" -eq 1 ]; then
-  # Anthropic-compatible Lemonade builds serve /v1/messages; the client-side
-  # Python Lemonade serves the OpenAI /api/v1/chat/completions instead. Probe the
-  # Anthropic path first, fall back to OpenAI, so the check passes on either.
   BODY="{\"model\":\"$LEMON_MODEL\",\"max_tokens\":16,\"messages\":[{\"role\":\"user\",\"content\":\"say ROCM_OK\"}]}"
   curl -s "http://127.0.0.1:$LEMONADE_PORT/v1/messages" -H 'content-type: application/json' \
     -d "$BODY" > "$ART/lemonade_messages_probe.json" 2>/dev/null
@@ -170,57 +118,42 @@ fi
 
 # --- 3. control-plane probe: ALLOW ----------------------------------------
 log "=== Stage 3: control-plane probe (ALLOW) ==="
-: > "$SINK"
+rm -f "$AUDIT_DB"
 AXIS_SESSION="cc-itest-allow" \
   node "$PROBE" "$SERVER" 'echo ROCM_OK && hostname' > "$ART/probe_allow.out" 2>"$ART/probe_allow.err"
 check "connector run returned real sandboxed output (ROCM_OK)" "grep -q 'ROCM_OK' '$ART/probe_allow.out'"
-check "an axis.toolcall event landed in the Splunk sink" "grep -q '\"axis.toolcall\"' '$SINK'"
-check "the allowed call recorded decision=allow" "grep '\"axis.toolcall\"' '$SINK' | grep -q '\"decision\":\"allow\"'"
-check "a session_start event was emitted" "grep -q '\"axis.session_start\"' '$SINK'"
-if [ "${DC_UP:-0}" -eq 1 ]; then
-  # The gateway logs each inspected tool to stderr ([inspect] >>> tool=...).
-  check "DefenseClaw saw the tool call" "grep -q 'inspect' '$DEFENSECLAW_HOME/gateway.log' 2>/dev/null || true; grep -q '\"reachable\":true' '$SINK'"
-fi
+check "an axis.toolcall event landed in the audit DB" "db_has '\"axis.toolcall\"'"
+check "the allowed call recorded decision=allow" "db_has '\"axis.toolcall\"' '\"decision\":\"allow\"'"
+check "a session_start event was emitted" "db_has '\"axis.session_start\"'"
 
-# --- 4. DENY/BLOCK: ssh-key read trips a DefenseClaw rule -----------------
-# Functional check: proves the *expected* block path works (a literal ssh-key
-# read is admitted-then-blocked). Adversarial follow-ups — can this rule be
-# evaded, can the sandbox be escaped, can audit be dropped — live in the separate
-# red-team suite, run_redteam.sh (see REDTEAM_FINDINGS.md).
-log "=== Stage 4: DENY/BLOCK probe (ssh-key read) ==="
-: > "$SINK"
-AXIS_SESSION="cc-itest-block" \
-  node "$PROBE" "$SERVER" 'cat $HOME/.ssh/id_ed25519' > "$ART/probe_block.out" 2>"$ART/probe_block.err"
-if [ "${DC_UP:-0}" -eq 1 ]; then
-  check "DefenseClaw blocked the ssh-key read (action mode)" "grep -qi 'blocked by DefenseClaw' '$ART/probe_block.out'"
-  check "a decision=block event landed in the sink" "grep '\"axis.toolcall\"' '$SINK' | grep -q '\"decision\":\"block\"'"
-  check "blocked event has null exit (AXIS never ran it)" "grep '\"axis.toolcall\"' '$SINK' | grep -q '\"exit\":null'"
-else
-  log "SKIP: DefenseClaw down — block path not exercised"
-fi
+# --- 4. DENY: AXIS sandbox contains an ssh-key read -----------------------
+# AXIS is the sole enforcement layer: a read of ~/.ssh (denied by the policy's
+# Landlock rules) runs but fails, so the command exits non-zero and the connector
+# records decision=error. The key is never disclosed.
+log "=== Stage 4: DENY probe (ssh-key read contained by AXIS Landlock) ==="
+rm -f "$AUDIT_DB"
+SSH_DECOY="$HOME/.ssh/itest_decoy"
+mkdir -p "$HOME/.ssh"; echo "ITEST_SSH_SECRET" > "$SSH_DECOY"
+AXIS_SESSION="cc-itest-deny" \
+  node "$PROBE" "$SERVER" 'cat $HOME/.ssh/itest_decoy' > "$ART/probe_deny.out" 2>"$ART/probe_deny.err"
+check "the ssh-key secret was NOT disclosed (AXIS Landlock denied the read)" \
+  "! grep -q 'ITEST_SSH_SECRET' '$ART/probe_deny.out'"
+check "an axis.toolcall event landed in the audit DB" "db_has '\"axis.toolcall\"'"
+check "the contained call recorded decision=error" "db_has '\"axis.toolcall\"' '\"decision\":\"error\"'"
+rm -f "$SSH_DECOY"
 
 # --- 5. unified session: both planes correlate under one AXIS_SESSION -----
-# Boots the inference proxy in front of Lemonade under the SAME AXIS_SESSION the
-# connector uses, with LLM_SESSION intentionally unset so the proxy falls back to
-# AXIS_SESSION (the agreed correlation seam). One inference call + one tool call
-# must then land in Splunk carrying the same identity.session — proving a Splunk
-# search on that id returns both planes for one logical agent run.
 if [ "${LEMON_UP:-0}" -eq 1 ]; then
   log "=== Stage 5: unified session (proxy + connector share AXIS_SESSION) ==="
   SESS="cc-itest-unified-$$"
   PROXY_PORT="${PROXY_PORT:-13399}"
-  : > "$SINK"
-  # LEMON_ROUTER stays off (plain passthrough) so no router binary is needed.
-  # LLM_SESSION is NOT exported: the proxy must fall back to AXIS_SESSION.
+  rm -f "$AUDIT_DB"
   AXIS_SESSION="$SESS" \
   LEMON_PROXY_PORT="$PROXY_PORT" \
   LEMON_UPSTREAM="http://127.0.0.1:$LEMONADE_PORT" \
-  DEFENSECLAW_URL="http://127.0.0.1:$DC_PORT" \
-  DEFENSECLAW_GATEWAY_TOKEN="$DEFENSECLAW_GATEWAY_TOKEN" \
-  SPLUNK_SINK="$SINK" SPLUNK_HEC_URL="$HEC_URL_EFF" \
-  SPLUNK_HEC_TOKEN="$HEC_TOKEN_EFF" \
+  AUDIT_DB="$AUDIT_DB" \
   AXIS_TENANT="$AXIS_TENANT" AXIS_USER="$AXIS_USER" \
-    node "$HERE/lemonade_proxy/src/server.js" >"$ART/proxy_boot.txt" 2>&1 &
+    node "$PROXY" >"$ART/proxy_boot.txt" 2>&1 &
   PIDS+=("$!")
   PROXY_UP=0
   for _ in $(seq 1 50); do
@@ -240,29 +173,24 @@ if [ "${LEMON_UP:-0}" -eq 1 ]; then
 
     # Assert both planes emitted events tagged with the same identity.session.
     UNIFIED_OK=0
-    python3 - "$SINK" "$SESS" <<'PY' && UNIFIED_OK=1
-import json, sys
-sink, sess = sys.argv[1], sys.argv[2]
-# Each sink line is the raw event object: {event:"<type>", identity:{session,...}, ...}
-planes = {"inference": set(), "tool": set()}   # plane -> set(session ids seen)
+    python3 - "$AUDIT_DB" "$SESS" <<'PY' && UNIFIED_OK=1
+import sqlite3, json, sys
+db_path, sess = sys.argv[1], sys.argv[2]
+db = sqlite3.connect(db_path)
+rows = db.execute("SELECT data FROM events ORDER BY id").fetchall()
+db.close()
+planes = {"inference": set(), "tool": set()}
 have_llm_request = have_toolcall = False
-for line in open(sink):
-    line = line.strip()
-    if not line:
-        continue
-    ev = json.loads(line)
+for (data,) in rows:
+    ev = json.loads(data)
     etype = ev.get("event", "")
     sid = (ev.get("identity") or {}).get("session")
     if etype.startswith("llm."):
-        if sid is not None:
-            planes["inference"].add(sid)
-        if etype == "llm.request":
-            have_llm_request = True
+        if sid is not None: planes["inference"].add(sid)
+        if etype == "llm.request": have_llm_request = True
     elif etype.startswith("axis."):
-        if sid is not None:
-            planes["tool"].add(sid)
-        if etype == "axis.toolcall":
-            have_toolcall = True
+        if sid is not None: planes["tool"].add(sid)
+        if etype == "axis.toolcall": have_toolcall = True
 seen = planes["inference"] | planes["tool"]
 ok = (have_llm_request and have_toolcall
       and planes["inference"] and planes["tool"]
@@ -283,14 +211,12 @@ fi
 # --- 6. functional (best-effort): real Claude Code via Lemonade -----------
 if [ "${RUN_CC:-1}" -eq 1 ] && [ "${LEMON_UP:-0}" -eq 1 ] && command -v claude >/dev/null 2>&1; then
   log "=== Stage 6: functional Claude Code (best-effort, 7B CPU is slow) ==="
-  : > "$SINK"
+  rm -f "$AUDIT_DB"
   cat > "$ART/.mcp.json" <<EOF
 { "mcpServers": { "axis": { "command": "node", "args": ["$SERVER"],
   "env": { "AXIS_BIN": "$AXIS_BIN", "AXIS_POLICY": "$AXIS_POLICY",
-    "DEFENSECLAW_URL": "http://127.0.0.1:$DC_PORT", "DEFENSECLAW_MODE": "action",
-    "DEFENSECLAW_GATEWAY_TOKEN": "$DEFENSECLAW_GATEWAY_TOKEN",
-    "SPLUNK_SINK": "$SINK", "SPLUNK_HEC_URL": "$HEC_URL_EFF",
-    "SPLUNK_HEC_TOKEN": "$HEC_TOKEN_EFF" } } } }
+    "AUDIT_DB": "$AUDIT_DB",
+    "AXIS_TENANT": "client-deskside", "AXIS_USER": "${USER:-amd}" } } } }
 EOF
   ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-http://127.0.0.1:$LEMONADE_PORT}" \
   ANTHROPIC_AUTH_TOKEN="lemonade-local" \
@@ -318,7 +244,7 @@ echo "$pass passed / $fail failed" > "$ART/SUMMARY.txt"
 {
   echo "gateway run @ $(date -u +%FT%TZ)"
   echo "host=$(hostname) node=$(node --version)"
-  echo "defenseclaw_up=${DC_UP:-0} lemonade_up=${LEMON_UP:-0} proxy_up=${PROXY_UP:-0}"
+  echo "lemonade_up=${LEMON_UP:-0} proxy_up=${PROXY_UP:-0}"
   echo "unified_session=${UNIFIED_OK:-0}"
   echo "pass=$pass fail=$fail"
 } >> "$ART/SUMMARY.txt"

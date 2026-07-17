@@ -5,7 +5,7 @@
 
 # claude_job.sh — launch real Claude Code with its inference routed THROUGH the
 # lemonade telemetry proxy (which forwards to the local Lemonade 8B on CPU and
-# emits an llm.request Splunk event per call).
+# emits an llm.request SQLite audit event per call).
 #
 # This stage exercises the INFERENCE plane only:
 # no gateway key, no MCP tools — just prove Claude Code's LLM traffic flows

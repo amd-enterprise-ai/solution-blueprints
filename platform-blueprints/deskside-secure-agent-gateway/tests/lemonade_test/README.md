@@ -4,12 +4,12 @@ Copyright © Advanced Micro Devices, Inc., or its affiliates.
 SPDX-License-Identifier: MIT
 -->
 
-# Client-Side Lemonade Test: **inference-plane** telemetry to real Splunk
+# Client-Side Lemonade Test: **inference-plane** telemetry to the SQLite audit DB
 
 Proves the client-side governance story extends from the **tool plane** (the
-`axis_mcp_connector` → DefenseClaw → AXIS → Splunk `axis.toolcall` events) to the
+`axis_mcp_connector` → AXIS → SQLite `axis.toolcall` events) to the
 **inference plane**: every LLM request made by the agent host is audited to the
-**same real Splunk `index=axis`** as an `llm.request` event.
+**same local SQLite audit DB** as an `llm.request` event.
 
 The new component is a **transparent telemetry proxy** in front of the local
 Lemonade server. No Lemonade source is modified — the agent host just points its
@@ -20,72 +20,55 @@ Lemonade server. No Lemonade source is modified — the agent host just points i
      │ ANTHROPIC_BASE_URL -> proxy
      ▼
    lemonade_proxy (Node, stack/lemonade_proxy)
-     │  1. DefenseClaw /api/v1/inspect/request   (prompt guardrail, observe)
-     │  2. forward /v1/messages  BYTE-FOR-BYTE  ─────────────►  Lemonade :13305
-     │  3. DefenseClaw /api/v1/inspect/response  (completion guardrail, observe)   (Qwen3-8B, CPU)
-     │  4. emit llm.request ──────────────────►  REAL Splunk HEC :8088, index=axis
-     ▼                                                            sourcetype axis:llm
+     │  1. forward /v1/messages  BYTE-FOR-BYTE  ─────────────►  Lemonade :13305
+     │  2. emit llm.request ──────────────────►  SQLite audit DB (AUDIT_DB)   (Qwen3-8B, CPU)
+     ▼
    response streamed back to the client unchanged
 ```
 
-## Two planes, one index
+## Two planes, one audit DB
 
-| Plane | Producer | Event | sourcetype |
-|-------|----------|-------|------------|
-| tool  | `axis_mcp_connector` | `axis.toolcall` | `axis:toolcall` |
-| inference | `lemonade_proxy` | `llm.request` | `axis:llm` |
+| Plane | Producer | Event |
+|-------|----------|-------|
+| tool  | `axis_mcp_connector` | `axis.toolcall` |
+| inference | `lemonade_proxy` | `llm.request` |
 
-Both carry the same `identity{session,user,tenant,device_id}` block, so a single
-agent session's tool calls and LLM calls correlate in `index=axis` by
-`identity.session`.
+Both carry the same `identity{session,user,tenant,device_id}` block and write to the
+same SQLite `AUDIT_DB` (WAL mode, so the two writers coexist), so a single agent
+session's tool calls and LLM calls correlate by `identity.session`.
 
 ## Why a proxy (not a Lemonade patch)
 
-Lemonade is upstream AMD code; patching it to emit Splunk events would rot against
+Lemonade is upstream AMD code; patching it to emit audit events would rot against
 every release. A transparent proxy keeps the telemetry entirely on the client
-side, reuses the connector's exact `SplunkEventSink`/HEC pattern, and works for
+side, reuses the connector's exact SQLite sink pattern, and works for
 **any** Anthropic-speaking host (Claude Code, gaia, curl) unchanged. The proxy
 never alters the bytes it forwards — parsing (model/prompt/token usage) is
 best-effort telemetry, never on the data path.
 
-## DefenseClaw on the inference plane
-
-DefenseClaw already ships the endpoints:
-
-- `POST /api/v1/inspect/request` — scans the **prompt** (prompt-injection / jailbreak).
-- `POST /api/v1/inspect/response` — scans the **completion** (secret / PII leakage).
-
-The proxy runs both in **observe** mode and **fail-open** by default: a
-governance-sidecar hiccup must never take inference down, and a false positive on
-a prompt must never kill a chat turn (DefenseClaw itself demotes prompt-surface
-blocks to "alert"). Each `llm.request` event records `would_block`, so Cisco can
-tune the ruleset before flipping to action mode.
-
-**Privacy by default:** the event ships metadata only — model, timing, token
-counts, prompt/response **char counts**, and the DefenseClaw verdicts. It does
-**not** ship prompt or completion text (mirrors the connector shipping
-exit/duration, not stdout). DefenseClaw sees the content to scan it; Splunk sees
-only the verdict.
+**Privacy:** the event records metadata only — model, timing, token counts, and
+prompt/response **char counts**. It never stores the raw prompt or completion
+text (mirrors the connector recording exit/duration, not stdout). This plane has
+no guardrail integration — the AXIS sandbox is the sole enforcement layer, and
+the proxy only observes and records.
 
 ## What it proves
 
 1. **proxy is transparent** — `/v1/messages` (JSON and SSE) is forwarded
    byte-for-byte; the client sees an unmodified Lemonade response.
 2. **deterministic HARD proof** — a real `/v1/messages` call through the proxy
-   produces an `llm.request(decision=allow)` event **read back out of
-   `index=axis`** via the Splunk search API, carrying the DefenseClaw prompt
-   verdict. Model-independent.
+   produces an `llm.request(decision=allow)` event **read back out of the SQLite
+   audit DB with SQL**. Model-independent.
 3. **Claude Code through the proxy** (best-effort) — Claude Code's own inference,
-   pointed at the proxy, lands its `llm.request` events in Splunk under session
-   `cc-lemon`. Reported SKIP if the local 8B can't carry Claude Code's loop (the
-   deterministic stage still HARD-proves the plane).
+   pointed at the proxy, lands its `llm.request` events in the SQLite audit DB
+   under session `cc-lemon`. Reported SKIP if the local 8B can't carry Claude
+   Code's loop (the deterministic stage still HARD-proves the plane).
 
 ## Reuse (no duplication)
 
-- `../../stack/lemonade_proxy/` — the proxy + 22 unit tests (new).
+- `../../stack/lemonade_proxy/` — the proxy + its unit tests (new).
 - `../../stack/lemonade/run_lemonade.sh` — local Lemonade on CPU.
-- `../../stack/defenseclaw/run_gateway.sh` — the real DefenseClaw gateway.
-- `../../stack/splunk/install_splunk.sh` + `query_splunk.sh` — real Splunk + read-back.
+- `../lib/audit_db.sh` — shared SQLite audit-DB read-back helpers.
 
 ## Layout
 
@@ -94,7 +77,7 @@ lemonade_test/
   README.md  SETUP.md  RESULTS.md
   run_lemonade_telemetry.sh   end-to-end runner (the main new code)
   claude_job.sh               Claude Code with ANTHROPIC_BASE_URL -> proxy
-  artifacts/                  SUMMARY.txt, events.jsonl, splunk_query.txt, proxy_*.log
+  artifacts/                  SUMMARY.txt, audit.db, proxy_*.log
 ```
 
 ## Quick start
@@ -103,7 +86,6 @@ See [SETUP.md](./SETUP.md).
 
 ```bash
 cd lemonade_test
-SPLUNK_PASS=<SPLUNK_PASS> HEC_TOKEN=<HEC_TOKEN> \
   bash run_lemonade_telemetry.sh
 ```
 

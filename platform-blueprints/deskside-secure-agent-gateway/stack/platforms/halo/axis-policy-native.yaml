@@ -23,8 +23,8 @@ filesystem:
   read_write:
     - "{workspace}"
     - "{tmpdir}"
-  # Named denies belt-and-braces over Landlock default-deny (see REDTEAM_FINDINGS.md
-  # RT-001/RT-002): credential stores an agent must never read.
+  # Named denies belt-and-braces over Landlock default-deny: credential stores
+  # an agent must never read.
   deny:
     - "~/.ssh"
     - "~/.gnupg"
@@ -46,7 +46,7 @@ process:
   # 0 = no cgroups-based limit requested (avoids the writable-cgroups-v2
   # requirement on a shared Halo box; AXIS fails closed if it can't enforce a
   # requested limit). The connector applies a userspace ulimit -u fallback
-  # instead — see AXIS_ULIMIT_NPROC and REDTEAM_FINDINGS.md RT-007.
+  # instead — see AXIS_ULIMIT_NPROC.
   max_processes: 0
   max_memory_mb: 0
   cpu_rate_percent: 0

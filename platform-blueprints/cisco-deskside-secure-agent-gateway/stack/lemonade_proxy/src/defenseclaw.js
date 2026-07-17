@@ -58,13 +58,17 @@ export class DefenseClawInferenceClient {
   }
 
   /** Scan the prompt before it reaches the model. */
-  async inspectRequest({ session, model, content }) {
+  async inspectRequest({ session, user, userSource, model, content }) {
     if (!content) return null;
     try {
       const verdict = await this.#post("/api/v1/inspect/request", {
         content,
         model,
         session_id: session,
+        // Identity passthrough for per-user policy/logging (asserted, not
+        // verified — user_source records the trust level).
+        user,
+        user_source: userSource,
       });
       return this.#normalize(verdict);
     } catch (err) {
@@ -73,13 +77,15 @@ export class DefenseClawInferenceClient {
   }
 
   /** Scan the completion after the model returns. */
-  async inspectResponse({ session, model, content }) {
+  async inspectResponse({ session, user, userSource, model, content }) {
     if (!content) return null;
     try {
       const verdict = await this.#post("/api/v1/inspect/response", {
         content,
         model,
         session_id: session,
+        user,
+        user_source: userSource,
       });
       return this.#normalize(verdict);
     } catch (err) {

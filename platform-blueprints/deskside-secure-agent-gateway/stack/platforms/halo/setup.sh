@@ -12,8 +12,8 @@
 #   bash   stack/platforms/halo/setup.sh
 #   bash   stack/platforms/halo/run.sh
 #
-# The AXIS policy is the committed platforms/halo/axis-policy-native.yaml — this script only
-# builds the external binaries (Go, Rust, AXIS, DefenseClaw) that can't live in
+# The AXIS policy is the committed platforms/halo/axis-policy-native.yaml — this
+# script only builds the external binaries (Go, Rust, AXIS) that can't live in
 # the repo.
 set -euo pipefail
 
@@ -47,15 +47,6 @@ if ! have cargo; then
 else say "Rust present"; fi
 cargo --version
 
-# --- DefenseClaw gateway (public) -----------------------------------------
-if [ ! -d "$HALO_TOOLS/repos/defenseclaw/.git" ]; then
-  say "cloning cisco-ai-defense/defenseclaw"
-  git clone https://github.com/cisco-ai-defense/defenseclaw.git "$HALO_TOOLS/repos/defenseclaw"
-fi
-if [ ! -x "$HALO_TOOLS/repos/defenseclaw/defenseclaw-gateway" ]; then
-  say "building defenseclaw-gateway"; ( cd "$HALO_TOOLS/repos/defenseclaw" && make gateway )
-else say "defenseclaw-gateway present"; fi
-
 # --- AXIS (public, build from source) -------------------------------------
 if [ ! -d "$HALO_TOOLS/repos/axis/.git" ]; then
   say "cloning qedawkins/axis @ ${AXIS_BRANCH}"
@@ -76,7 +67,6 @@ else say "AXIS present ($($HALO_TOOLS/bin/axis --version 2>/dev/null))"; fi
 # Symlinks in both $HOME/repos and the legacy sibling path for compatibility.
 say "linking repos into $HOME/repos"
 mkdir -p "$HOME/repos"
-ln -sfn "$HALO_TOOLS/repos/defenseclaw"  "$HOME/repos/defenseclaw"
 ln -sfn "$HALO_TOOLS/repos/lemonade-sdk" "$HOME/repos/lemonade-sdk"
 
 # --- npm deps + unit tests -------------------------------------------------

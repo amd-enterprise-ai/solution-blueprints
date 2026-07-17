@@ -3,12 +3,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Group a client-side telemetry capture into Cisco's per-turn trace view.
+"""Group a client-side telemetry capture into a per-turn trace view.
 
-Reads the newline-delimited HEC events (both planes: axis.* tool-plane and llm.*
+Reads newline-delimited audit events (both planes: axis.* tool-plane and llm.*
 inference-plane) and renders a human-readable Markdown report where the top-level
-grouping is the `trace_id` — Cisco's unit of "one user prompt + all the LLM calls
-and tool calls it triggered until the next user prompt". One agent session
+grouping is the `trace_id` — one user prompt plus all the LLM calls and tool
+calls it triggered until the next user prompt. One agent session
 (identity.session) contains multiple traces (one per turn).
 
 Usage: group_by_trace.py <events.ndjson>  > by_trace.md
@@ -67,15 +67,13 @@ def fmt_llm(ev):
 def fmt_tool(ev):
     cmd = ev.get("command", {})
     res = ev.get("result", {})
-    dc = ev.get("defenseclaw") or {}
-    argv = cmd.get("argv_redacted") or cmd.get("argv") or []
+    argv = cmd.get("argv_redacted") or []
     cmd_str = argv[-1] if argv else ""
     parts = [
         f"span={short(ev.get('span_id'))}",
         f"decision={ev.get('decision')}",
         f"exit={res.get('exit')}",
         f"{res.get('duration_ms')}ms",
-        f"dc={dc.get('severity')}",
     ]
     return "    - **axis.toolcall** " + " ".join(str(p) for p in parts) + f"\n      `{cmd_str}`"
 

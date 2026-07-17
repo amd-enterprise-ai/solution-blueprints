@@ -4,37 +4,38 @@ Copyright © Advanced Micro Devices, Inc., or its affiliates.
 SPDX-License-Identifier: MIT
 -->
 
-# Deskside Secure Agent Gateway
+# AMD Deskside Agent Gateway
 
-A self-contained **secure gateway for coding agents** that runs entirely on **one
-machine** — no orchestrator, no rack control plane. It governs an agent (e.g.
-Claude Code) on **two planes** so that every action it takes is sandboxed,
-admission-checked, and audited:
+A self-contained, **fully open-source** secure gateway for coding agents that
+runs entirely on **one machine** — no orchestrator, no rack control plane, no
+third-party SaaS. It governs an agent (e.g. Claude Code) on **two planes** so
+that every action it takes is sandboxed and audited:
 
-- **Tool / audit plane** — the agent's built-in tools are disabled; the *only* way
-  it can touch the machine is a single MCP `run` tool. Every call flows through a
-  **Cisco DefenseClaw** admission check → an **AXIS** sandbox (Landlock + seccomp +
-  netns) → a **Splunk-shaped audit event**. Nothing runs unrecorded.
-- **Inference plane** — completions flow through a transparent **Lemonade proxy**
-  that guardrails each prompt/response, optionally consults a **semantic router**
-  to keep cheap prompts on a local model and escalate hard ones to a frontier
-  model, and emits an `llm.request` audit event correlated to the tool plane by a
-  shared session id.
+- **Tool / audit plane** — the agent's built-in tools are disabled; the *only*
+  way it can touch the machine is a single MCP `run` tool. Every call flows
+  through an **AXIS** sandbox (Landlock + seccomp + netns) → a **SQLite audit
+  event**. Nothing runs unrecorded.
+- **Inference plane** — completions flow through a transparent **Lemonade
+  proxy** that optionally consults a **semantic router** to keep cheap prompts
+  on a local model and escalate hard ones to a frontier model, and emits an
+  `llm.request` audit event correlated to the tool plane by a shared session id.
+
+All audit events land in a local **SQLite database** — no Splunk, no external
+service, no network dependency. The DB is queryable with any SQL tool or the
+bundled Python helper.
 
 Validated on **AMD Strix Halo** (Ryzen AI Max+ 395), unprivileged.
 
-![Architecture](./stack/assets/architecture.png)
-
-> **DefenseClaw decides *whether* a call may run. AXIS *contains* it when it does.
-> The Splunk events record *what happened*.** The deep-dive architecture reference
-> is in [`stack/README.md`](./stack/README.md).
+> **AXIS *contains* every call at execution time. SQLite records *what
+> happened*.** The deep-dive architecture reference is in
+> [`stack/README.md`](./stack/README.md).
 
 ## What's here
 
 | Path | What it is |
 |------|------------|
-| [`stack/`](./stack/) | The gateway itself — the MCP connector, the inference proxy, the DefenseClaw + Lemonade + Splunk wiring, and the Strix Halo bring-up. Start here. |
-| [`tests/agent_harness_integrations/`](./tests/agent_harness_integrations/) | End-to-end demos of the gateway driving real agents (Claude Code, gaia) on real tasks. The two quick-starts below live here. |
+| [`stack/`](./stack/) | The gateway itself — the MCP connector, the inference proxy, Lemonade + SQLite wiring, and the Strix Halo bring-up. Start here. |
+| [`tests/agent_harness_integrations/`](./tests/agent_harness_integrations/) | End-to-end demos of the gateway driving real agents (Claude Code, gaia) on real tasks. |
 | [`tests/router_test/`](./tests/router_test/), [`tests/lemonade_test/`](./tests/lemonade_test/) | Inference-plane A/B and telemetry verification suites. |
 | [`experiments/`](./experiments/) | Benchmarks: isolation latency and router tokenomics. |
 
@@ -44,79 +45,63 @@ The gateway builds its external binaries for you (see [`stack/SETUP.md`](./stack
 You need on the box first:
 
 - **Node ≥18** (via nvm) — the connector + proxy.
-- **git, curl, python3** — clone/build + the bundled audit sink.
-- An **AXIS** sandbox binary and a **DefenseClaw** gateway — both built from source
-  by `stack/platforms/halo/setup.sh` (Rust + Go).
+- **git, curl, python3** — clone/build.
+- An **AXIS** sandbox binary — built from source by `stack/platforms/halo/setup.sh` (Rust).
 - A local **Lemonade** server *or* a frontier LLM key (e.g. an Anthropic-compatible
   gateway) for the inference plane.
-- **Splunk** is optional — a self-contained local sink ships in the box; a vendored
-  user-space Splunk installer ([`stack/splunk/`](./stack/splunk/)) is there for the
-  full search-API-verified demos.
+- **SQLite** — ships with Python and is used automatically; no install needed.
 
 One-time bring-up on a Strix Halo deskside:
 
 ```bash
 cd stack
 source platforms/halo/env.sh     # toolchain paths, native AXIS policy, ports
-bash   platforms/halo/setup.sh   # build Go, Rust, AXIS, DefenseClaw; run unit tests
-bash   platforms/halo/run.sh     # functional governance loop (expects 15/0)
+bash   platforms/halo/setup.sh   # build Go, Rust, AXIS; run unit tests
+bash   platforms/halo/run.sh     # functional governance loop
 ```
 
 ## Quick start A — Claude Code solves a SWE-bench issue, fully governed
 
 Drives **Claude Code** to solve the real SWE-bench instance `pallets__flask-5014`
 end-to-end. Claude Code's own tools are disabled, so every command it runs is
-sandboxed by AXIS and audited — and the audit events are hard-verified by reading
-them back out of Splunk via the search API. The task definition + grader are
-vendored under `task/`.
+sandboxed by AXIS and audited in the local SQLite DB.
 
 ```bash
 cd tests/agent_harness_integrations/claude_code
 
 # inference via an Anthropic-compatible gateway
-GATEWAY_KEY=<your-key> SPLUNK_PASS=<pw> HEC_TOKEN=<tok> \
-  bash run_swebench_client.sh
+GATEWAY_KEY=<your-key> bash run_swebench_client.sh
 
 # or inference via the Claude API directly
-INFERENCE_MODE=anthropic ANTHROPIC_API_KEY=<key> SPLUNK_PASS=<pw> HEC_TOKEN=<tok> \
-  bash run_swebench_client.sh
+INFERENCE_MODE=anthropic ANTHROPIC_API_KEY=<key> bash run_swebench_client.sh
 ```
 
-Green means: Claude Code emitted `mcp__axis__run`, the edit was persisted to the
-repo under the sandbox, the `axis.toolcall` events were confirmed in `index=axis`,
-and the graded FAIL_TO_PASS test passes (`SOLVED=yes`). See
+Green means: Claude Code emitted `mcp__axis__run`, the edit was persisted to
+the repo under the sandbox, the `axis.toolcall` events are in the SQLite audit
+DB, and the graded FAIL_TO_PASS test passes (`SOLVED=yes`). See
 [`claude_code/README.md`](./tests/agent_harness_integrations/claude_code/README.md).
 
 ## Quick start B — a gaia agent through the same connector
 
 Proves the **same** connector governs a *different* MCP host: AMD's
 [gaia](https://github.com/amd/gaia) agent framework. gaia drives the `run` tool
-through DefenseClaw → AXIS → Splunk, unchanged — one connector, two hosts.
+through AXIS → SQLite, unchanged — one connector, two hosts.
 
 ```bash
 cd tests/agent_harness_integrations/gaia
-GATEWAY_KEY=<your-key> SPLUNK_PASS=<pw> HEC_TOKEN=<tok> \
-  bash run_gaia_integration.sh
+GATEWAY_KEY=<your-key> bash run_gaia_integration.sh
 ```
-
-Green means a gaia-driven tool call is confirmed in `index=axis`, and the index
-holds events from **both** a gaia session and a Claude Code session. See
-[`gaia/README.md`](./tests/agent_harness_integrations/gaia/README.md).
 
 ## Results
 
 All measured on a **Strix Halo** deskside (AMD Ryzen AI Max+ PRO 395), unprivileged.
 
-### Governance loop — works, and holds under attack
+### Governance loop — works end-to-end
 
 | Suite | Result | Date |
 |-------|--------|------|
-| Connector + proxy unit tests | **39 + 75 pass / 0 fail** | 2026-07-13 |
-| Functional loop (`run_integration.sh`) — ALLOW sandboxed, BLOCK stopped before exec, both planes correlate under one session | **15 / 0** | 2026-07-13 |
-| Red-team regression (`run_redteam.sh`) — data-theft, sandbox break-out, control-defeat probes | **20 / 20 contained, 0 breaches** | 2026-07-13 |
-| SWE-bench under governance — `pallets__flask-5014` solved, every tool call verified in Splunk | **SOLVED**, 13 / 0 | 2026-07-06 |
-
-Red-team detail in [`stack/REDTEAM_FINDINGS.md`](./stack/REDTEAM_FINDINGS.md).
+| Connector + proxy unit tests | **42 + 83 pass / 0 fail** | 2026-07-15 |
+| Functional loop (`run_integration.sh`) — ALLOW sandboxed, a dangerous command contained by AXIS (denied syscall → `decision=deny`), both planes correlate under one session | **green** | 2026-07-15 |
 
 ### Isolation cost — near-container security at near-native latency
 
@@ -132,7 +117,7 @@ Per-tool-call sandbox cost, p50, N=30 ([`experiments/latency_bench/`](./experime
 
 AXIS wraps *every* tool call in a fresh sandbox for tens of milliseconds — real
 Landlock+seccomp isolation ~12× cheaper than Docker and ~23× cheaper than a
-micro-VM. That per-call economy is what makes "sandbox everything" viable.
+micro-VM.
 
 ### Tokenomics — a local model offloads real cost
 
@@ -156,12 +141,11 @@ This blueprint integrates the following open-source components, each governed by
 
 | Component | Role | License |
 |-----------|------|---------|
-| [Cisco DefenseClaw](https://github.com/cisco-ai-defense/defenseclaw) | Admission control and runtime guardrails for agentic AI | Apache-2.0 |
 | [AXIS](https://github.com/qedawkins/axis) | Per-tool-call sandbox (Landlock + seccomp + netns) | Apache-2.0 |
 | [Lemonade SDK](https://github.com/lemonade-sdk/lemonade) | Local LLM inference server (CPU/APU, GGUF models) | Apache-2.0 |
 | [vLLM Semantic Router](https://github.com/vllm-project/semantic-router) | Per-prompt difficulty-based routing (consult-only) | Apache-2.0 |
 | [gaia](https://github.com/amd/gaia) | AMD agent framework (second MCP host in the gaia demo) | MIT |
-| [Splunk Enterprise](https://www.splunk.com) | Audit event sink and search-API verification (optional; not redistributed — installed at runtime by the user) | [Splunk General Terms](https://www.splunk.com/en_us/legal/splunk-general-terms.html) |
+| [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) | Synchronous SQLite bindings for Node.js — audit event sink | MIT |
 
 ---
 

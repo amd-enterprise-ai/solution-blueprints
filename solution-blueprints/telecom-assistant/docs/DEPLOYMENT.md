@@ -4,6 +4,8 @@ Copyright © Advanced Micro Devices, Inc., or its affiliates.
 SPDX-License-Identifier: MIT
 -->
 
+# Telecom Assistant Deployment Guide
+
 ## Prerequisites
 
 Before deploying the Telecom Assistant blueprint, you must install the **STUNner Operator** — a Kubernetes-native WebRTC media gateway used for routing browser media traffic to LiveKit.
@@ -168,7 +170,7 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-telecom-ass
 Set `vlm.existingService` to the endpoint.
 ```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-telecom-assistant \
-  --set vlm.existingService="http://my-vlm-service:8000/v1" \
+  --set vlm.existingService="http://<my-vlm-service>:8000/v1" \
   --namespace $namespace \
   | kubectl apply -f - -n $namespace
 ```

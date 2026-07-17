@@ -113,7 +113,7 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-fsi \
 
 ## Disclaimer
 
-This tool is for educational and research purposes only. It is not financial advice.
+This tool is for educational and research purposes only. It does not constitute financial advice.
 
 ## Third-Party Components
 

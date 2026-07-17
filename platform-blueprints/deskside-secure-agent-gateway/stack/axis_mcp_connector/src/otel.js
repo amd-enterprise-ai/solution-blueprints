@@ -2,14 +2,14 @@
 //
 // SPDX-License-Identifier: MIT
 
-// OpenTelemetry-shaped envelope helpers (Cisco telemetry delta #2).
+// OpenTelemetry-shaped envelope helpers.
 //
-// Cisco wants the Splunk events consumable as OTLP (trace/span ids, GenAI
-// semantic attributes, service identity, schema versioning) — not just as
-// SIEM-search audit records. Rather than stand up a separate OTLP exporter, we
-// keep HEC as the audit source of truth and ADD OTEL-shaped fields INSIDE the
-// existing event JSON. Every field here is additive; the legacy audit fields are
-// untouched so existing Splunk searches keep working.
+// Makes the audit events consumable as OTLP (trace/span ids, GenAI semantic
+// attributes, service identity, schema versioning) — not just as plain audit
+// records. Rather than stand up a separate OTLP exporter, we keep SQLite as the
+// audit source of truth and ADD OTEL-shaped fields INSIDE the event JSON. Every
+// field here is additive; the base audit fields are untouched so existing SQL
+// queries keep working.
 //
 // What we add to each event:
 //   event_id        unique id per event (OTEL log record / dedup key)

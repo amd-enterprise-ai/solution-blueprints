@@ -5,16 +5,15 @@
 
 # gaia_mcp_probe.py — deterministic proof that gaia's OWN MCP client stack can
 # drive the client-side axis MCP connector (the same connector Claude Code uses),
-# producing a real AXIS-sandboxed run and a Splunk audit event.
+# producing a real AXIS-sandboxed run and a SQLite audit event.
 #
 # This uses gaia.mcp.client.MCPClient (gaia's code, not the raw MCP SDK), so a
 # green run is genuine "the connector works with gaia". It is model-independent:
 # no LLM is involved, so it can't be blocked by gaia<->gateway inference wiring.
 #
-# The connector's full env (AXIS_*, DEFENSECLAW_*, SPLUNK_*) is taken from this
-# process's environment (the runner exports it) and passed through gaia's
-# from_config env block; StdioTransport merges it over os.environ before spawning
-# `node <server.js>`.
+# The connector's env (AXIS_*, AUDIT_DB) is taken from this process's environment
+# (the runner exports it) and passed through gaia's from_config env block;
+# StdioTransport merges it over os.environ before spawning `node <server.js>`.
 #
 # Args: $1 = path to connector server.js, $2 = shell command (default benign probe)
 # Exit: 0 iff the tool returned the expected sandbox output.
@@ -32,13 +31,7 @@ CONNECTOR_ENV_KEYS = (
     "AXIS_USER",
     "AXIS_POLICY_SOURCE",
     "AXIS_POLICY_ID",
-    "DEFENSECLAW_URL",
-    "DEFENSECLAW_MODE",
-    "DEFENSECLAW_FAIL_OPEN",
-    "DEFENSECLAW_GATEWAY_TOKEN",
-    "SPLUNK_SINK",
-    "SPLUNK_HEC_URL",
-    "SPLUNK_HEC_TOKEN",
+    "AUDIT_DB",
     "NODE_TLS_REJECT_UNAUTHORIZED",
 )
 

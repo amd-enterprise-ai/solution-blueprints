@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: MIT
 
-// OpenTelemetry-shaped envelope helpers (Cisco telemetry delta #2) — INFERENCE plane.
+// OpenTelemetry-shaped envelope helpers — INFERENCE plane.
 //
-// Same intent as the connector's otel.js: keep HEC the audit source of truth and
-// ADD OTEL-shaped fields inside the event JSON so Cisco's O11y/Tokenomics views can
+// Same intent as the connector's otel.js: keep SQLite the audit source of truth
+// and ADD OTEL-shaped fields inside the event JSON so O11y/Tokenomics views can
 // consume it as OTLP. The inference plane additionally carries GenAI semantic-
 // convention span attributes (gen_ai.*) so the llm.request event maps cleanly to
 // an OTEL GenAI "chat" span.
@@ -47,7 +47,7 @@ export function otelEnvelope({ identity, trace, spanId, parentSpanId }) {
 /** GenAI semantic-convention span attributes for an llm.request.
  *  - provider: "lemonade" (local) or "frontier" (escalated cloud gateway).
  *  - execution_location: "deskside" (local APU) or "cloud" (frontier) — the
- *    Tokenomics signal Cisco asked for alongside cost_basis.
+ *    Tokenomics signal, alongside cost_basis.
  *  Token/model fields are null-safe (the backend may omit usage). */
 export function genAiAttributes({
   requestedModel,

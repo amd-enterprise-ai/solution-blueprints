@@ -12,7 +12,7 @@ Artifacts: `artifacts/node_run/`.
 ## Local (pre-flight, laptop)
 
 - Proxy unit tests: **37/37** (`cd ../../stack/lemonade_proxy && node --test`)
-  — 22 original + 8 `router.test.js` + 4 server routing tests + 3 `cross_plane_session.test.js`.
+  — plus `router.test.js`, server routing tests, and `cross_plane_session.test.js`.
 - A/B probe unit tests: **12/12** (`python3 -m pytest test_router_ab_probe.py`).
   (Skipped on the node — pytest not installed there; verified off-node.)
 
@@ -23,8 +23,8 @@ router_test run @ 2026-07-01T11:44:20Z
 host=<halo-host> node=v24.18.0
 inference: proxy -> Lemonade Qwen3-8B-GGUF (local :13305) | frontier claude-opus-4.8 @ https://<llm-gateway>/Anthropic
 router: classify API :18088 (consult-only); toggle=LEMON_ROUTER
-audit: real Splunk index=axis sourcetype=axis:llm (routing block)
-splunk_up=1 defenseclaw_up=1 lemonade_up=1 router_up=1 frontier_ready=0
+audit: SQLite audit DB (AUDIT_DB) with routing block
+lemonade_up=1 router_up=1 frontier_ready=0
 routing_correct=7/7
 pass=17 fail=0
 cc=ok
@@ -38,17 +38,15 @@ the intended behavior. Set `GATEWAY_KEY` to see real `routing.tier=frontier`.
 ### Checklist
 
 - [x] Stage 0 — proxy 37/37 (probe unit tests verified off-node; pytest absent on node)
-- [x] Stage 1 — real Splunk HEC + search API healthy
-- [x] Stage 2 — DefenseClaw gateway `:18970`
 - [x] Stage 3 — Lemonade local tier `:13305`
 - [x] Stage 4 — semantic-router classify API `:18088`
 - [x] Stage 5 — frontier preflight (`frontier_ready=0` — no key supplied)
-- [x] Stage 6 — baseline all-local + `routing.enabled=false` confirmed in `index=axis`
+- [x] Stage 6 — baseline all-local + `routing.enabled=false` confirmed in the SQLite audit DB
 - [x] Stage 7 — router-on: simple→local, hard→frontier **decision**
-      (`routing.selected_model=claude-opus-4.8`) confirmed in Splunk; `routing.tier=local`
+      (`routing.selected_model=claude-opus-4.8`) confirmed in the SQLite audit DB; `routing.tier=local`
       (fail-safe, no key); `routing_correct=7/7`
 - [x] Stage 8 — Claude Code through the router-on proxy (`cc=ok`)
-- [x] Stage 9 — `splunk_query.txt` read-back attached
+- [x] Stage 9 — SQLite audit DB read-back attached
 
 ### A/B summary
 
@@ -65,9 +63,9 @@ routing correctness (router-on): **7/7** prompts to the expected tier
 
 Cost/task is $0 on both passes because no frontier key was present, so every
 served request stayed on the free local tier. The routing **decision** is still
-recorded per prompt in the Splunk `routing` block.
+recorded per prompt in the audit DB's `routing` block.
 
-### Indexed `routing` block (frontier decision, from `events.jsonl` → `index=axis`)
+### Recorded `routing` block (frontier decision, from the SQLite audit DB)
 
 ```json
 "routing": {

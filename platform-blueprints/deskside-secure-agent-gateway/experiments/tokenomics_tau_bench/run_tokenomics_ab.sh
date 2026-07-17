@@ -18,10 +18,18 @@
 # Env (required):
 #   GATEWAY_KEY   — AMD gateway Ocp-Apim-Subscription-Key (32-char)
 # Env (optional):
-#   ARMS          "A B" (default both)
-#   CC_TIMEOUT    per-task timeout seconds (default 180)
-#   MAX_TURNS     tau_bench max_turns (default 20)
-#   LEMONADE_PORT (default 13305)
+#   ARMS                        "A B" (default both)
+#   CC_TIMEOUT                  per-task timeout seconds (default 300)
+#   MAX_TURNS                   tau_bench max_turns (default 20)
+#   LEMONADE_PORT               (default 13305)
+#   LEMON_ROUTER_CLASSIFY_INPUT last_user (default) | full — which text the router
+#                               classifies (last user turn vs whole flattened prompt)
+#   ROUTER_CLASSIFY_TIMEOUT_MS  router classify timeout (default: proxy default 5s)
+#   ROUTER_CPUS                 taskset core range for the router (e.g. 448-511);
+#                               empty = no pinning. On CPU-only nodes, pin the
+#                               router off the local-inference cores so its
+#                               embedding classify is never starved (otherwise it
+#                               times out and fails open to local).
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,7 +38,7 @@ CSI="$(cd "$HERE/../../stack" && pwd)"
 ROUTER_REPO="${ROUTER_REPO:-$HOME/repos/semantic-router}"
 # TAUBENCH: clone https://github.com/sierra-research/tau-bench first.
 TAUBENCH="${TAUBENCH:-$(cd "$HERE/../../../repos/tau-bench" 2>/dev/null && pwd || echo "$HOME/repos/tau-bench")}"
-ART="$HERE/artifacts"; mkdir -p "$ART"
+ART="${ART:-$HERE/artifacts}"; mkdir -p "$ART"
 
 # Toolchain root — override HALO_TOOLS to relocate (default: $HOME/halo-toolchain).
 HALO_TOOLS="${HALO_TOOLS:-$HOME/halo-toolchain}"
@@ -73,9 +81,14 @@ trap cleanup EXIT
 start_router(){
   ss -ltn 2>/dev/null | grep -q ":$ROUTER_PORT " && { log "router already on :$ROUTER_PORT"; return 0; }
   log "starting semantic router on :$ROUTER_PORT"
+  # Optional CPU pinning (ROUTER_CPUS, e.g. "448-511"): on CPU-only nodes the
+  # local llama.cpp backend can grab every core and starve the router's embedding
+  # classify, which then times out and fails open to local. Pinning the router to
+  # a dedicated core range keeps classify fast. Empty (default) => no pinning.
+  local pin=(); [ -n "${ROUTER_CPUS:-}" ] && pin=(taskset -c "$ROUTER_CPUS")
   ( cd "$ROUTER_REPO" && \
     LD_LIBRARY_PATH="$ROUTER_REPO/candle-binding/target/release:$ROUTER_REPO/nlp-binding/target/release:$ROUTER_REPO/ml-binding/target/release" \
-    ./bin/router -config "$HERE/router/config.yaml" -api-port "$ROUTER_PORT" -enable-api ) \
+    "${pin[@]}" ./bin/router -config "$HERE/router/config.yaml" -api-port "$ROUTER_PORT" -enable-api ) \
     >"$ART/router.log" 2>&1 &
   PIDS+=("$!")
   for _ in $(seq 1 90); do grep -q 'startup_complete' "$ART/router.log" 2>/dev/null && break; sleep 2; done
@@ -90,7 +103,7 @@ start_router(){
 
 # --- start proxy for an arm -------------------------------------------------
 start_proxy(){
-  local arm="$1" sess="$2" sink="$3"
+  local arm="$1" sess="$2" audit_db="$3"
   [ -n "$PROXY_PID" ] && kill "$PROXY_PID" 2>/dev/null; sleep 1
   local router_env=()
   if [ "$arm" = "A" ]; then
@@ -100,11 +113,13 @@ start_proxy(){
   fi
   AXIS_SESSION="$sess" LEMON_PROXY_PORT="$PROXY_PORT" \
   LEMON_UPSTREAM="http://127.0.0.1:$LEMONADE_PORT" LEMON_MODEL="$LOCAL_MODEL" \
-  LEMON_TRANSLATE_LOCAL=1 \
+  LEMON_TRANSLATE_LOCAL="${LEMON_TRANSLATE_LOCAL:-1}" \
+  LEMON_ROUTER_CLASSIFY_INPUT="${LEMON_ROUTER_CLASSIFY_INPUT:-last_user}" \
+  ROUTER_CLASSIFY_TIMEOUT_MS="${ROUTER_CLASSIFY_TIMEOUT_MS:-}" \
   FRONTIER_UPSTREAM="$FRONTIER_URL" FRONTIER_MODEL="$FRONTIER_MODEL" \
   FRONTIER_AUTH_HEADER="Ocp-Apim-Subscription-Key" FRONTIER_AUTH_KEY="$GATEWAY_KEY" \
   FRONTIER_EXTRA_HEADERS='{"anthropic-version":"2023-06-01"}' \
-  DEFENSECLAW_INFERENCE_FAIL_OPEN=1 SPLUNK_SINK="$sink" \
+  AUDIT_DB="$audit_db" \
     env "${router_env[@]}" node "$CSI/lemonade_proxy/src/server.js" \
     >"$ART/proxy_$arm.log" 2>&1 &
   PROXY_PID=$!; PIDS+=("$PROXY_PID")
@@ -151,13 +166,22 @@ curl -sf "http://127.0.0.1:$LEMONADE_PORT/api/v1/health" >/dev/null 2>&1 \
 
 for arm in $ARMS; do
   log "=== ARM $arm ($([ "$arm" = A ] && echo router-on || echo frontier-only)) ==="
-  sink="$ART/events_$arm.jsonl"; : > "$sink"
-  start_proxy "$arm" "tau-$arm" "$sink" || continue
+  audit_db="$ART/audit_$arm.db"; rm -f "$audit_db"
+  sink="$ART/events_$arm.jsonl"
+  start_proxy "$arm" "tau-$arm" "$audit_db" || continue
 
   run_env "$arm" "retail"  "$RETAIL_IDS"  "$ART/results_${arm}_retail"
   run_env "$arm" "airline" "$AIRLINE_IDS" "$ART/results_${arm}_airline"
 
   [ -n "$PROXY_PID" ] && kill "$PROXY_PID" 2>/dev/null; PROXY_PID=""; sleep 1
+  # Export the SQLite audit rows to newline-delimited JSON for analyze.py.
+  "$PY" -c "
+import sqlite3, sys
+db = sqlite3.connect('$audit_db')
+for (data,) in db.execute('SELECT data FROM events ORDER BY id'):
+    print(data)
+db.close()
+" > "$sink" 2>/dev/null || : > "$sink"
   n_events=$(grep -c '"event":"llm.request"' "$sink" 2>/dev/null || echo 0)
   log "ARM $arm done: $n_events llm.request events"
 done

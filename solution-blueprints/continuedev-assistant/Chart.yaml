@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-continuedev-assistant
 description: A local LLM assistant for your IDE
 type: application
-version: 0.8.2
+version: 0.8.3
 maintainers:
 - name: AMD
   url: https://www.amd.com/

@@ -10,24 +10,30 @@
 // within a session. The lifecycle is session_start (once) -> toolcall (N) ->
 // session_end (once).
 
-import { randomUUID } from "node:crypto";
-import { hostname } from "node:os";
+import { makeSessionId as _makeSessionId, resolveUser as _resolveUser, hostnameSafe } from "../../shared/identity_utils.js";
 
 /** A stable per-process session id. Honors an injected id (e.g. set by a
  *  supervising harness via AXIS_SESSION) so a single logical agent run can be
  *  correlated across restarts; otherwise mints a fresh `cc-<uuid>`. */
 export function makeSessionId(envSession) {
-  if (envSession && envSession.trim()) return envSession.trim();
-  return `cc-${randomUUID()}`;
+  return _makeSessionId(envSession, "cc");
+}
+
+/** Resolve the acting user and its provenance for the tool plane.
+ *  Env key: AXIS_USER (asserted by launcher); falls back to OS login user. */
+export function resolveUser(env = process.env) {
+  return _resolveUser(["AXIS_USER"], env);
 }
 
 /** Holds the identity of one agent session and hands out tool-call sequence
  *  numbers. Pure/in-memory: emitting the actual lifecycle events is the
- *  splunk_events layer's job, driven by start()/nextSeq()/end() here. */
+ *  sqlite_events layer's job, driven by start()/nextSeq()/end() here. */
 export class SessionIdentity {
   constructor(env = process.env) {
     this.session = makeSessionId(env.AXIS_SESSION);
-    this.user = (env.AXIS_USER || "").trim() || "unknown";
+    const { user, source } = resolveUser(env);
+    this.user = user;
+    this.userSource = source;
     this.tenant = (env.AXIS_TENANT || "").trim() || "client-deskside";
     this.deviceId = (env.AXIS_DEVICE_ID || "").trim() || hostnameSafe();
     this.policySource = (env.AXIS_POLICY_SOURCE || "").trim() || "local-control";
@@ -42,6 +48,7 @@ export class SessionIdentity {
     return {
       session: this.session,
       user: this.user,
+      user_source: this.userSource,
       tenant: this.tenant,
       device_id: this.deviceId,
     };
@@ -66,13 +73,5 @@ export class SessionIdentity {
     if (!this.started || this.ended) return false;
     this.ended = true;
     return true;
-  }
-}
-
-function hostnameSafe() {
-  try {
-    return hostname();
-  } catch {
-    return "localhost";
   }
 }

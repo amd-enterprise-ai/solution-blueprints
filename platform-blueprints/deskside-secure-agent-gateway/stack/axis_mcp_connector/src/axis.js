@@ -5,10 +5,9 @@
 // AXIS sandbox layer for the client-side connector.
 //
 // AXIS is an in-process sandbox (seccomp + landlock + netns) applied as an argv
-// prefix: `axis run --policy <p> -- bash -c "<cmd>"`. It is the *enforcement*
-// plane — it actually isolates and, via landlock/seccomp, can make a forbidden
-// action fail with a non-zero exit. DefenseClaw is the separate *policy/verdict*
-// plane that decides whether we even hand the command to AXIS.
+// prefix: `axis run --policy <p> -- bash -c "<cmd>"`. It is the sole enforcement
+// layer in this deployment — it actually isolates and, via landlock/seccomp, can
+// make a forbidden action fail with a non-zero exit.
 //
 // Ported from rocm-cpu-2010/mcp_connector/src/lib.js (buildAxisArgv /
 // runInSandbox / stripAxisLogs / formatToolResult), kept dependency-free so the
@@ -101,11 +100,23 @@ export function formatToolResult({ code, stdout, stderr, timedOut }) {
 }
 
 /** Redact obvious secret-bearing argv for the audit record. The path the agent
- *  reached for is kept (audit needs it); only inline secret *values* are
- *  masked, so the secret reach stays visible in the audit record but the secret
- *  content is not. */
+ *  reached for is kept (audit needs it); only inline secret *values* are masked,
+ *  so the secret reach stays visible in the audit record but the secret content
+ *  is not. AXIS performs no command-string inspection, so this redaction is the
+ *  only thing standing between an inline secret and the audit DB — keep the
+ *  token shapes below in sync with well-known credential formats. */
 export function redactCommand(command) {
   return command
+    // Flag-style secrets: --password / --token / --secret / --api-key VALUE
     .replace(/(--?(?:password|token|secret|api[-_]?key)[=\s]+)(\S+)/gi, "$1<redacted>")
-    .replace(/(AWS_SECRET_ACCESS_KEY=)(\S+)/g, "$1<redacted>");
+    // Env-assignment secrets: FOO_TOKEN=..., FOO_SECRET=..., FOO_KEY=...,
+    // FOO_PASSWORD=..., *_API_KEY=... (covers AWS_SECRET_ACCESS_KEY and friends)
+    .replace(/\b([A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|API[_-]?KEY|ACCESS_KEY)=)(\S+)/gi, "$1<redacted>")
+    // Known provider key shapes, wherever they appear in the command:
+    .replace(/\bAKIA[0-9A-Z]{16}\b/g, "<redacted-aws-key>")
+    .replace(/\bghp_[A-Za-z0-9]{20,}\b/g, "<redacted-github-token>")
+    .replace(/\bgithub_pat_[A-Za-z0-9_]{20,}\b/g, "<redacted-github-token>")
+    .replace(/\bsk-ant-[A-Za-z0-9_-]{20,}\b/g, "<redacted-anthropic-key>")
+    .replace(/\bsk-[A-Za-z0-9]{20,}\b/g, "<redacted-openai-key>")
+    .replace(/\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g, "<redacted-slack-token>");
 }

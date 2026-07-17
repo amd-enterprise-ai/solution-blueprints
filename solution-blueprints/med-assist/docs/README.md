@@ -64,6 +64,8 @@ environments. This replaces direct exposure of LiveKit media ports in many setup
 
 ## Getting Started
 
+This is a quick start guide on how to deploy the blueprint. For advanced options, such as reusing an existing AIM, providing a Hugging Face token, or overriding storage classes, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html). For blueprint specific details such as connecting to existing LLM endpoints, configuring routing rules, enabling HTTPRoute access, STUNner configuration details and more, see the [advanced deployment guide](./DEPLOYMENT.md).
+
 ### Prerequisites
 
 Before deploying the Med Assist Voice Consultation blueprint, a cluster-admin must run
@@ -94,11 +96,7 @@ cd solution-blueprints/solution-blueprints/med-assist
 ./install-prerequisites.sh
 ```
 
-This is a quick start guide on how to deploy the blueprint. For advanced options, such as connecting
-to existing LLM endpoints, configuring routing rules, enabling HTTPRoute access, STUNner
-configuration details and more, see the docs at `docs/DEPLOYMENT.md`.
-
-This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms. The section below covers the default **Instinct** deployment. For Radeon and other advanced options, see:
+This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms. The section below covers the default **Instinct** deployment commands. For Radeon and other advanced options, see:
 
 - [Deploy on AMD Radeon](DEPLOYMENT.md#amd-radeon-gpu)
 
@@ -117,7 +115,7 @@ This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms.
     - If you use **`livekit.exposure.mode=nodePort`**, you must still allow **inbound TCP** to the
       chosen **NodePort** (default `32080`) for WebSocket signaling.
     - For details on configuring STUNner, LiveKit media routing, and firewall rules, see
-      `docs/DEPLOYMENT.md`.
+      [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md).
 - Resource requirements (defaults in `values.yaml` for `agent` and `frontend` services):
     - **Total CPU requests**: 1 CPU (agent: 500m, frontend: 500m)
     - **Total CPU limits**: 4 CPU (agent: 2, frontend: 2)
@@ -135,7 +133,7 @@ This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms.
 
 ### Deployment
 
-See the deployment docs and follow the instructions (`docs/DEPLOYMENT.md`):
+See the deployment docs and follow the instructions ([`docs/DEPLOYMENT.md`](./DEPLOYMENT.md)):
 - Deploy from the OCI registry with `helm template ... | kubectl apply -f -`.
 - Set `pythonServices.frontend.env.LIVEKIT_WS_URL` to your external LiveKit WebSocket URL.
 - Optionally set `llm.existingService` and/or `qwen-asr.existingService` to reuse existing backends.
@@ -161,7 +159,7 @@ kubectl port-forward "svc/aimsb-med-assist-$name-frontend" 7860:7860 -n $namespa
   - `STT_API_KEY` — API key for the external ASR service when using `qwen-asr.existingService`.
   - `STT_MODEL` — Model name for the external ASR service when using `qwen-asr.existingService`.
 - **Frontend Secrets**: configure LiveKit and model access under `pythonServices.frontend.env`:
-  - `LIVEKIT_WS_URL` — external LiveKit WebSocket URL; without this value, chart rendering fails. See `docs/DEPLOYMENT.md` for details and examples.
+  - `LIVEKIT_WS_URL` — external LiveKit WebSocket URL; without this value, chart rendering fails. See [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md) for details and examples.
   - `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` — LiveKit credentials used by the frontend.
 - **Networking**:
     - `http_route.enabled=true` enables frontend HTTPRoute generation.
@@ -171,7 +169,7 @@ kubectl port-forward "svc/aimsb-med-assist-$name-frontend" 7860:7860 -n $namespa
     - If you use **`livekit.exposure.mode=nodePort`**, you must still allow **inbound TCP** to the
       chosen **NodePort** (default `32080`) for WebSocket signaling.
     - For full details on STUNner configuration, Gateway/UDPRoute setup, and firewall rules, see
-      `docs/DEPLOYMENT.md`.
+      [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md).
 - **Security**: default API keys/secrets in `values.yaml` are placeholders and must be overridden
   for production.
 

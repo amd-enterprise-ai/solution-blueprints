@@ -6,10 +6,7 @@
       "env": {
         "AXIS_BIN": "axis",
         "AXIS_POLICY": "/etc/axis/coding-agent.yaml",
-        "DEFENSECLAW_URL": "http://127.0.0.1:18970",
-        "DEFENSECLAW_MODE": "action",
-        "DEFENSECLAW_FAIL_OPEN": "0",
-        "SPLUNK_SINK": "./artifacts/events.jsonl",
+        "AUDIT_DB": "./artifacts/audit.db",
         "AXIS_TENANT": "client-deskside",
         "AXIS_USER": "amd",
         "AXIS_POLICY_SOURCE": "local-control",

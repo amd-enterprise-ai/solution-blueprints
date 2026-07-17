@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: MIT
 
-// Per-turn trace ids (Cisco telemetry delta #3) — INFERENCE-plane authority.
+// Per-turn trace ids — INFERENCE-plane authority.
 //
-// Cisco's trace model: one USER PROMPT plus every LLM call and every tool call
+// The trace model: one USER PROMPT plus every LLM call and every tool call
 // that happens until the NEXT user prompt is ONE trace. So a single agent session
 // (one identity.session) contains MANY trace_ids — one per conversational turn.
 //

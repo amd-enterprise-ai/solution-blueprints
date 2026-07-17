@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-fsi
 description: Financial Stock Intelligence blueprint
 type: application
-version: 0.5.2
+version: 0.5.3
 maintainers:
 - name: AMD
   url: https://www.amd.com/

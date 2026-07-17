@@ -62,7 +62,7 @@ The blueprint requires the following cluster resources by default:
 | Resource | Default Configuration |
 |--|-------------------|
 | GPUs | 1 (AIM LLM; application pod does not require a GPU) |
-| CPUs | ~5 CPU cores |
+| CPUs | 5 CPU cores |
 | RAM | 68 Gi |
 
 To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
