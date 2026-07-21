@@ -8,7 +8,7 @@
 # signals are kept VERBATIM (same threshold, same hard/easy candidate sets) —
 # only the model NAMES are renamed to the client-side tiers:
 #   - LOCAL    : lemonade-local     -> local Lemonade (Qwen3-8B-GGUF, CPU, :13305)
-#   - FRONTIER : claude-opus-4-8    -> AMD LLM Gateway (Anthropic-compatible)
+#   - FRONTIER : claude-opus-4-8    -> Anthropic-compatible gateway
 #
 # The proxy does NOT run Envoy/ExtProc. It only
 # CONSULTS the standalone classify API (POST /api/v1/classify/intent), which
@@ -42,7 +42,7 @@ providers:
           protocol: http
           weight: 100
           type: chat
-    # ---- FRONTIER (Claude via the AMD LLM Gateway) -------------------------
+    # ---- FRONTIER (Claude via an Anthropic-compatible gateway) -------------
     # The model NAME must start with "claude-" so the proxy maps it to the
     # frontier tier (SemanticRouterClient#tierFor).
     - name: claude-opus-4-8

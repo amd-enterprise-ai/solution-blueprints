@@ -44,22 +44,17 @@ The blueprint provides a **Streamlit** web application for agentic translation w
 
 This is a quick start guide on how to deploy the blueprint. For advanced options, such as reusing an existing AIM, providing a Hugging Face token, or overriding storage classes, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html) or explore the [advanced deployment guide](./DEPLOYMENT.md).
 
-This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms. The section below covers the default **Instinct** deployment. For Radeon deployment and other advanced options, see:
-
-- [Deploy on AMD Instinct](DEPLOYMENT.md#amd-instinct-gpu-default)
-- [Deploy on AMD Radeon](DEPLOYMENT.md#amd-radeon-gpu)
-
 ### Prerequisites
 
 #### System Requirements
 
-The blueprint requires the following cluster resources by default:
+This blueprint can be deployed on **AMD Instinct** (default) and **AMD Radeon**. The blueprint requires the following cluster resources by default, depending on the hardware being used:
 
-| Resource | Default Configuration |
-|--|-------------------|
-| GPUs | 1 (AIM LLM; application pod does not require a GPU) |
-| CPUs | 5 CPU cores |
-| RAM | 68 Gi |
+| Resource | Instinct | Radeon |
+|--|--|--|
+| GPUs | 1 | 1 |
+| CPUs | 5 CPU cores | 5 CPU cores |
+| RAM | 68 Gi | 36 Gi |
 
 To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
@@ -68,7 +63,15 @@ To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
 ### Deployment
 
-Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`:
+For advanced deployment options, explore the [advanced deployment guide](./DEPLOYMENT.md). Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`.
+
+Find the deployment command below.
+
+Note: You can create a namespace using `kubectl create namespace <my-namespace>`.
+
+<!-- platform-tabs:start -->
+
+#### AMD Instinct (GPU, default)
 
 ```bash
 name="my-deployment"
@@ -77,7 +80,19 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-tra
   | kubectl apply -f - -n $namespace
 ```
 
-Note: You can create a namespace using `kubectl create namespace $namespace`.
+#### AMD Radeon (GPU)
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-translation \
+  --set global.platform=radeon \
+  | kubectl apply -f - -n $namespace
+```
+
+<!-- platform-tabs:end -->
+
+### Verify Deployment
 
 To check the status of the deployment, run:
 
@@ -103,7 +118,7 @@ Once connected, use the application as follows:
 
 ### Clean Up
 
-When you are finished, remove the deployed resources:
+When you are finished, remove the deployed resources using the same deployment command, with `kubectl delete` instead of `kubectl apply`. For example, for Instinct use the following command:
 
 ```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-agentic-translation \

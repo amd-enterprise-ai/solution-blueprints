@@ -26,7 +26,7 @@ latency does each isolation mechanism cost on a deskside?**
 | gvisor | `docker run --runtime=runsc busybox <cmd>` | userspace guest kernel (syscall intercept) |
 | firecracker | `fc-run.sh <cmd>` | KVM micro-VM (own guest kernel) |
 
-Versions: axis 0.3.5 (built from `qedawkins/axis@mxc`) · docker 29.1.3 · runsc
+Versions: axis 0.3.5 (built from `ROCm/axis` @ pinned commit `0224ab0`) · docker 29.1.3 · runsc
 release-20260622.0 · firecracker v1.13.1 (CI vmlinux 5.10 + ubuntu-22.04 rootfs).
 AXIS policy: `../../stack/platforms/halo/axis-policy-native.yaml`
 (unprivileged `axis_native` — Landlock + seccomp, no lxc/cgroups).

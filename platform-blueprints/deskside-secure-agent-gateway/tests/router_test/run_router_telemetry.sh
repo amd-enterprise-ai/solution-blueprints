@@ -11,7 +11,7 @@
 # to that proxy: per prompt the proxy CONSULTS the router's standalone classify
 # API (POST /api/v1/classify/intent — NO Envoy, NO inference) and, on a "hard"
 # verdict AND a configured frontier key, escalates the request to the frontier
-# tier (AMD LLM Gateway, Anthropic-compatible); otherwise it stays byte-for-byte
+# tier (an Anthropic-compatible gateway); otherwise it stays byte-for-byte
 # on local Lemonade. The routing decision is surfaced on the client response as
 # additive x-lemon-* headers AND recorded in a new `routing` block on every
 # llm.request SQLite audit event.
@@ -26,7 +26,7 @@
 #   0. preconditions: node + proxy unit tests (37) green
 #   3. Lemonade (reuse-or-boot Qwen3-8B on CPU, :13305) — the local tier
 #   4. semantic-router classify API (reuse a local ~/repos/semantic-router build)
-#   5. frontier preflight (AMD LLM Gateway) — real completion if a key is set
+#   5. frontier preflight (Anthropic-compatible gateway) — real completion if a key is set
 #   6. BASELINE (router off, session router-baseline): all local, confirmed in SQLite DB
 #   7. ROUTER-ON (router on, session router-on): easy->local, hard->frontier
 #      decision; routing correctness; routing block CONFIRMED in SQLite DB
@@ -50,6 +50,17 @@ LEMONADE_PORT="${LEMONADE_PORT:-13305}"
 LEMON_BASE="http://127.0.0.1:$LEMONADE_PORT"
 # Lemonade's OpenAI-compatible API lives under /api/v1 on this pip install.
 LEMON_UPSTREAM="${LEMON_UPSTREAM:-$LEMON_BASE/api}"
+# The probe always speaks the Anthropic Messages API (/v1/messages) and lets the
+# proxy decide the tier. The frontier tier stays Anthropic byte-for-byte, but a
+# CPU llama.cpp Lemonade build serves ONLY the OpenAI Chat Completions API, so the
+# proxy must translate the LOCAL tier Anthropic<->OpenAI. Default on; set
+# LEMON_TRANSLATE_LOCAL=0 if the local Lemonade serves the Anthropic API natively.
+LEMON_TRANSLATE_LOCAL="${LEMON_TRANSLATE_LOCAL:-1}"
+# The proxy aims the translated LOCAL-tier OpenAI request at this path, relative to
+# LEMON_UPSTREAM. Since LEMON_UPSTREAM already ends in /api here, the OpenAI Chat
+# Completions endpoint is /v1/chat/completions (NOT the server.js default
+# /api/v1/chat/completions, which would double the /api prefix -> 404).
+LEMONADE_OPENAI_PATH="${LEMONADE_OPENAI_PATH:-/v1/chat/completions}"
 PROXY_BASELINE_PORT="${PROXY_BASELINE_PORT:-13399}"
 PROXY_ROUTER_PORT="${PROXY_ROUTER_PORT:-13398}"
 PROXY_CC_PORT="${PROXY_CC_PORT:-13397}"
@@ -66,10 +77,11 @@ ROUTER_URL="http://127.0.0.1:$ROUTER_API_PORT"
 ROUTER_EXTPROC_PORT="${ROUTER_EXTPROC_PORT:-50151}"
 ROUTER_METRICS_PORT="${ROUTER_METRICS_PORT:-19190}"
 
-# --- frontier tier (default AMD LLM Gateway; Anthropic-compatible) -------
-FRONTIER_UPSTREAM="${FRONTIER_UPSTREAM:-https://<llm-gateway>/Anthropic}"
+# --- frontier tier: default = Anthropic direct; override FRONTIER_UPSTREAM +
+#     FRONTIER_AUTH_HEADER (or use the GATEWAY_KEY alias) for a gateway ---------
+FRONTIER_UPSTREAM="${FRONTIER_UPSTREAM:-https://api.anthropic.com}"
 FRONTIER_MODEL="${FRONTIER_MODEL:-claude-opus-4-8}"
-FRONTIER_AUTH_HEADER="${FRONTIER_AUTH_HEADER:-Ocp-Apim-Subscription-Key}"
+FRONTIER_AUTH_HEADER="${FRONTIER_AUTH_HEADER:-x-api-key}"
 FRONTIER_AUTH_KEY="${FRONTIER_AUTH_KEY:-${GATEWAY_KEY:-${ANTHROPIC_API_KEY:-}}}"
 FRONTIER_EXTRA_HEADERS="${FRONTIER_EXTRA_HEADERS:-}"
 
@@ -106,6 +118,9 @@ start_proxy(){
   : > "$out"
   LEMON_PROXY_PORT="$port" \
   LEMON_UPSTREAM="$LEMON_UPSTREAM" \
+  LEMON_MODEL="$LEMON_MODEL" \
+  LEMON_TRANSLATE_LOCAL="$LEMON_TRANSLATE_LOCAL" \
+  LEMONADE_OPENAI_PATH="$LEMONADE_OPENAI_PATH" \
   AUDIT_DB="$AUDIT_DB" \
   LEMON_ROUTER="$router" \
   SEMANTIC_ROUTER_URL="$ROUTER_URL" \
@@ -150,7 +165,7 @@ router_wait(){
 log "=== Stage 0: preconditions ==="
 command -v node >/dev/null 2>&1 || { log "FATAL: node not found"; exit 2; }
 log "node: $(node --version)"
-( cd "$PROXY" && env -u FRONTIER_AUTH_KEY -u FRONTIER_AUTH_HEADER -u FRONTIER_UPSTREAM -u FRONTIER_EXTRA_HEADERS node --test ) >"$ART/proxy_unit_tests.log" 2>&1
+( cd "$PROXY" && env -u FRONTIER_AUTH_KEY -u FRONTIER_AUTH_HEADER -u FRONTIER_UPSTREAM -u FRONTIER_EXTRA_HEADERS -u FRONTIER_MODEL node --test ) >"$ART/proxy_unit_tests.log" 2>&1
 check "proxy unit tests green" "grep -qE '# fail 0' '$ART/proxy_unit_tests.log'"
 # The probe's pure-logic unit tests need pytest. It's a pre-flight only (the HARD
 # proof is the SQLite stages), so if pytest is absent on this node we SKIP the

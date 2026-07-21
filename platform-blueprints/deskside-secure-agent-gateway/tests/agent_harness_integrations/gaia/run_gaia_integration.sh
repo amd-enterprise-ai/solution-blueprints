@@ -12,7 +12,7 @@
 # in addition to, Claude Code). The connector is reused unchanged by path.
 #
 # Stages:
-#   0. preconditions: node, axis, connector deps + unit tests, GATEWAY_KEY, python;
+#   0. preconditions: node, axis, connector deps + unit tests, inference access, python;
 #      clone gaia + install into a venv
 #   3. register the connector with gaia (mcp_servers.json incl. full env);
 #      gaia's MCP client lists the `run` tool
@@ -24,8 +24,9 @@
 #   7. cross-host proof: audit DB holds BOTH a gaia session AND a Claude-Code session
 #   8. summary -> artifacts/SUMMARY.txt (SQLite event count)
 #
-# Env: GATEWAY_KEY (required), GATEWAY_URL, MODEL, AUDIT_DB, AXIS_BIN, AXIS_POLICY,
-#      GAIA_REPO, GAIA_VENV, RUN_CC, RUN_AGENTIC,
+# Env: inference access (ANTHROPIC_API_KEY, or ANTHROPIC_BASE_URL+ANTHROPIC_AUTH_TOKEN,
+#      or ANTHROPIC_CUSTOM_HEADERS, or the GATEWAY_KEY/GATEWAY_URL alias),
+#      MODEL, AUDIT_DB, AXIS_BIN, AXIS_POLICY, GAIA_REPO, GAIA_VENV, RUN_CC, RUN_AGENTIC,
 #      OPENAI_BASE_URL/OPENAI_API_KEY or LEMONADE_BASE_URL (agentic LLM)
 set -uo pipefail
 
@@ -36,9 +37,14 @@ GWTEST="$(cd "$HERE/../claude_code" && pwd)"   # reuse claude_job.sh for cross-h
 CONN="$CSI/axis_mcp_connector"
 SERVER="$CONN/src/server.js"
 
-# --- inference plane: AMD LLM Gateway -------------------------------------
-GATEWAY_URL="${GATEWAY_URL:-https://api.anthropic.com}"
-GATEWAY_KEY="${GATEWAY_KEY:-${ANTHROPIC_API_KEY:-}}"
+# --- inference plane: bring-your-own Anthropic-compatible access ----------
+# The cross-host Claude stage resolves access via tests/lib/inference_env.sh
+# (auto-detects ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL+ANTHROPIC_AUTH_TOKEN /
+# ANTHROPIC_CUSTOM_HEADERS / the GATEWAY_KEY alias). Do NOT alias GATEWAY_KEY
+# from ANTHROPIC_API_KEY here — that would force the custom-header gateway path
+# and break the plain Anthropic-direct run.
+GATEWAY_URL="${GATEWAY_URL:-}"
+GATEWAY_KEY="${GATEWAY_KEY:-}"
 MODEL="${MODEL:-claude-opus-4-8}"
 
 # --- control plane -------------------------------------------------------
@@ -55,6 +61,8 @@ source "$HERE/../../lib/audit_db.sh"
 # --- gaia ----------------------------------------------------------------
 GAIA_REPO="${GAIA_REPO:-$ART/gaia}"
 GAIA_VENV="${GAIA_VENV:-$ART/gaia-venv}"
+# Pin gaia to the verified commit (amd/gaia moves fast; HEAD is not guaranteed).
+GAIA_COMMIT="${GAIA_COMMIT:-a441765672e2e4e7d00ee3056323cfaed95a848c}"
 RUN_CC="${RUN_CC:-1}"
 RUN_AGENTIC="${RUN_AGENTIC:-1}"
 
@@ -96,22 +104,31 @@ if [ ! -d "$CONN/node_modules/@modelcontextprotocol" ]; then
     || { log "FATAL: connector npm install failed"; tail -20 "$ART/npm_install.log"; exit 2; }
 fi
 ( cd "$CONN" && node --test ) >"$ART/unit_tests.log" 2>&1
-check "connector unit tests green" "grep -q 'pass 28' '$ART/unit_tests.log' || grep -qE '# fail 0' '$ART/unit_tests.log'"
-check "GATEWAY_KEY provided" "[ -n \"$GATEWAY_KEY\" ]"
+check "connector unit tests green" "grep -q 'pass 32' '$ART/unit_tests.log' || grep -qE '# fail 0' '$ART/unit_tests.log'"
+check "inference access configured" \
+  "[ -n \"${ANTHROPIC_API_KEY:-}\" ] || [ -n \"${ANTHROPIC_AUTH_TOKEN:-}\" ] || [ -n \"${ANTHROPIC_CUSTOM_HEADERS:-}\" ] || [ -n \"${GATEWAY_KEY:-}\" ]"
 
 # Clone + install gaia into a dedicated venv.
 if [ ! -d "$GAIA_REPO/.git" ]; then
-  log "cloning amd/gaia -> $GAIA_REPO"
-  git clone --depth 1 https://github.com/amd/gaia "$GAIA_REPO" >"$ART/gaia_clone.log" 2>&1 \
-    || { log "WARN: gaia clone failed; see gaia_clone.log"; tail -10 "$ART/gaia_clone.log"; }
+  log "cloning amd/gaia @ $GAIA_COMMIT -> $GAIA_REPO"
+  git clone --filter=blob:none https://github.com/amd/gaia "$GAIA_REPO" >"$ART/gaia_clone.log" 2>&1 \
+    && git -C "$GAIA_REPO" checkout --quiet "$GAIA_COMMIT" >>"$ART/gaia_clone.log" 2>&1 \
+    || { log "WARN: gaia clone/checkout failed; see gaia_clone.log"; tail -10 "$ART/gaia_clone.log"; }
 fi
-if [ ! -x "$GAIA_VENV/bin/python" ]; then
+# Rebuild the venv unless gaia already imports cleanly. An interrupted run
+# leaves bin/python behind without gaia installed, so gate on importability
+# (not just the interpreter) and wipe any half-built venv before rebuilding.
+if [ ! -x "$GAIA_VENV/bin/python" ] || ! "$GAIA_VENV/bin/python" -c 'import gaia' >/dev/null 2>&1; then
   log "creating gaia venv at $GAIA_VENV"
+  rm -rf "$GAIA_VENV"
   "$PY" -m venv "$GAIA_VENV" >"$ART/gaia_install.log" 2>&1
-  PYVER="$("$PY" -c 'import sys; print(".".join(map(str,sys.version_info[:2])))')"
-  GSITE="$GAIA_VENV/lib/python$PYVER/site-packages"
-  pip3 install -e "$GAIA_REPO[mcp]" --target "$GSITE" >>"$ART/gaia_install.log" 2>&1 \
-    || pip3 install "amd-gaia[mcp]" --target "$GSITE" >>"$ART/gaia_install.log" 2>&1 || true
+  # Use the venv's OWN pip (upgraded first) and install into the venv directly.
+  # Avoids the fragile `pip3 -e ... --target` combo that silently fails on older
+  # system pip and leaves gaia unimportable.
+  VPIP=("$GAIA_VENV/bin/python" -m pip)
+  "${VPIP[@]}" install --upgrade pip setuptools wheel >>"$ART/gaia_install.log" 2>&1 || true
+  "${VPIP[@]}" install "$GAIA_REPO[mcp]" >>"$ART/gaia_install.log" 2>&1 \
+    || "${VPIP[@]}" install "amd-gaia[mcp]" >>"$ART/gaia_install.log" 2>&1 || true
 fi
 GPY="$GAIA_VENV/bin/python"
 check "gaia importable in venv" "'$GPY' -c 'import gaia; from gaia.mcp.client.mcp_client import MCPClient' 2>/dev/null"
@@ -206,8 +223,12 @@ if [ "${RUN_CC:-1}" -eq 1 ] && command -v claude >/dev/null 2>&1; then
 JSON
   CC_PROMPT="$ART/cc_gaia_prompt.txt"
   echo 'Use the run tool to execute exactly: echo CC_GAIA_OK && hostname. Then stop.' > "$CC_PROMPT"
-  GATEWAY_URL="$GATEWAY_URL" GATEWAY_KEY="$GATEWAY_KEY" MODEL="$MODEL" \
-    INFERENCE_MODE="${INFERENCE_MODE:-gateway}" ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}" \
+  # Forward whatever inference access the user configured and let claude_job.sh's
+  # resolver auto-detect the scheme (no forced INFERENCE_MODE).
+  GATEWAY_URL="${GATEWAY_URL:-}" GATEWAY_KEY="${GATEWAY_KEY:-}" \
+  ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}" ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-}" \
+  ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:-}" ANTHROPIC_CUSTOM_HEADERS="${ANTHROPIC_CUSTOM_HEADERS:-}" \
+  INFERENCE_MODE="${INFERENCE_MODE:-}" MODEL="$MODEL" \
     bash "$GWTEST/claude_job.sh" "$MCP_JSON" "$CC_PROMPT" \
       > "$ART/claude_cc.out" 2>"$ART/claude_cc.err" || true
   check "[cross-host] Claude Code emitted mcp__axis__run" \
@@ -269,7 +290,7 @@ log "=== RESULT: $pass passed, $fail failed (agentic=$AGENTIC) ==="
 {
   echo "gaia run @ $(date -u +%FT%TZ)"
   echo "host=$(hostname) node=$(node --version)"
-  echo "model=$MODEL gateway=$GATEWAY_URL"
+  echo "model=$MODEL endpoint=${ANTHROPIC_BASE_URL:-${GATEWAY_URL:-https://api.anthropic.com}}"
   echo "audit_db=$AUDIT_DB events=$EVENT_COUNT"
   echo "cc_cross_host=${CC_DONE}"
   echo "agentic=$AGENTIC"

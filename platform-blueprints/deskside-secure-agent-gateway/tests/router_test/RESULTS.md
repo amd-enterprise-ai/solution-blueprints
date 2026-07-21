@@ -82,7 +82,7 @@ recorded per prompt in the audit DB's `routing` block.
 `tier=local` with `selected_model=claude-opus-4.8` is the fail-safe path: the
 router **decided** frontier, but with no frontier key the proxy served local and
 recorded the decision. With a key, `tier` becomes `frontier` and `upstream`
-becomes the AMD gateway.
+becomes the Anthropic-compatible gateway.
 
 ### Notes
 

@@ -44,7 +44,11 @@ Validated on **AMD Strix Halo** (Ryzen AI Max+ 395), unprivileged.
 The gateway builds its external binaries for you (see [`stack/SETUP.md`](./stack/SETUP.md)).
 You need on the box first:
 
-- **Node ≥18** (via nvm) — the connector + proxy.
+- **Node 22 + npm** via [nvm](https://github.com/nvm-sh/nvm) (which bundles npm):
+  `nvm install 22 && nvm use 22` — the connector + proxy.
+- **Claude Code CLI** (`claude`), known-good **2.1.121** — for the agent-harness tests
+  (Quick start A/B). Newer builds defer MCP tool loading, which can break the
+  connector's `mcp__axis__run` tool gating.
 - **git, curl, python3** — clone/build.
 - An **AXIS** sandbox binary — built from source by `stack/platforms/halo/setup.sh` (Rust).
 - A local **Lemonade** server *or* a frontier LLM key (e.g. an Anthropic-compatible
@@ -69,12 +73,23 @@ sandboxed by AXIS and audited in the local SQLite DB.
 ```bash
 cd tests/agent_harness_integrations/claude_code
 
-# inference via an Anthropic-compatible gateway
-GATEWAY_KEY=<your-key> bash run_swebench_client.sh
+# Option 1 — Anthropic API directly
+ANTHROPIC_API_KEY=<key> bash run_swebench_client.sh
 
-# or inference via the Claude API directly
-INFERENCE_MODE=anthropic ANTHROPIC_API_KEY=<key> bash run_swebench_client.sh
+# Option 2 — Anthropic-compatible gateway (bearer token)
+ANTHROPIC_BASE_URL=https://your-gateway ANTHROPIC_AUTH_TOKEN=<token> bash run_swebench_client.sh
 ```
+
+> If your gateway authenticates with a custom header instead of `x-api-key` /
+> a bearer token (e.g. `Ocp-Apim-Subscription-Key`), set it via
+> `ANTHROPIC_CUSTOM_HEADERS`:
+>
+> ```bash
+> export ANTHROPIC_BASE_URL=https://your-gateway
+> export ANTHROPIC_CUSTOM_HEADERS="Your-Header-Name: <your-key>"
+> ```
+>
+> This applies to every test below.
 
 Green means: Claude Code emitted `mcp__axis__run`, the edit was persisted to
 the repo under the sandbox, the `axis.toolcall` events are in the SQLite audit
@@ -89,7 +104,12 @@ through AXIS → SQLite, unchanged — one connector, two hosts.
 
 ```bash
 cd tests/agent_harness_integrations/gaia
-GATEWAY_KEY=<your-key> bash run_gaia_integration.sh
+
+# Option 1 — Anthropic API directly
+ANTHROPIC_API_KEY=<key> bash run_gaia_integration.sh
+
+# Option 2 — Anthropic-compatible gateway (bearer token)
+ANTHROPIC_BASE_URL=https://your-gateway ANTHROPIC_AUTH_TOKEN=<token> bash run_gaia_integration.sh
 ```
 
 ## Results
@@ -100,7 +120,7 @@ All measured on a **Strix Halo** deskside (AMD Ryzen AI Max+ PRO 395), unprivile
 
 | Suite | Result | Date |
 |-------|--------|------|
-| Connector + proxy unit tests | **42 + 83 pass / 0 fail** | 2026-07-15 |
+| Connector + proxy unit tests | **32 + 75 pass / 0 fail** | 2026-07-15 |
 | Functional loop (`run_integration.sh`) — ALLOW sandboxed, a dangerous command contained by AXIS (denied syscall → `decision=deny`), both planes correlate under one session | **green** | 2026-07-15 |
 
 ### Isolation cost — near-container security at near-native latency
@@ -141,7 +161,7 @@ This blueprint integrates the following open-source components, each governed by
 
 | Component | Role | License |
 |-----------|------|---------|
-| [AXIS](https://github.com/qedawkins/axis) | Per-tool-call sandbox (Landlock + seccomp + netns) | Apache-2.0 |
+| [AXIS](https://github.com/ROCm/axis) | Per-tool-call sandbox (Landlock + seccomp + netns) | Apache-2.0 |
 | [Lemonade SDK](https://github.com/lemonade-sdk/lemonade) | Local LLM inference server (CPU/APU, GGUF models) | Apache-2.0 |
 | [vLLM Semantic Router](https://github.com/vllm-project/semantic-router) | Per-prompt difficulty-based routing (consult-only) | Apache-2.0 |
 | [gaia](https://github.com/amd/gaia) | AMD agent framework (second MCP host in the gaia demo) | MIT |

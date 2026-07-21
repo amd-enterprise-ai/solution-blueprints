@@ -310,6 +310,12 @@ Every event carries an OTEL-shaped envelope (additive — SQLite is the source o
 The inference proxy is the trace authority; it writes to `AXIS_TRACE_STATE`, which
 the tool connector reads.
 
+**Session lifecycle events** (`session_start` / `session_end`) bracket the whole
+session rather than a single turn, so they carry a **session-scoped** trace: both
+share one `trace_id`, each has its own `span_id`, and `parent_span_id` is `null`
+(they are roots). Per-turn `trace_id`s above still apply to `request`/`toolcall`
+events. `trace_id` and `span_id` are always non-null; `parent_span_id` is `null` only for root spans.
+
 ```sql
 -- reconstruct one turn (both planes)
 SELECT json_extract(data, '$.time'), json_extract(data, '$.event')

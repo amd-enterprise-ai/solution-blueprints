@@ -7,7 +7,7 @@
 #
 # ARM A (router-on):  τ-bench agent LLM calls → lemonade_proxy (LEMON_ROUTER=on)
 #   → semantic router classifies each prompt → local Qwen3-Coder-30B or frontier
-#   Opus 4.8 (AMD Gateway).
+#   Opus 4.8 (frontier gateway).
 # ARM B (frontier-only): τ-bench agent LLM calls → lemonade_proxy
 #   (LEMON_FORCE_FRONTIER=1) → every call → Opus 4.8.
 #
@@ -16,7 +16,7 @@
 # automatically — zero harness modifications needed.
 #
 # Env (required):
-#   GATEWAY_KEY   — AMD gateway Ocp-Apim-Subscription-Key (32-char)
+#   GATEWAY_KEY   — gateway auth key (sent as Ocp-Apim-Subscription-Key; 32-char)
 # Env (optional):
 #   ARMS                        "A B" (default both)
 #   CC_TIMEOUT                  per-task timeout seconds (default 300)
@@ -61,7 +61,7 @@ ROUTER_PORT="${ROUTER_PORT:-18099}"
 FRONTIER_MODEL="${FRONTIER_MODEL:-claude-opus-4-8}"
 FRONTIER_URL="${FRONTIER_URL:-https://<llm-gateway>/Anthropic}"
 LOCAL_MODEL="${LOCAL_MODEL:-Qwen3-Coder-30B-A3B-Instruct-GGUF}"
-GATEWAY_KEY="${GATEWAY_KEY:?GATEWAY_KEY required (AMD gateway key)}"
+GATEWAY_KEY="${GATEWAY_KEY:?GATEWAY_KEY required (gateway auth key)}"
 
 log(){ echo "[tau-tokenomics $(date +%H:%M:%S)] $*"; }
 

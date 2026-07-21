@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-agentic-translation
 description: Agentic translation blueprint
 type: application
-version: 0.8.4
+version: 0.8.5
 maintainers:
 - name: AMD
   url: https://www.amd.com/

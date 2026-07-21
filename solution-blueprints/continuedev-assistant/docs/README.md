@@ -51,13 +51,11 @@ The blueprint integrates three components: a **code-server** browser IDE, the **
 
 This is a quick start guide on how to deploy the blueprint. For advanced options, such as reusing an existing AIM, providing a Hugging Face token, or overriding storage classes, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html) or explore the [advanced deployment guide](./DEPLOYMENT.md).
 
-This blueprint is designed to run on **AMD Instinct** GPUs.
-
 ### Prerequisites
 
 #### System Requirements
 
-The blueprint requires the following cluster resources by default:
+This blueprint can be deployed on **AMD Instinct**. The blueprint requires the following cluster resources by default:
 
 | Resource | Default Configuration |
 |--|-------------------|
@@ -72,7 +70,7 @@ To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
 ### Deployment
 
-Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`:
+For advanced deployment options, explore the [advanced deployment guide](./DEPLOYMENT.md). Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`:
 
 ```bash
 name="my-deployment"
@@ -103,7 +101,7 @@ The Continue.dev extension is preinstalled and appears in the Extensions view on
 
 ### Clean Up
 
-When you are finished, remove the deployed resources:
+When you are finished, remove the deployed resources using the same deployment command, with `kubectl delete` instead of `kubectl apply`:
 
 ```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-continuedev-assistant \

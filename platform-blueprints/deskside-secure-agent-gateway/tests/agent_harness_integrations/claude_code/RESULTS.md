@@ -15,7 +15,7 @@ events back with SQL.
 
 **Inference backend for this verified run: Claude API direct** —
 `api.anthropic.com`, model `claude-opus-4-8`. (An `INFERENCE_MODE=gateway` path
-to the AMD LLM Gateway also exists in the scripts, but it is **not** the backend
+to an Anthropic-compatible gateway also exists in the scripts, but it is **not** the backend
 used for this result — see Notes.)
 
 ## Summary
@@ -48,7 +48,7 @@ cd tests/agent_harness_integrations/claude_code
 # Claude API direct (no tunnel):
 INFERENCE_MODE=anthropic ANTHROPIC_API_KEY=<key> bash run_swebench_client.sh
 
-# AMD Gateway instead (needs the laptop tunnel + /etc/hosts alias):
+# Custom-header gateway instead (needs the laptop tunnel + /etc/hosts alias):
 #   laptop:  ssh -N -R 127.0.0.1:8443:<llm-gateway>:443 halo
 #   halo:    echo "127.0.0.1 <llm-gateway>" | sudo tee -a /etc/hosts
 INFERENCE_MODE=gateway GATEWAY_KEY=<key> bash run_swebench_client.sh
@@ -96,8 +96,8 @@ knobs are switchable so a privileged node runs unchanged.
    `run_swebench_client.sh` + `claude_job.sh`:
    - `anthropic` — `api.anthropic.com`, `x-api-key`, model `claude-opus-4-8`.
      **This is the backend used for this verified result.**
-   - `gateway` — AMD LLM Gateway, `Ocp-Apim-Subscription-Key`, `claude-opus-4.8`.
-     Provided as an option but **not exercised in this result**: the AMD Gateway
+   - `gateway` — an Anthropic-compatible gateway, `Ocp-Apim-Subscription-Key`, `claude-opus-4.8`.
+     Provided as an option but **not exercised in this result**: the gateway
      is not reachable from Halo directly (resolves to an internal address,
      black-holed at the node's only gateway), so it would require a laptop SSH
      reverse tunnel (non-permanent) or IT routing the node to the gateway. We

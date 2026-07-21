@@ -22,7 +22,10 @@ CSI="$(dirname "$(dirname "$HALO_DIR")")"   # .../stack (halo lives under platfo
 source "$HALO_DIR/env.sh"
 
 GO_VERSION="${GO_VERSION:-1.26.4}"
-AXIS_BRANCH="${AXIS_BRANCH:-mxc}"
+# Build AXIS from ROCm/axis, pinned to a validated commit so the build is
+# reproducible and never tracks a moving branch. Override with AXIS_REF/AXIS_REPO.
+AXIS_REPO="${AXIS_REPO:-https://github.com/ROCm/axis.git}"
+AXIS_REF="${AXIS_REF:-0224ab0268c09ad862cf73e1bec66e44a0979195}"
 say(){ printf '\n\033[1;36m[halo-setup]\033[0m %s\n' "$*"; }
 have(){ command -v "$1" >/dev/null 2>&1; }
 
@@ -30,7 +33,10 @@ mkdir -p "$HALO_TOOLS"/{repos,bin,gopath,gocache}
 chmod 755 "$HALO_TOOLS" "$HALO_TOOLS/bin"   # axis rejects a group/world-writable launcher dir
 
 have node || { echo "FATAL: node not found (expected via nvm)"; exit 2; }
-say "node $(node --version)"
+# npm ships WITH Node; if it is missing the box has a partial/system Node without
+# npm on PATH. Fail fast here rather than deep inside the first `npm install`.
+have npm || { echo "FATAL: npm not found. Install Node via nvm (bundles npm) so 'npm' is on PATH: https://github.com/nvm-sh/nvm"; exit 2; }
+say "node $(node --version) / npm $(npm --version)"
 
 # --- Go --------------------------------------------------------------------
 if [ "$("$HALO_TOOLS/go/bin/go" version 2>/dev/null | awk '{print $3}')" != "go${GO_VERSION}" ]; then
@@ -49,9 +55,14 @@ cargo --version
 
 # --- AXIS (public, build from source) -------------------------------------
 if [ ! -d "$HALO_TOOLS/repos/axis/.git" ]; then
-  say "cloning qedawkins/axis @ ${AXIS_BRANCH}"
-  git clone --branch "$AXIS_BRANCH" https://github.com/qedawkins/axis.git "$HALO_TOOLS/repos/axis"
+  say "cloning $AXIS_REPO"
+  git clone --filter=blob:none "$AXIS_REPO" "$HALO_TOOLS/repos/axis"
 fi
+# Always (re)pin to AXIS_REF, even on reruns or when AXIS_REF is overridden, so the
+# working tree matches the pinned commit rather than whatever it happened to be on.
+( cd "$HALO_TOOLS/repos/axis" \
+  && { git cat-file -e "${AXIS_REF}^{commit}" 2>/dev/null || git fetch --filter=blob:none origin "$AXIS_REF"; } \
+  && git checkout --detach "$AXIS_REF" )
 if [ ! -x "$HALO_TOOLS/bin/axis" ]; then
   say "building AXIS (cargo build --release; a few minutes)"
   ( cd "$HALO_TOOLS/repos/axis" && cargo build --release -p axis-cli -p axis-daemon -p axis-sandbox --bins )
@@ -70,10 +81,18 @@ mkdir -p "$HOME/repos"
 ln -sfn "$HALO_TOOLS/repos/lemonade-sdk" "$HOME/repos/lemonade-sdk"
 
 # --- npm deps + unit tests -------------------------------------------------
-say "installing npm deps + running unit tests"
-( cd "$CSI/axis_mcp_connector" && npm install --no-audit --no-fund >/dev/null && node --test 2>&1 | grep -E '# (tests|pass|fail)' )
+# Install ALL npm deps before running any unit test. The connector's
+# sqlite_events.test.js imports ../shared/sqlite_sink.js, which requires
+# better-sqlite3 to be resolvable from $CSI/node_modules (the stack root). If the
+# connector test runs before the root `npm install`, it fails with
+# "Cannot find package 'better-sqlite3'" on a clean box and aborts setup.
+say "installing npm deps"
+( cd "$CSI/axis_mcp_connector" && npm install --no-audit --no-fund >/dev/null )
 ( cd "$CSI"                    && npm install --no-audit --no-fund >/dev/null )
-( cd "$CSI/lemonade_proxy"     && npm install --no-audit --no-fund >/dev/null && node --test 2>&1 | grep -E '# (tests|pass|fail)' )
+( cd "$CSI/lemonade_proxy"     && npm install --no-audit --no-fund >/dev/null )
+say "running unit tests"
+( cd "$CSI/axis_mcp_connector" && node --test 2>&1 | grep -E '# (tests|pass|fail)' )
+( cd "$CSI/lemonade_proxy"     && node --test 2>&1 | grep -E '# (tests|pass|fail)' )
 
 # --- AXIS smoke test -------------------------------------------------------
 say "AXIS smoke test (expect ROCM_OK)"

@@ -97,6 +97,8 @@ This is the default platform; the deployment commands in this guide run the LLM 
 
 On Radeon the chart deploys a different, Radeon-optimized LLM — Qwen3-VL 8B Instruct (`aim-radeon-qwen-qwen3-vl-8b-instruct`) instead of Llama 3.3 70B. Add `--set global.platform=radeon` to any deploy command to select the Radeon AIM defaults:
 
+This blueprints requires 2 GPUs, 16 CPU cores and 100Gi RAM to deploy on Radeon.
+
 ```bash
 name="my-deployment"
 namespace="my-namespace"

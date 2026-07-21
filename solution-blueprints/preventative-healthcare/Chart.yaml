@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-preventative-healthcare
 description: Preventative Healthcare blueprint
 type: application
-version: 0.2.2
+version: 0.2.3
 maintainers:
 - name: AMD
   url: https://www.amd.com/

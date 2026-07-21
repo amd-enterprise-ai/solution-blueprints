@@ -54,22 +54,17 @@ The blueprint deploys Code Docs Builder as a containerized web application with 
 
 This is a quick start guide on how to deploy the blueprint. For advanced options, such as reusing an existing AIM, providing a Hugging Face token, or overriding storage classes, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html) or explore the [advanced deployment guide](./DEPLOYMENT.md).
 
-This blueprint supports **AMD Instinct** (default) and **AMD EPYC** platforms. The section below covers the default **Instinct** deployment. For EPYC deployment and other advanced options, see:
-
-- [Deploy on AMD Instinct](DEPLOYMENT.md#amd-instinct-gpu-default)
-- [Deploy on AMD EPYC](DEPLOYMENT.md#amd-epyc-cpu)
-
 ### Prerequisites
 
 #### System Requirements
 
-The blueprint requires the following cluster resources by default:
+This blueprint can be deployed on **AMD Instinct** (default) and **AMD EPYC**. The blueprint requires the following cluster resources by default, depending on the hardware being used:
 
-| Resource | Default Configuration |
-|----------|-------------------------|
-| GPUs | 1 |
-| CPUs | 4 CPU cores |
-| RAM | 64 Gi |
+| Resource | Instinct | EPYC |
+|--|--|--|
+| GPUs | 1 | — |
+| CPUs | 4 CPU cores | 188 CPU cores |
+| RAM | 64 Gi | 128 Gi |
 
 To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
@@ -78,7 +73,13 @@ To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
 ### Deployment
 
-Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`:
+For advanced deployment options, explore the [advanced deployment guide](./DEPLOYMENT.md). Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`.
+
+Find the deployment command below. Note: You can create a namespace using `kubectl create namespace <my-namespace>`.
+
+<!-- platform-tabs:start -->
+
+#### AMD Instinct (GPU, default)
 
 ```bash
 name="my-deployment"
@@ -87,7 +88,31 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-codedocs \
   | kubectl apply -f - -n $namespace
 ```
 
-Note: You can create a namespace using `kubectl create namespace $namespace`.
+#### AMD EPYC (CPU)
+
+EPYC runs the model on CPU (`gpus=0`, `bf16`, `AIM_ALLOW_UNOPTIMIZED=true`), sized via `llm.cpus`/`llm.memory`. The default EPYC AIM is a **gated** image, so provide a Hugging Face token through a Secret.
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+kubectl create namespace $namespace
+kubectl create secret generic hf-token --from-literal=hf-token=<YOUR_HF_TOKEN> -n $namespace
+
+helm pull oci://registry-1.docker.io/amdenterpriseai/aimsb-codedocs --untar
+helm template $name ./aimsb-codedocs \
+  --set global.platform=epyc \
+  --set llm.cpus=188 \
+  --set llm.memory=128 \
+  --set llm.env_vars.HF_TOKEN.name=hf-token \
+  --set llm.env_vars.HF_TOKEN.key=hf-token \
+  | kubectl apply -f - -n $namespace
+```
+
+> **Performance note**: On multi-socket EPYC nodes, configure the kubelet for NUMA alignment (CPU Manager `static`, Topology Manager `single-numa-node`, Memory Manager `Static`); otherwise the LLM's CPUs and memory can land on different NUMA nodes and vLLM runs effectively single-threaded.
+
+<!-- platform-tabs:end -->
+
+### Verify Deployment
 
 To check the status of the deployment, run:
 
@@ -112,7 +137,7 @@ Once connected, use the application as follows:
 
 ### Clean Up
 
-When you are finished, remove the deployed resources:
+When you are finished, remove the deployed resources using the same deployment command, with `kubectl delete` instead of `kubectl apply`. For example, for Instinct use the following command:
 
 ```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-codedocs \

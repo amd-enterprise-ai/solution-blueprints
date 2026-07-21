@@ -388,7 +388,9 @@ test("router-on but NO frontier key: frontier decision falls back to local", asy
       res.end(localBody);
     },
     routerHandler: classifyResponder("claude-opus-4-8", "frontier-reasoning", "needs_reasoning:hard"),
-    extraEnv: { FRONTIER_AUTH_KEY: "", GATEWAY_KEY: "" },
+    // Clear every frontier-credential source, incl. the ANTHROPIC_API_KEY alias
+    // (x-api-key default), so this really exercises the "no key -> fall back" path.
+    extraEnv: { FRONTIER_AUTH_KEY: "", GATEWAY_KEY: "", ANTHROPIC_API_KEY: "" },
     run: async ({ port, readEvents, up }) => {
       const resp = await postJson(port, "/v1/messages", {
         model: "Qwen3-8B-GGUF",

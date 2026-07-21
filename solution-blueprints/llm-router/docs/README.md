@@ -184,22 +184,17 @@ embedding:
 
 This is a quick start guide on how to deploy the blueprint. For advanced options, such as connecting to existing LLM endpoints, configuring routing rules, or enabling HTTPRoute access, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html) or explore the [advanced deployment guide](./DEPLOYMENT.md).
 
-This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms. The section below covers the default **Instinct** deployment. For Radeon deployment and other advanced options, see:
-
-- [Deploy on AMD Instinct](DEPLOYMENT.md#amd-instinct-gpu-default)
-- [Deploy on AMD Radeon](DEPLOYMENT.md#amd-radeon-gpu)
-
 ### Prerequisites
 
 #### System Requirements
 
-The blueprint requires the following cluster resources by default (with embedding-based classification enabled):
+This blueprint can be deployed on **AMD Instinct** (default) and **AMD Radeon**. The blueprint requires the following cluster resources by default, depending on the hardware being used:
 
-| Resource | Default Configuration |
-|--|-------------------|
-| GPUs | 1 (embedding service; router pods do not require GPUs) |
-| CPUs | 4 CPU cores |
-| RAM | 192 Gi |
+| Resource | Instinct | Radeon |
+|--|--|--|
+| GPUs | 1 | 1 |
+| CPUs | 4 CPU cores | 4 CPU cores |
+| RAM | 192 Gi | 32 Gi |
 
 For demo deployment with self-hosted LLMs (`deployDemonstrationLLMs=true`), plan for **3 GPUs** total (2 demonstration LLMs + 1 embedding service). If you use external LLM endpoints via `models` configuration, GPU requirements for those services are defined by their own deployments.
 
@@ -210,9 +205,15 @@ To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
 ### Deployment
 
-Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`.
+For advanced deployment options, explore the [advanced deployment guide](./DEPLOYMENT.md). Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`.
 
-The example below sets `deployDemonstrationLLMs=true` to deploy with self-hosted AIM backends.
+Find the deployment command below. The examples set `deployDemonstrationLLMs=true` to deploy with self-hosted AIM backends.
+
+Note: You can create a namespace using `kubectl create namespace <my-namespace>`.
+
+<!-- platform-tabs:start -->
+
+#### AMD Instinct (GPU, default)
 
 ```bash
 name="my-deployment"
@@ -222,7 +223,28 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router 
   | kubectl apply -f - -n $namespace
 ```
 
-Note: You can create a namespace using `kubectl create namespace $namespace`.
+#### AMD Radeon (GPU)
+
+When deployed with demonstration LLMs (`deployDemonstrationLLMs=true`), the chart deploys two AIM backends by default: **primary** (Llama 3.1 8B) and **secondary** (Qwen3 VL 8B). The primary Radeon AIM is a **gated** model, so provide a Hugging Face token through a Kubernetes secret.
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+kubectl create secret generic hf-token \
+  --from-literal=hf-token="<YOUR_HF_TOKEN_HERE>" \
+  -n $namespace
+
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \
+  --set deployDemonstrationLLMs=true \
+  --set global.platform=radeon \
+  --set primary.env_vars.HF_TOKEN.name=hf-token \
+  --set primary.env_vars.HF_TOKEN.key=hf-token \
+  | kubectl apply -f - -n $namespace
+```
+
+<!-- platform-tabs:end -->
+
+### Verify Deployment
 
 To check the status of the deployment, run:
 
@@ -281,7 +303,7 @@ Accept: application/json
 
 ### Clean Up
 
-When you are finished, remove the deployed resources:
+When you are finished, remove the deployed resources using the same deployment command, with `kubectl delete` instead of `kubectl apply`. For example, for Instinct use the following command:
 
 ```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-llm-router \

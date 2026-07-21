@@ -43,23 +43,17 @@ Users upload documents and ask questions through the web UI:
 
 This is a quick start guide on how to deploy the blueprint. For advanced options, such as reusing an existing AIM, providing a Hugging Face token, and more, see [Deploying Solution Blueprints with Helm](https://enterprise-ai.docs.amd.com/en/latest/solution-blueprints/deployment.html) or explore the [advanced deployment guide](./DEPLOYMENT.md).
 
-This blueprint supports **AMD Instinct** (default), **AMD EPYC**, and **AMD Radeon** platforms. The section below covers the default **Instinct** deployment. For EPYC and Radeon deployment and other advanced options, see:
-
-- [Deploy on AMD Instinct](DEPLOYMENT.md#amd-instinct-gpu-default)
-- [Deploy on AMD EPYC](DEPLOYMENT.md#amd-epyc-cpu)
-- [Deploy on AMD Radeon](DEPLOYMENT.md#amd-radeon-gpu)
-
 ### Prerequisites
 
 #### System Requirements
 
-The blueprint requires the following cluster resources by default:
+This blueprint can be deployed on **AMD Instinct** (default), **AMD EPYC**, and **AMD Radeon**. The blueprint requires the following cluster resources by default, depending on the hardware being used:
 
-| Resource | Default Configuration |
-|--|-------------------|
-| GPUs | 2 |
-| CPUs | 11 CPU cores |
-| RAM | 268 Gi |
+| Resource | Instinct | Radeon | EPYC |
+|--|--|--|--|
+| GPUs | 2 | 2 | — |
+| CPUs | 11 CPU cores | 11 CPU cores | 223 CPU cores |
+| RAM | 268 Gi | 76 Gi | 172 Gi |
 
 To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
@@ -68,7 +62,13 @@ To deploy to the Kubernetes cluster, ensure the following prerequisites are met:
 
 ### Deployment
 
-Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`:
+For advanced deployment options, explore the [advanced deployment guide](./DEPLOYMENT.md). Solution Blueprints are packaged as OCI-compliant Helm charts in the Docker Hub registry and can be deployed to a Kubernetes cluster with a single command. Define the `name` (deployment name) and the `namespace` (Kubernetes namespace), then pipe the output of `helm template` to `kubectl apply -f -`.
+
+Find the deployment command below. Note: You can create a namespace using `kubectl create namespace <my-namespace>`.
+
+<!-- platform-tabs:start -->
+
+#### AMD Instinct (GPU, default)
 
 ```bash
 name="my-deployment"
@@ -77,7 +77,49 @@ helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-talk-to-you
   | kubectl apply -f - -n $namespace
 ```
 
-Note: You can create a namespace using `kubectl create namespace $namespace`.
+#### AMD EPYC (CPU)
+
+EPYC runs the LLM on CPU (`gpus=0`, `bf16`, `AIM_ALLOW_UNOPTIMIZED=true`), sized via `llm.cpus`/`llm.memory`. The embedding service runs separately on CPU (`aim-epyc-base` serving `intfloat/multilingual-e5-small`), sized via `embedding.resources`. `global.platform=epyc` selects EPYC defaults for both components. The default EPYC AIM images are **gated**, so provide a Hugging Face token through a Secret.
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+kubectl create namespace $namespace
+kubectl create secret generic hf-token --from-literal=hf-token=<YOUR_HF_TOKEN> -n $namespace
+
+helm pull oci://registry-1.docker.io/amdenterpriseai/aimsb-talk-to-your-documents --untar
+helm template $name ./aimsb-talk-to-your-documents \
+  --set global.platform=epyc \
+  --set llm.cpus=188 \
+  --set llm.memory=128 \
+  --set llm.env_vars.HF_TOKEN.name=hf-token \
+  --set llm.env_vars.HF_TOKEN.key=hf-token \
+  --set embedding.env_vars.HF_TOKEN.name=hf-token \
+  --set embedding.env_vars.HF_TOKEN.key=hf-token \
+  | kubectl apply -f - -n $namespace
+```
+
+> **Resource sizing note**: Depending on your node it may be necessary to resize the LLM and embedding model resources. For example, the following parameters can be set to limit the embedding model's cpu count and memory:
+> ```bash
+> --set embedding.resources.requests.cpu=32 --set embedding.resources.limits.cpu=32 \
+> --set embedding.resources.requests.memory=32Gi --set embedding.resources.limits.memory=32Gi \
+> ```
+
+> **Performance note**: On multi-socket EPYC nodes, configure the kubelet for NUMA alignment (CPU Manager `static`, Topology Manager `single-numa-node`, Memory Manager `Static`); otherwise the LLM's and embedding service's CPUs and memory can land on different NUMA nodes and vLLM runs effectively single-threaded.
+
+#### AMD Radeon (GPU)
+
+```bash
+name="my-deployment"
+namespace="my-namespace"
+helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-talk-to-your-documents \
+  --set global.platform=radeon \
+  | kubectl apply -f - -n $namespace
+```
+
+<!-- platform-tabs:end -->
+
+### Verify Deployment
 
 To check the status of the deployment, run:
 
@@ -97,7 +139,7 @@ kubectl port-forward services/$name-aimsb-talk-to-your-documents 7860:80 -n $nam
 
 ### Clean Up
 
-When you are finished, remove the deployed resources:
+When you are finished, remove the deployed resources using the same deployment command, with `kubectl delete` instead of `kubectl apply`. For example, for Instinct use the following command:
 
 ```bash
 helm template $name oci://registry-1.docker.io/amdenterpriseai/aimsb-talk-to-your-documents \

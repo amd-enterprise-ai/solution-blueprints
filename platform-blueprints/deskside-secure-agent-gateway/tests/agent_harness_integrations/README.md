@@ -16,8 +16,8 @@ through the AXIS sandbox (sole enforcement) → a SQLite audit event — while t
 | [`claude_code/`](./claude_code/) | Claude Code | Solves the real SWE-bench issue `pallets__flask-5014` under full governance; every tool call verified in the SQLite audit DB. |
 | [`gaia/`](./gaia/) | [gaia](https://github.com/amd/gaia) | The same connector driven by a *second* MCP host — one connector, two hosts, both landing in one SQLite audit DB. |
 
-Each demo is self-contained: see its `README.md` for what it proves and `SETUP.md`
-for the copy-paste run. The two headline quick-starts (swebench + gaia) are in the
+Each demo is self-contained: see its `README.md` for what it proves and the
+copy-paste "Setup & run" section. The two headline quick-starts (swebench + gaia) are in the
 [top-level README](../../README.md).
 
 ---

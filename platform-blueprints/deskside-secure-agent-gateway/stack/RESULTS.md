@@ -26,7 +26,7 @@ syscall is denied, so the command exits non-zero and is recorded with
 | # | Check | What it proves | Result |
 |---|-------|----------------|:---:|
 | **① Stack build & health — every component comes up · 5 / 5** | | | |
-| 1 | connector unit tests (39) | connector suite green (`# fail 0`) | ✅ PASS |
+| 1 | connector unit tests (32) | connector suite green (`# fail 0`) | ✅ PASS |
 | 2 | inference proxy healthy | `lemonade_proxy` up (inference-plane entry) | ✅ PASS |
 | 3 | Lemonade server healthy | Qwen3-8B served locally on the APU (`/api/v1/health`) | ✅ PASS |
 | 4 | Lemonade returns a completion | the model actually answers a prompt (real inference) | ✅ PASS |
@@ -62,7 +62,7 @@ Strix Halo hardware, into the local **SQLite audit DB**:
 | **OTEL-shaped events** | ✅ | every event carries `event_id`, `schema_version=1.0`, `ingest_source`, `trace_id`/`span_id`/`parent_span_id`, `resource{service.*}`; `llm.request` carries GenAI `attributes` (`gen_ai.request.model`, `gen_ai.usage.*`, `gen_ai.provider.name`, `execution_location`). |
 | **Per-turn trace_id** | ✅ | proxy detects a new user turn, mints a trace to the shared `AXIS_TRACE_STATE` statefile; connector reads it. One 2-turn session → **2 trace_ids**, each grouping its `llm.request` + `axis.toolcall` across both planes. |
 
-- **Local stack, all local:** AXIS 0.3.5 (built from `qedawkins/axis@mxc`),
+- **Local stack, all local:** AXIS 0.3.5 (built from `ROCm/axis` @ pinned commit `0224ab0`),
   local **SQLite audit DB**, Lemonade 9.1.4 serving Qwen3-8B-GGUF on the APU.
 - **Note (this box):** the pip Lemonade build serves the **OpenAI** API, not
   Anthropic `/v1/messages`; the proxy forwards it byte-for-byte and its telemetry
@@ -72,7 +72,7 @@ Strix Halo hardware, into the local **SQLite audit DB**:
   need an exec-capable `TMPDIR` (`platforms/halo/env.sh` sets `$HALO_TOOLS/tmp`),
   and Node/Python need the system CA bundle (`NODE_EXTRA_CA_CERTS` /
   `SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt`).
-- Tests: 39 connector + 75 proxy, all green. Functional loop 13/0.
+- Tests: 32 connector + 75 proxy, all green. Functional loop 13/0.
 
 ## Raw run evidence (2026-07-13, `<halo-host>`)
 
@@ -119,7 +119,7 @@ unaffected.
    cgroups v2). Consequence: cgroups resource-limit enforcement is not exercised
    here — the connector's userspace `ulimit` fallback (`AXIS_ULIMIT_NPROC`)
    covers it.
-2. **AXIS built from source** (`qedawkins/axis`, Rust) into `$HALO_TOOLS/bin` by
+2. **AXIS built from source** (`ROCm/axis` @ pinned commit, Rust) into `$HALO_TOOLS/bin` by
    `platforms/halo/setup.sh`; the seccomp launcher refuses a group-writable install path,
    so the whole ancestry is 755.
 3. **Audit sink is a local SQLite DB** (`AUDIT_DB`, default `$HOME/axis-audit.db`)

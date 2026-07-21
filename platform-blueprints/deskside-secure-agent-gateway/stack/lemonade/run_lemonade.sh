@@ -20,7 +20,7 @@
 #
 # Prints, on success:
 #   ANTHROPIC_BASE_URL=http://127.0.0.1:<port>
-# which SETUP.md / run_integration.sh feed to Claude Code (with a dummy key).
+# which the test runners feed to Claude Code (with a dummy key).
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

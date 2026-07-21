@@ -6,7 +6,7 @@ apiVersion: v2
 name: aimsb-talk-to-your-documents
 description: A RAG application blueprint to talk to your documents
 type: application
-version: 0.6.1
+version: 0.6.2
 
 maintainers:
 - name: AMD

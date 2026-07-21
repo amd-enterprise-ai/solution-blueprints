@@ -27,11 +27,14 @@ The unprivileged box shapes three choices, all baked into `platforms/halo/`:
 `platforms/halo/setup.sh` builds Go, Rust and AXIS for you. You only need
 these on the box first:
 
-| Need | Why | Check |
-|------|-----|-------|
+| Need | Why | Check / install |
+|------|-----|-----------------|
 | outbound internet | clone repos, download Go/Rust | `curl -sI https://github.com` |
-| Node ≥18 (via nvm) | connector + probe; `setup.sh` does **not** install it | `node --version` |
+| **Node 22 + npm via [nvm](https://github.com/nvm-sh/nvm)** — `setup.sh` does **not** install Node | connector + proxy + Claude Code | `nvm install 22 && nvm use 22`, then `node --version && npm --version` |
+| nvm — only if you hit `npm: command not found` | provides Node + npm without sudo | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh)"`, then re-open the shell |
 | `git`, `curl`, `python3` | clone/build | `git --version` |
+| `claude` (Claude Code CLI, **known-good 2.1.121**) — only for the `RUN_CC=1` Claude-Code-via-Lemonade stage | functional loop's optional agent stage | `claude --version` — newer builds defer MCP tool loading, which can break the `--allowedTools mcp__axis__run` gating |
+| `sqlite3` **CLI** — optional, only to hand-query the audit DB | the Python `sqlite3` **module** ships with Python and is used automatically (no install); the **`sqlite3` command-line tool** is a **separate** package, **not** installed by default on Debian/Ubuntu | `sqlite3 --version` — if missing: `sudo apt-get install sqlite3` |
 
 No `sudo`, no privileged sandbox: everything installs under `$HALO_TOOLS` and the
 policy is the unprivileged `platforms/halo/axis-policy-native.yaml`.

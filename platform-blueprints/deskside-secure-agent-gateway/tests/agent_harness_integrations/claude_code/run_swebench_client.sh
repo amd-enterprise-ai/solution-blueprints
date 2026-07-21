@@ -6,7 +6,7 @@
 # run_swebench_client.sh — solve ONE real SWE-bench instance through the
 # AMD-only client-side governance loop (no DefenseClaw, no Splunk).
 #
-# Inference plane:  Claude Code  ->  AMD LLM Gateway / Anthropic API
+# Inference plane:  Claude Code  ->  Anthropic-compatible gateway / Anthropic API
 # Tool/audit plane: axis MCP connector  ->  AXIS sandbox (sole enforcement)
 #                   ->  SQLite audit DB (local file)
 #
@@ -15,16 +15,18 @@
 #   ./task/{instance.json,grade.sh}   (vendored SWE-bench task)
 #
 # Stages:
-#   0. preconditions (node, axis, connector deps + unit tests, GATEWAY_KEY, py/git)
+#   0. preconditions (node, axis, connector deps + unit tests, inference access, py/git)
 #   1. task workspace (clone flask @ base_commit, task venv) + AXIS swebench policy
-#   2. gateway preflight — real model response
+#   2. inference preflight — real model response
 #   3. functional solve: Claude Code emits mcp__axis__run, edits blueprints.py,
 #      events confirmed in the SQLite audit DB
 #   4. grade (soft, reported): apply test_patch, run FAIL_TO_PASS -> SOLVED=yes/no
 #   5. summary -> artifacts/SUMMARY.txt
 #
-# Env: GATEWAY_KEY (required for gateway mode), GATEWAY_URL, MODEL,
-#      AXIS_BIN, AUDIT_DB, RUN_CC, MAXTURNS, CC_TIMEOUT
+# Inference access (bring your own; see tests/lib/inference_env.sh): set one of
+#   ANTHROPIC_API_KEY | ANTHROPIC_BASE_URL+ANTHROPIC_AUTH_TOKEN |
+#   ANTHROPIC_BASE_URL+ANTHROPIC_CUSTOM_HEADERS. Custom-header alias: GATEWAY_KEY.
+# Env: MODEL, AXIS_BIN, AUDIT_DB, RUN_CC, MAXTURNS, CC_TIMEOUT
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,18 +38,15 @@ SERVER="$CONN/src/server.js"
 INSTANCE="$SWE/instance.json"
 
 # --- inference plane ---------------------------------------------------------
-# INFERENCE_MODE=gateway   -> AMD LLM Gateway (Ocp-Apim-Subscription-Key) [default]
-# INFERENCE_MODE=anthropic -> Claude API direct (api.anthropic.com, x-api-key)
-INFERENCE_MODE="${INFERENCE_MODE:-gateway}"
-if [ "$INFERENCE_MODE" = "anthropic" ]; then
-  GATEWAY_URL="${GATEWAY_URL:-https://api.anthropic.com}"
-  GATEWAY_KEY="${ANTHROPIC_API_KEY:-}"
-  MODEL="${MODEL:-claude-opus-4-8}"
-else
-  GATEWAY_URL="${GATEWAY_URL:-https://<llm-gateway>/Anthropic}"
-  GATEWAY_KEY="${GATEWAY_KEY:-}"
-  MODEL="${MODEL:-claude-opus-4.8}"
-fi
+# Bring your own Anthropic-compatible access — Anthropic direct, or any gateway
+# via a bearer/x-api-key token or a custom header. No endpoint is assumed; the
+# resolver exits with a how-to if nothing is configured. See
+# tests/lib/inference_env.sh (custom-header alias: set GATEWAY_KEY).
+# shellcheck source=../../lib/inference_env.sh
+source "$HERE/../../lib/inference_env.sh"
+resolve_inference_access || exit 2
+GATEWAY_URL="$INFER_BASE_URL"
+MODEL="${MODEL:-$INFER_MODEL_DEFAULT}"
 
 # --- control + audit plane ---------------------------------------------------
 AXIS_BIN="${AXIS_BIN:-$(command -v axis 2>/dev/null || echo axis)}"
@@ -87,7 +86,7 @@ if [ ! -d "$CONN/node_modules/@modelcontextprotocol" ]; then
 fi
 ( cd "$CONN" && node --test ) >"$ART/unit_tests.log" 2>&1
 check "connector unit tests green" "grep -qE '# fail 0' '$ART/unit_tests.log'"
-check "GATEWAY_KEY provided" "[ -n \"${GATEWAY_KEY:-}\" ]"
+check "inference access configured" "[ -n \"${INFER_AUTH_HEADER:-}\" ]"
 
 # --- 1. task workspace + AXIS swebench policy --------------------------------
 log "=== Stage 1: task workspace + venv + AXIS policy ==="
@@ -106,15 +105,40 @@ else
   git -C "$WORK" reset --hard -q "$BASE" && git -C "$WORK" clean -fdq
 fi
 
-if ! "$TASKVENV/bin/python" -c \
-     'import flask,pytest,werkzeug; assert pytest.__version__.startswith("7."); assert werkzeug.__version__.startswith("2.3.")' \
-     >/dev/null 2>&1; then
-  log "creating task venv (py3 + flask editable + pytest 7.4.4 + werkzeug 2.3.8)"
+# We can build the preferred py3.11 grade venv iff python3.11 or uv is present.
+# When we can, also rebuild a stale non-3.11 venv: a reused py3.12 venv would
+# false-fail the grade even though the deps are present.
+NEED_PY="3.11"; { command -v python3.11 || command -v uv; } >/dev/null 2>&1 || NEED_PY=""
+if ! "$TASKVENV/bin/python" -c "
+import sys
+try:
+    import flask, pytest, werkzeug
+except Exception:
+    sys.exit(1)
+if not (pytest.__version__.startswith('7.') and werkzeug.__version__.startswith('2.3.')):
+    sys.exit(1)
+need = '$NEED_PY'
+if need and '.'.join(map(str, sys.version_info[:2])) != need:
+    sys.exit(1)
+" >/dev/null 2>&1; then
+  log "creating task venv (py3.11 + flask editable + pytest 7.4.4 + werkzeug 2.3.8)"
   rm -rf "$TASKVENV"
-  python3 -m venv "$TASKVENV"
-  PYVER="$(python3 -c 'import sys; print(".".join(map(str,sys.version_info[:2])))')"
-  SITE="$TASKVENV/lib/python$PYVER/site-packages"
-  pip3 install -q -e "$WORK" "pytest==7.4.4" "werkzeug==2.3.8" --target "$SITE"
+  # pallets__flask-5014 is a py3.11-era instance. On py3.12 flask promotes the
+  # pkgutil.get_loader DeprecationWarning to an error, which false-fails the
+  # FAIL_TO_PASS grade. Build the grade venv on 3.11: prefer python3.11, else let
+  # uv fetch a 3.11, else fall back to whatever python3 is (grade may false-negative).
+  if command -v python3.11 >/dev/null 2>&1; then
+    python3.11 -m venv "$TASKVENV"
+  elif command -v uv >/dev/null 2>&1; then
+    # --seed installs pip into the venv so we can use its own interpreter below.
+    uv venv --seed --python 3.11 "$TASKVENV" >/dev/null
+  else
+    log "WARN: no python3.11 or uv found; using $(python3 --version 2>&1) — the soft SWE-bench grade may false-negative on py3.12+"
+    python3 -m venv "$TASKVENV"
+  fi
+  # Install with the venv's own interpreter (not the host pip3 + --target), so the
+  # deps land in this venv regardless of the host's pip version/availability.
+  "$TASKVENV/bin/python" -m pip install -q -e "$WORK" "pytest==7.4.4" "werkzeug==2.3.8"
 fi
 check "task venv has flask+pytest7+werkzeug2.3" \
   "\"$TASKVENV/bin/python\" -c 'import flask,pytest,werkzeug; assert pytest.__version__.startswith(\"7.\"); assert werkzeug.__version__.startswith(\"2.3.\")'"
@@ -150,25 +174,20 @@ YAML
 export AXIS_POLICY="$AXIS_POLICY_FILE"
 rm -f "$AUDIT_DB"
 
-# --- 2. gateway preflight ----------------------------------------------------
-log "=== Stage 2: gateway /v1/messages preflight ($MODEL) ==="
-if [ "$INFERENCE_MODE" = "anthropic" ]; then
-  AUTH_HEADER="x-api-key: $GATEWAY_KEY"
-else
-  AUTH_HEADER="Ocp-Apim-Subscription-Key: $GATEWAY_KEY"
-fi
-curl -sS -m 60 "$GATEWAY_URL/v1/messages" \
+# --- 2. inference preflight --------------------------------------------------
+log "=== Stage 2: inference /v1/messages preflight ($MODEL) ==="
+curl -sS -m 60 "$INFER_BASE_URL/v1/messages" \
   -H 'content-type: application/json' \
   -H 'anthropic-version: 2023-06-01' \
-  -H "$AUTH_HEADER" \
+  -H "$INFER_AUTH_HEADER" \
   -d "{\"model\":\"$MODEL\",\"max_tokens\":16,\"messages\":[{\"role\":\"user\",\"content\":\"reply with exactly: GATEWAY_OK\"}]}" \
   > "$ART/gateway_messages_probe.json" 2>"$ART/gateway_messages_probe.err"
-check "gateway returns a real completion ($MODEL)" \
+check "endpoint returns a real completion ($MODEL)" \
   "grep -q '\"type\":\"message\"' '$ART/gateway_messages_probe.json' && grep -q '\"text\"' '$ART/gateway_messages_probe.json'"
 
 # --- 3. functional SWE-bench solve -------------------------------------------
 if [ "${RUN_CC:-1}" -eq 1 ] && command -v claude >/dev/null 2>&1; then
-  log "=== Stage 3: functional Claude Code solve via gateway ($MODEL) ==="
+  log "=== Stage 3: functional Claude Code solve via endpoint ($MODEL) ==="
   MCP_JSON="$ART/.mcp.json"
   # Strip the leading '#' license header before substituting — the rendered file
   # is parsed as strict JSON, which has no comment syntax.
@@ -181,13 +200,13 @@ if [ "${RUN_CC:-1}" -eq 1 ] && command -v claude >/dev/null 2>&1; then
       -e "s#@AXIS_USER@#${USER:-amd}#g" \
       "$HERE/mcp.json.tmpl" > "$MCP_JSON"
 
-  GATEWAY_URL="$GATEWAY_URL" GATEWAY_KEY="$GATEWAY_KEY" MODEL="$MODEL" \
-    INFERENCE_MODE="$INFERENCE_MODE" ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}" \
-    WORKDIR="$WORK" TASKVENV="$TASKVENV" \
+  # Auth flows through the exported ANTHROPIC_* env resolved above; pass only the
+  # per-run knobs. INFERENCE_MODE (optional override) and GATEWAY_KEY inherit.
+  MODEL="$MODEL" WORKDIR="$WORK" TASKVENV="$TASKVENV" \
     bash "$HERE/claude_job.sh" "$MCP_JSON" "$HERE/prompt.txt" \
       > "$ART/claude_cc.out" 2>"$ART/claude_cc.err" || true
 
-  check "[functional] Claude Code got a real gateway response" \
+  check "[functional] Claude Code got a real endpoint response" \
     "grep '\"type\":\"result\"' '$ART/claude_cc.out' 2>/dev/null | grep -q '\"is_error\":false'"
   check "[functional] model emitted mcp__axis__run" \
     "grep -E '\"type\":\"tool_use\"' '$ART/claude_cc.out' 2>/dev/null | grep -q 'mcp__axis__run'"
@@ -229,7 +248,7 @@ log "=== RESULT: $pass passed, $fail failed (SOLVED=$SOLVED) ==="
 {
   echo "swebench run @ $(date -u +%FT%TZ)"
   echo "host=$(hostname) node=$(node --version)"
-  echo "instance=$INSTID  model=$MODEL  gateway=$GATEWAY_URL"
+  echo "instance=$INSTID  model=$MODEL  endpoint=$GATEWAY_URL"
   echo "audit_db=$AUDIT_DB"
   echo "solved=$SOLVED"
   echo "pass=$pass  fail=$fail"

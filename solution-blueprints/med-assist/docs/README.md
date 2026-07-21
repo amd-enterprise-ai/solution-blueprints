@@ -96,7 +96,7 @@ cd solution-blueprints/solution-blueprints/med-assist
 ./install-prerequisites.sh
 ```
 
-This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms. The section below covers the default **Instinct** deployment commands. For Radeon and other advanced options, see:
+This blueprint can be deployed on **AMD Instinct** (default) and **AMD Radeon**. The section below covers the default **Instinct** deployment commands. For Radeon and other advanced options, see:
 
 - [Deploy on AMD Radeon](DEPLOYMENT.md#amd-radeon-gpu)
 
@@ -133,7 +133,7 @@ This blueprint supports **AMD Instinct** (default) and **AMD Radeon** platforms.
 
 ### Deployment
 
-See the deployment docs and follow the instructions ([`docs/DEPLOYMENT.md`](./DEPLOYMENT.md)):
+For advanced deployment options, explore the [advanced deployment guide](./DEPLOYMENT.md). See the deployment docs and follow the instructions ([`docs/DEPLOYMENT.md`](./DEPLOYMENT.md)):
 - Deploy from the OCI registry with `helm template ... | kubectl apply -f -`.
 - Set `pythonServices.frontend.env.LIVEKIT_WS_URL` to your external LiveKit WebSocket URL.
 - Optionally set `llm.existingService` and/or `qwen-asr.existingService` to reuse existing backends.

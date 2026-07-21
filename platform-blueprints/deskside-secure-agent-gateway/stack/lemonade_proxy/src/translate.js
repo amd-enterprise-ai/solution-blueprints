@@ -9,7 +9,7 @@
 // (/api/v1/chat/completions). When the router keeps a call on the LOCAL tier, the
 // proxy must translate the Anthropic request into OpenAI, forward to Lemonade, and
 // translate the OpenAI response (JSON or SSE) back into the Anthropic shape Claude
-// Code expects. FRONTIER calls are already Anthropic (AMD gateway) and pass through
+// Code expects. FRONTIER calls are already Anthropic (frontier gateway) and pass through
 // byte-for-byte — this module is only used on the local tier.
 //
 // Scope: text, system prompt, multi-turn history, tool definitions, tool_use /
@@ -202,8 +202,9 @@ function sse(event, data) {
  *  string. (Buffered translation: the proxy already tees the whole upstream body
  *  for telemetry, so we translate after collection rather than mid-flight — simpler
  *  and correct for the A/B; latency is unaffected because Lemonade is the bottleneck.) */
-export function openAISSEtoAnthropic(raw, requestedModel) {
+export function openAISSEtoAnthropic(raw, requestedModel, meta) {
   let text = "";
+  let reasoning = "";
   const toolCalls = []; // {id,name,args}
   let promptTokens = 0;
   let completionTokens = 0;
@@ -228,6 +229,10 @@ export function openAISSEtoAnthropic(raw, requestedModel) {
     }
     const delta = evt.choices?.[0]?.delta || {};
     if (typeof delta.content === "string") text += delta.content;
+    // Reasoning models (e.g. Qwen3 thinking) stream the answer under
+    // reasoning_content while `content` stays empty. Keep it for telemetry only
+    // (it is NOT injected into the client-visible content block).
+    if (typeof delta.reasoning_content === "string") reasoning += delta.reasoning_content;
     if (evt.choices?.[0]?.finish_reason) finish = evt.choices[0].finish_reason;
     for (const tc of delta.tool_calls || []) {
       const idx = tc.index ?? 0;
@@ -283,5 +288,17 @@ export function openAISSEtoAnthropic(raw, requestedModel) {
     usage: { output_tokens: completionTokens },
   });
   out += sse("message_stop", { type: "message_stop" });
+
+  // Optional telemetry out-param. The client body carries only `content`, so a
+  // reasoning-only completion produces an empty visible body; expose the source
+  // completion text (content, or reasoning as fallback) so the caller can record
+  // a correct completion_chars even though the body has no text block. Mirrors
+  // extractResponseJson's content-or-reasoning fallback.
+  if (meta && typeof meta === "object") {
+    meta.completionText = text || reasoning;
+    meta.promptTokens = promptTokens;
+    meta.completionTokens = completionTokens;
+    meta.stopReason = STOP_MAP[finish] || "end_turn";
+  }
   return out;
 }

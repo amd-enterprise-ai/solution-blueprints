@@ -18,7 +18,7 @@ SPDX-License-Identifier: MIT
 |-----------|--------|
 | **Benchmark** | τ-bench v0.1 (sierra-research/tau-bench), retail + airline environments |
 | **Tasks** | 50 tasks: 25 retail + 25 airline, seed=42 (deterministic, same for both arms) |
-| **Frontier model** | `claude-opus-4-8` via AMD LLM Gateway, $5.00/1M in · $25.00/1M out |
+| **Frontier model** | `claude-opus-4-8` via an Anthropic-compatible gateway, $5.00/1M in · $25.00/1M out |
 | **Local model** | `Qwen3-Coder-30B-A3B-Instruct-GGUF` (Q4_K_M, 18.6 GB, MoE ~3B active), ctx=200K, on the llama.cpp CPU backend (CPU node) / Lemonade iGPU (Halo) |
 | **Semantic router** | vLLM semantic-router, difficulty-based classify API, consult-only |
 | **Proxy** | `stack/lemonade_proxy` — routes calls, captures telemetry |
@@ -145,7 +145,7 @@ cd tokenomics_tau_bench
 export LEMONADE_CTX_SIZE=200000
 lemonade-server serve --port 13305 &  # Lemonade with 200K ctx
 
-export GATEWAY_KEY="<AMD-Gateway-Ocp-Apim-Key>"
+export GATEWAY_KEY="<gateway-ocp-apim-key>"
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 export REQUESTS_CA_BUNDLE=$SSL_CERT_FILE CURL_CA_BUNDLE=$SSL_CERT_FILE
 export NODE_EXTRA_CA_CERTS=$SSL_CERT_FILE

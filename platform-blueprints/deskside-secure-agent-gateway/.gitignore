@@ -13,3 +13,8 @@ artifacts/
 
 # Node deps
 node_modules/
+
+# The repo-root .gitignore has a Python-template `lib/` rule that also matches
+# tests/lib/, so re-include them.
+!tests/lib/
+!tests/lib/*.sh

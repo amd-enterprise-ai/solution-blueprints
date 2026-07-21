@@ -44,7 +44,7 @@ A coding agent (**Claude Code**) is governed on **both planes**:
   served locally on the APU), and on the side emits an `llm.request` event. With
   `LEMON_ROUTER=on` it also **consults** the vLLM Semantic Router per prompt: a
   hard prompt gets a **frontier** decision (escalate to a paid Anthropic-compatible
-  gateway, e.g. AMD LLM Gateway `claude-*`) and a simple prompt stays **local**.
+  gateway, e.g. an Anthropic-compatible `claude-*` endpoint) and a simple prompt stays **local**.
   The router is consult-only and **fail-open** — a router hiccup, or a frontier
   decision with no key configured, keeps the request on the local tier. Full A/B
   in [`../tests/router_test/`](../tests/router_test/).
@@ -154,7 +154,7 @@ On shutdown: emit `llm.session_end`. The two tiers:
 | Tier | Backend | Cost | Route |
 |------|---------|------|-------|
 | local | Lemonade `Qwen3-8B-GGUF` on CPU (`:13305`) | free | simple / factual prompts |
-| frontier | AMD LLM Gateway `claude-*` (Anthropic-compatible; configurable) | paid | hard reasoning / proofs / planning |
+| frontier | Anthropic-compatible gateway `claude-*` (configurable) | paid | hard reasoning / proofs / planning |
 
 ## One session id across both planes
 
@@ -236,7 +236,7 @@ fallback-order change fails the unit test). See
 | `FRONTIER_MODEL` | `claude-opus-4.8` | model id written into the body on escalation |
 | `FRONTIER_AUTH_HEADER` | `Ocp-Apim-Subscription-Key` | frontier auth header name (`x-api-key` for Anthropic direct) |
 | `FRONTIER_AUTH_KEY` | `$GATEWAY_KEY` | frontier key; **absent ⇒ frontier decisions serve local (fail-safe)** |
-| `FRONTIER_EXTRA_HEADERS` | `{}` | JSON of extra headers (e.g. `{"anthropic-version":"2023-06-01"}`) |
+| `FRONTIER_EXTRA_HEADERS` | `{}` | JSON of extra headers per frontier call. Anthropic-direct: `{"anthropic-version":"2023-06-01"}`. **Some gateways are account-dependent** — a few require extra headers, e.g. `{"anthropic-version":"vertex-2023-10-16","user":"<username>"}`; others need none. If escalation returns 4xx, set these. |
 | `GPU_TELEMETRY` | `on` | `off` disables the local-inference GPU sampling block on `llm.request` |
 | `GPU_SYSFS_PATH` | _(auto-discovered)_ | pin the amdgpu card device dir (`/sys/class/drm/cardN/device`) instead of auto-detecting |
 | `LLM_USER` | `$AXIS_USER` | inference-plane user override; same `env`/`os` resolution + `user_source` as the tool plane |

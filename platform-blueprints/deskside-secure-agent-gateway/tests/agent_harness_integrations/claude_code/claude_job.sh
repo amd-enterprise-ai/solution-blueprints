@@ -4,17 +4,19 @@
 # SPDX-License-Identifier: MIT
 
 # claude_job.sh — launch real Claude Code to solve a SWE-bench instance, with its
-# inference coming from the AMD LLM Gateway (claude-opus-4.8) and its ONLY tool
-# being the CLIENT-SIDE axis MCP connector's `run`. Every command the model runs
-# therefore funnels through the AXIS sandbox (sole enforcement layer) -> the
-# SQLite audit event builder (local AUDIT_DB).
+# inference coming from an Anthropic-compatible endpoint (bring your own access;
+# see tests/lib/inference_env.sh) and its ONLY tool being the CLIENT-SIDE axis MCP
+# connector's `run`. Every command the model runs therefore funnels through the
+# AXIS sandbox (sole enforcement layer) -> the SQLite audit event builder (local
+# AUDIT_DB).
 #
 # Claude Code itself is NOT sandboxed; what is contained + audited is each command
 # it runs via `run`. Built-in tools are disallowed so `run` is the only way the
 # model can touch the machine.
 #
 # Args: $1 = path to .mcp.json, $2 = prompt file
-# Env:  GATEWAY_KEY (required), GATEWAY_URL, MODEL, WORKDIR (repo cwd), TASKVENV
+# Env:  inference access (ANTHROPIC_* or the GATEWAY_KEY alias; see
+#       tests/lib/inference_env.sh), MODEL, WORKDIR (repo cwd), TASKVENV
 set -uo pipefail
 
 MCP_JSON="${1:?mcp.json path required}"
@@ -32,22 +34,17 @@ if [ -n "${TASKVENV:-}" ] && [ -f "$TASKVENV/bin/activate" ]; then
   source "$TASKVENV/bin/activate"
 fi
 
-# Inference plane. Two modes:
-#   INFERENCE_MODE=anthropic -> Claude Code -> api.anthropic.com (x-api-key)
-#   INFERENCE_MODE=gateway   -> Claude Code -> AMD LLM Gateway (subscription key) [default]
-INFERENCE_MODE="${INFERENCE_MODE:-gateway}"
-if [ "$INFERENCE_MODE" = "anthropic" ]; then
-  export ANTHROPIC_BASE_URL="https://api.anthropic.com"
-  export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY required}"
-  unset ANTHROPIC_AUTH_TOKEN ANTHROPIC_CUSTOM_HEADERS CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX
-  MODEL="${MODEL:-claude-opus-4-8}"
-else
-  export ANTHROPIC_BASE_URL="${GATEWAY_URL:-https://<llm-gateway>/Anthropic}"
-  export ANTHROPIC_API_KEY="dummy"
-  export ANTHROPIC_AUTH_TOKEN="dummy"
-  export ANTHROPIC_CUSTOM_HEADERS="Ocp-Apim-Subscription-Key: ${GATEWAY_KEY:?GATEWAY_KEY required}"
-  MODEL="${MODEL:-claude-opus-4-8}"
-fi
+# Inference plane — bring your own Anthropic-compatible access. The shared
+# resolver reads the standard ANTHROPIC_* env (Anthropic direct, or any gateway
+# via bearer/x-api-key or a custom header) — or the GATEWAY_KEY
+# alias — and exports the base URL + the right auth mechanism for Claude Code.
+_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../lib/inference_env.sh
+source "$_HERE/../../lib/inference_env.sh"
+resolve_inference_access || exit 2
+# The Bedrock/Vertex backends would override the endpoint we just resolved.
+unset CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX
+MODEL="${MODEL:-$INFER_MODEL_DEFAULT}"
 export ANTHROPIC_MODEL="$MODEL"
 export ANTHROPIC_SMALL_FAST_MODEL="$MODEL"
 export ANTHROPIC_DEFAULT_OPUS_MODEL="$MODEL"

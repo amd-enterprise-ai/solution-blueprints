@@ -9,7 +9,7 @@ type: application
 maintainers:
 - name: AMD
   url: https://www.amd.com/
-version: 0.4.2
+version: 0.4.3
 dependencies:
 - name: aimchart-llm
   version: 0.3.0

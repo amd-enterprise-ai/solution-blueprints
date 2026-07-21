@@ -185,7 +185,7 @@ def run_one(
     }
     t0 = time.time()
     try:
-        status, body, hdrs = _http_messages(f"{proxy_url.rstrip('/')}/v1/chat/completions", payload, timeout)
+        status, body, hdrs = _http_messages(f"{proxy_url.rstrip('/')}/v1/messages", payload, timeout)
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         return CallResult(
             prompt,

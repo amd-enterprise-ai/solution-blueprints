@@ -25,7 +25,7 @@
 
 import { SqliteSink } from "../../shared/sqlite_sink.js";
 import { otelEnvelope, genAiAttributes } from "./otel.js";
-import { newSpanId } from "./trace.js";
+import { newSpanId, newTraceId } from "./trace.js";
 
 // Re-export the shared sink under the inference-plane name. The shared sink is
 // fail-soft (a bad AUDIT_DB path degrades to a no-op instead of crashing the
@@ -56,21 +56,29 @@ function routingBlock(r) {
   };
 }
 
-export function buildLlmSessionStart(identity) {
+// Session lifecycle events carry a SESSION-SCOPED trace (not a per-turn trace):
+// per-turn traces cover the request/toolcall events, but session_start/end
+// bracket the whole session, so they share one session trace_id, each get their
+// own span_id, and have no parent (root). Per TELEMETRY_CONTRACT §8, every event
+// must carry non-null trace_id/span_id. The caller passes a shared session trace
+// so start/end correlate; if omitted we mint one so the fields are never null.
+export function buildLlmSessionStart(identity, trace) {
+  const sessionTrace = trace ?? { trace_id: newTraceId() };
   return {
     event: "llm.session_start",
     time: nowEpoch(),
-    ...otelEnvelope({ identity, trace: null, spanId: null, parentSpanId: null }),
+    ...otelEnvelope({ identity, trace: sessionTrace, spanId: newSpanId(), parentSpanId: null }),
     identity: identity.identityBlock(),
     policy: policyBlock(identity),
   };
 }
 
-export function buildLlmSessionEnd(identity) {
+export function buildLlmSessionEnd(identity, trace) {
+  const sessionTrace = trace ?? { trace_id: newTraceId() };
   return {
     event: "llm.session_end",
     time: nowEpoch(),
-    ...otelEnvelope({ identity, trace: null, spanId: null, parentSpanId: null }),
+    ...otelEnvelope({ identity, trace: sessionTrace, spanId: newSpanId(), parentSpanId: null }),
     identity: identity.identityBlock(),
   };
 }

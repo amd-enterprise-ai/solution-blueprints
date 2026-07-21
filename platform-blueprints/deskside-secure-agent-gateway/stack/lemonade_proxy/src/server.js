@@ -24,7 +24,7 @@ import http from "node:http";
 
 import { ProxyIdentity } from "./identity.js";
 import { SemanticRouterClient } from "./router.js";
-import { TraceState } from "./trace.js";
+import { TraceState, newTraceId } from "./trace.js";
 import { sampleGpu, gpuBlock } from "./gpu.js";
 import {
   SqliteLlmEventSink,
@@ -65,13 +65,22 @@ const cfg = {
   translateLocal: process.env.LEMON_TRANSLATE_LOCAL === "1",
   lemonadeOpenAIPath: process.env.LEMONADE_OPENAI_PATH || "/api/v1/chat/completions",
   localModel: process.env.LEMON_MODEL || "Qwen3-Coder-30B-A3B-Instruct-GGUF",
-  // Frontier tier (configurable): default = AMD LLM Gateway (Anthropic-compatible,
-  // like Lemonade). For Anthropic direct set FRONTIER_UPSTREAM=https://api.anthropic.com,
-  // FRONTIER_AUTH_HEADER=x-api-key, FRONTIER_MODEL=claude-haiku-4-5-20251001.
-  frontierUpstream: (process.env.FRONTIER_UPSTREAM || "https://<llm-gateway>/Anthropic").replace(/\/+$/, ""),
-  frontierModel: process.env.FRONTIER_MODEL || "claude-opus-4.8",
-  frontierAuthHeader: process.env.FRONTIER_AUTH_HEADER || "Ocp-Apim-Subscription-Key",
-  frontierAuthKey: process.env.FRONTIER_AUTH_KEY || process.env.GATEWAY_KEY || "",
+  // Frontier tier (configurable): default = Anthropic direct. Point it at an
+  // Anthropic-compatible gateway by setting FRONTIER_UPSTREAM + FRONTIER_AUTH_HEADER
+  // (or the GATEWAY_KEY alias).
+  frontierUpstream: (process.env.FRONTIER_UPSTREAM || "https://api.anthropic.com").replace(/\/+$/, ""),
+  frontierModel: process.env.FRONTIER_MODEL || "claude-opus-4-8",
+  frontierAuthHeader: process.env.FRONTIER_AUTH_HEADER || "x-api-key",
+  // When the frontier is Anthropic direct (x-api-key), accept ANTHROPIC_API_KEY as
+  // an alias so the documented "Anthropic direct" setup escalates without also
+  // exporting FRONTIER_AUTH_KEY.
+  frontierAuthKey:
+    process.env.FRONTIER_AUTH_KEY ||
+    process.env.GATEWAY_KEY ||
+    ((process.env.FRONTIER_AUTH_HEADER || "x-api-key") === "x-api-key"
+      ? process.env.ANTHROPIC_API_KEY
+      : "") ||
+    "",
   // Extra static headers for the frontier (e.g. anthropic-version for Anthropic
   // direct), as JSON: FRONTIER_EXTRA_HEADERS='{"anthropic-version":"2023-06-01"}'.
   frontierExtraHeaders: parseJsonEnv(process.env.FRONTIER_EXTRA_HEADERS),
@@ -91,6 +100,9 @@ const identity = new ProxyIdentity(process.env);
 // This plane is the trace authority: it sees the user prompt, so it detects a new
 // turn, mints a trace, and writes it to the shared statefile the tool plane reads.
 const traceState = new TraceState(identity.session, process.env);
+// Session-scoped trace shared by session_start/session_end (distinct from the
+// per-turn traces above) so both lifecycle events correlate under one trace_id.
+const sessionTrace = { trace_id: newTraceId() };
 const router = new SemanticRouterClient({
   enabled: cfg.routerEnabled,
   apiUrl: cfg.routerUrl,
@@ -131,7 +143,7 @@ function forwardReqHeaders(req) {
 
 async function ensureStarted() {
   if (identity.start()) {
-    sink.emit(buildLlmSessionStart(identity));
+    sink.emit(buildLlmSessionStart(identity, sessionTrace));
   }
 }
 
@@ -277,9 +289,14 @@ async function handle(req, res) {
     const oaiRaw = await upstream.text().catch(() => "");
     let clientBody;
     if (upstreamIsSSE) {
-      clientBody = openAISSEtoAnthropic(oaiRaw, reqInfo.model);
+      const meta = {};
+      clientBody = openAISSEtoAnthropic(oaiRaw, reqInfo.model, meta);
       resHeaders["content-type"] = "text/event-stream";
       parsed = parseAnthropicSSE(clientBody);
+      // The translated body drops reasoning-only output, so completion_chars
+      // would be 0 while completion_tokens is non-zero. Recover the char count
+      // from the source stream (content, or reasoning as fallback).
+      if (!parsed.completionText && meta.completionText) parsed.completionText = meta.completionText;
     } else {
       let oai = {};
       try {
@@ -291,6 +308,13 @@ async function handle(req, res) {
       clientBody = JSON.stringify(anth);
       resHeaders["content-type"] = "application/json";
       parsed = extractResponseJson(anth);
+      // openAIToAnthropic keeps only `content`; a reasoning-only response has an
+      // empty body. Recover completion_chars from the OpenAI source, where
+      // extractResponseJson falls back to reasoning_content.
+      if (!parsed.completionText) {
+        const src = extractResponseJson(oai);
+        if (src.completionText) parsed.completionText = src.completionText;
+      }
     }
     res.writeHead(upstream.status, resHeaders);
     res.write(clientBody);
@@ -394,7 +418,7 @@ const server = http.createServer((req, res) => {
 
 async function shutdown() {
   if (identity.end()) {
-    sink.emit(buildLlmSessionEnd(identity));
+    sink.emit(buildLlmSessionEnd(identity, sessionTrace));
   }
   sink.close();
   server.close(() => process.exit(0));
